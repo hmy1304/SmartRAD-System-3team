@@ -29,6 +29,15 @@ public class EmployeeLicense extends BaseEntity {
     @Column(name = "license_number", length = 50, nullable = false)
     private String licenseNumber;
 
+    @Column(name = "license_name", length = 100)
+    private String licenseName;
+
+    @Column(name = "issuing_org", length = 100)
+    private String issuingOrg;
+
+    @Column(length = 100)
+    private String specialty;
+
     @Column(name = "issue_date")
     private LocalDate issueDate;
 

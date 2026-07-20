@@ -1,6 +1,7 @@
 package com.tphr.hr.employee.entity;
 
 import com.tphr.hr.common.entity.BaseEntity;
+import com.tphr.hr.system.entity.CommonCode;
 import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
@@ -27,12 +28,19 @@ public class EmployeeHealth extends BaseEntity {
     @Column(name = "checkup_date")
     private LocalDate checkupDate; // 실제 검진일
 
-    @Column(name = "tb_result", length = 20)
-    private String tbResult; // 결핵 결과 (양성/음성)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "checkup_type_code")
+    private CommonCode checkupType; // 검진 종류
 
-    @Column(name = "hepb_result", length = 20)
-    private String hepbResult; // B형간염 결과
+    @Column(length = 100)
+    private String institution; // 검진 기관
 
-    @Column(name = "flu_vaccine_status", length = 20)
-    private String fluVaccineStatus; // 독감 접종 상태
+    @Column(length = 50)
+    private String result; // 종합 판정
+
+    @Column(columnDefinition = "TEXT")
+    private String findings; // 주요 소견
+
+    @Column(name = "checkup_items_json", columnDefinition = "JSON")
+    private String checkupItemsJson; // 세부 검사 항목 (JSON)
 }
