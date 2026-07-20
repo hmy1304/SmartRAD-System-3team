@@ -1,0 +1,63 @@
+@use "../../../styles/variables" as *;
+
+.card {
+  overflow: hidden;
+  border: 1px solid #dce6f5;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: $shadow-card;
+}
+
+.top,
+.rows > div,
+.total {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.top {
+  padding: 20px 22px;
+  background: #f0f5ff;
+
+  span {
+    color: $color-blue-600;
+    font-size: 0.72rem;
+    font-weight: 800;
+  }
+}
+
+.rows {
+  padding: 8px 22px;
+
+  > div {
+    min-height: 46px;
+    border-bottom: 1px solid #edf1f6;
+    color: #5d687b;
+    font-size: 0.82rem;
+
+    &:last-child {
+      border-bottom: 0;
+    }
+
+    b {
+      color: $color-text;
+      font-size: 0.84rem;
+    }
+
+    .minus {
+      color: $color-danger;
+    }
+  }
+}
+
+.total {
+  padding: 18px 22px;
+  color: $color-blue-600;
+  background: $color-blue-100;
+  font-weight: 800;
+
+  b {
+    font-size: 1.2rem;
+  }
+}

@@ -1,0 +1,42 @@
+@use "../../../styles/variables" as *;
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: $color-text;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+.inverse {
+  color: #fff;
+}
+
+.symbol {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #3387ff, #19d2c6);
+  box-shadow: 0 7px 20px rgba(39, 101, 239, 0.3);
+
+  span {
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: 13px;
+    height: 3px;
+    border-radius: 99px;
+    background: #fff;
+    transform: translate(-50%, -50%);
+
+    &:last-child {
+      transform: translate(-50%, -50%) rotate(90deg);
+    }
+  }
+}
+
+.name {
+  white-space: nowrap;
+}

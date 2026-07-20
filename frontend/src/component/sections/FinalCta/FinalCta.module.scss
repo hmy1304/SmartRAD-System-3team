@@ -1,0 +1,58 @@
+@use "../../../styles/variables" as *;
+@use "../../../styles/mixins" as *;
+
+.section {
+  position: relative;
+  overflow: hidden;
+  padding-block: 100px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 20% 30%, rgba(58, 123, 255, 0.35), transparent 34%),
+    linear-gradient(110deg, #1f58df, #0d2b65 65%, #071936);
+}
+
+.section::after {
+  content: "";
+  position: absolute;
+  width: 520px;
+  height: 520px;
+  right: -180px;
+  bottom: -360px;
+  border: 80px solid rgba(255, 255, 255, 0.035);
+  border-radius: 50%;
+}
+
+.inner {
+  @include container;
+  position: relative;
+  z-index: 1;
+  text-align: center;
+
+  h2 {
+    margin: 0;
+    font-size: clamp(2.2rem, 5vw, 4.1rem);
+    line-height: 1.2;
+    letter-spacing: -0.05em;
+  }
+
+  p {
+    max-width: 670px;
+    margin: 20px auto 0;
+    color: rgba(230, 238, 255, 0.72);
+    line-height: 1.7;
+  }
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+@media (max-width: 560px) {
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}

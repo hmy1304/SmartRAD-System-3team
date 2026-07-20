@@ -1,0 +1,85 @@
+@use "../../../styles/variables" as *;
+@use "../../../styles/mixins" as *;
+
+.footer {
+  color: rgba(255, 255, 255, 0.55);
+  background: #050f22;
+}
+
+.inner,
+.bottom {
+  @include container;
+}
+
+.inner {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 80px;
+  padding-block: 62px;
+}
+
+.brandArea p {
+  margin: 20px 0 0;
+  font-size: 0.75rem;
+  line-height: 1.8;
+}
+
+.links {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 28px;
+
+  div {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  strong {
+    margin-bottom: 4px;
+    color: #fff;
+    font-size: 0.76rem;
+  }
+
+  a {
+    font-size: 0.7rem;
+    transition: color $transition;
+
+    &:hover {
+      color: #fff;
+    }
+  }
+}
+
+.bottom {
+  min-height: 70px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 0.65rem;
+
+  div {
+    display: flex;
+    gap: 18px;
+  }
+}
+
+@media (max-width: 780px) {
+  .inner {
+    grid-template-columns: 1fr;
+    gap: 44px;
+  }
+
+  .links {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .bottom {
+    align-items: flex-start;
+    flex-direction: column;
+    justify-content: center;
+    gap: 12px;
+    padding-block: 20px;
+  }
+}

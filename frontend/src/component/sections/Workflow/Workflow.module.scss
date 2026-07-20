@@ -1,0 +1,71 @@
+@use "../../../styles/variables" as *;
+@use "../../../styles/mixins" as *;
+
+.section {
+  @include section-spacing;
+  background: $color-surface-soft;
+}
+
+.inner {
+  @include container;
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  align-items: center;
+  gap: 80px;
+}
+
+.copy {
+  h2 {
+    @include title;
+    margin-top: 20px;
+  }
+
+  > p {
+    margin: 18px 0 0;
+    color: $color-muted;
+    line-height: 1.7;
+  }
+}
+
+.steps {
+  display: grid;
+  gap: 22px;
+  margin-top: 34px;
+
+  article {
+    display: grid;
+    grid-template-columns: 44px 1fr;
+    gap: 15px;
+  }
+
+  strong {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    color: #fff;
+    background: $color-blue-600;
+    box-shadow: 0 10px 20px rgba(40, 100, 239, 0.25);
+    font-size: 0.78rem;
+  }
+
+  h3 {
+    margin: 1px 0 7px;
+    font-size: 0.98rem;
+  }
+
+  p {
+    margin: 0;
+    color: $color-muted;
+    font-size: 0.8rem;
+    line-height: 1.65;
+  }
+}
+
+@media (max-width: 900px) {
+  .inner {
+    grid-template-columns: 1fr;
+    gap: 48px;
+  }
+}

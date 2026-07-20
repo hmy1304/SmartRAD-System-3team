@@ -1,0 +1,120 @@
+@use "../../../styles/variables" as *;
+@use "../../../styles/mixins" as *;
+
+.hero {
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  background:
+    radial-gradient(circle at 30% 10%, rgba(23, 190, 210, 0.22), transparent 33%),
+    linear-gradient(115deg, #125e93 0%, #173e78 52%, #071b3f 100%);
+}
+
+.glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 85% 20%, rgba(75, 122, 255, 0.28), transparent 28%),
+    linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.025), transparent);
+}
+
+.inner {
+  @include container;
+  position: relative;
+  z-index: 1;
+  padding-top: 72px;
+  text-align: center;
+}
+
+.eyebrow {
+  display: inline-flex;
+  padding: 7px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  color: #dce9ff;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.hero h1 {
+  margin: 34px 0 18px;
+  font-size: clamp(2.7rem, 6vw, 5rem);
+  line-height: 1.12;
+  letter-spacing: -0.055em;
+}
+
+.hero p {
+  margin: 0;
+  color: rgba(229, 238, 255, 0.7);
+  font-size: clamp(0.92rem, 1.5vw, 1.05rem);
+  line-height: 1.8;
+}
+
+.actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 30px;
+}
+
+.preview {
+  display: flex;
+  justify-content: center;
+  margin-top: 48px;
+}
+
+.roleBar {
+  position: relative;
+  z-index: 2;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  padding: 12px 20px;
+  color: #708099;
+  background: #f1f6fc;
+  font-size: 0.75rem;
+
+  > div {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  b {
+    padding: 5px 10px;
+    border: 1px solid #dce5f1;
+    border-radius: 999px;
+    color: #59687d;
+    background: #fff;
+    font-size: 0.7rem;
+  }
+}
+
+@media (max-width: 700px) {
+  .inner {
+    padding-top: 54px;
+  }
+
+  .hero h1 {
+    font-size: 2.65rem;
+  }
+
+  .hero p br {
+    display: none;
+  }
+
+  .actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .roleBar {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 10px;
+  }
+}

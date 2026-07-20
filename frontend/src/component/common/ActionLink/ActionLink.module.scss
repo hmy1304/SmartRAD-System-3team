@@ -1,0 +1,42 @@
+@use "../../../styles/variables" as *;
+
+.link {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 22px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  font-size: 0.92rem;
+  font-weight: 800;
+  transition:
+    transform $transition,
+    box-shadow $transition,
+    background $transition;
+
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.primary {
+  color: $color-blue-700;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(5, 24, 62, 0.18);
+}
+
+.secondary {
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.ghost {
+  color: $color-blue-700;
+  background: $color-blue-100;
+}
+
+.full {
+  width: 100%;
+}

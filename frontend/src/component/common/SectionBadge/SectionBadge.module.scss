@@ -1,0 +1,14 @@
+@use "../../../styles/variables" as *;
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 5px 12px;
+  border: 1px solid rgba($color-blue-500, 0.16);
+  border-radius: 999px;
+  color: $color-blue-600;
+  background: $color-blue-50;
+  font-size: 0.76rem;
+  font-weight: 800;
+}

@@ -1,0 +1,135 @@
+@use "../../../styles/variables" as *;
+
+.floatingButtons {
+  position: fixed;
+  right: 32px;
+  bottom: 42px;
+  z-index: 100;
+
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.floatingButton {
+  position: relative;
+
+  width: 64px;
+  height: 64px;
+
+  display: grid;
+  place-items: center;
+
+  padding: 0;
+  overflow: hidden;
+
+  border: 0;
+  border-radius: 50%;
+
+  cursor: pointer;
+
+  box-shadow: 0 12px 28px rgba(8, 32, 79, 0.25);
+
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    filter 180ms ease;
+
+  svg {
+    width: 27px;
+    height: 27px;
+
+    fill: none;
+    stroke: #fff;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+
+    pointer-events: none;
+  }
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 34px rgba(8, 32, 79, 0.35);
+    filter: brightness(1.06);
+  }
+
+  &:active {
+    transform: translateY(-1px) scale(0.97);
+  }
+
+  &:focus-visible {
+    outline: 3px solid rgba(56, 132, 255, 0.35);
+    outline-offset: 4px;
+  }
+}
+
+/* 맨 위로 버튼 */
+.scrollTop {
+  margin-bottom: 0;
+
+  border: 1px solid rgba(255, 255, 255, 0.25);
+
+  background: linear-gradient(
+    145deg,
+    rgba(35, 71, 132, 0.92),
+    rgba(20, 48, 101, 0.92)
+  );
+
+  backdrop-filter: blur(12px);
+
+  svg {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* 채팅 버튼 */
+.chat {
+  background: linear-gradient(145deg, #27dfc5 0%, #25b8e7 48%, #3371f1 100%);
+}
+
+/* 상담 버튼 */
+.consult {
+  background: linear-gradient(145deg, #3478f4, #1f55d8);
+}
+
+/* 태블릿 */
+@media (max-width: 900px) {
+  .floatingButtons {
+    right: 22px;
+    bottom: 28px;
+  }
+
+  .floatingButton {
+    width: 58px;
+    height: 58px;
+
+    svg {
+      width: 25px;
+      height: 25px;
+    }
+  }
+}
+
+/* 모바일 */
+@media (max-width: 600px) {
+  .floatingButtons {
+    right: 16px;
+    bottom: 20px;
+    gap: 8px;
+  }
+
+  .floatingButton {
+    width: 52px;
+    height: 52px;
+
+    box-shadow: 0 9px 22px rgba(8, 32, 79, 0.24);
+
+    svg {
+      width: 23px;
+      height: 23px;
+    }
+  }
+}
