@@ -43,4 +43,21 @@ public class Notice extends BaseEntity {
 
     @Column(name = "expiration_date")
     private LocalDate expirationDate;
+
+    // ===== 도메인 메서드 =====
+
+    // 상세 조회 시 조회수 1 증가
+    public void increaseViewCount() {
+        this.viewCount = this.viewCount + 1;
+    }
+
+    // PATCH /notices/{id} 부분 수정 - null인 항목은 변경하지 않는다
+    public void update(String title, String content, CommonCode noticeType, Boolean isImportant,
+                        LocalDate expirationDate) {
+        if (title != null) this.title = title;
+        if (content != null) this.content = content;
+        if (noticeType != null) this.noticeType = noticeType;
+        if (isImportant != null) this.isImportant = isImportant;
+        if (expirationDate != null) this.expirationDate = expirationDate;
+    }
 }

@@ -1,7 +1,10 @@
 package com.tphr.hr.system.entity;
 
 import com.tphr.hr.common.entity.BaseEntity;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.*;
 
 @Entity
@@ -31,4 +34,14 @@ public class CommonCode extends BaseEntity {
 
     @Column(name = "sort_order")
     private Integer sortOrder;
+
+    // ===== 도메인 메서드 =====
+
+    // PATCH /common-codes/{code} 부분 수정 - null인 항목은 변경하지 않는다
+    public void update(String name, String description, Integer sortOrder, Boolean isActive) {
+        if (name != null) this.name = name;
+        if (description != null) this.description = description;
+        if (sortOrder != null) this.sortOrder = sortOrder;
+        if (isActive != null) this.isActive = isActive;
+    }
 }

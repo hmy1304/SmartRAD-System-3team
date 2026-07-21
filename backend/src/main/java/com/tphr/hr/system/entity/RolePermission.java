@@ -39,4 +39,14 @@ public class RolePermission extends BaseEntity {
     @Column(name = "can_approve", nullable = false)
     @Builder.Default
     private Boolean canApprove = false;
+
+    // ===== 도메인 메서드 =====
+
+    // PUT /role-groups/{roleGroupId}/permissions/{menuId} - 권한 값 갱신 (지정된 값만 반영)
+    public void updatePermissions(Boolean canRead, Boolean canWrite, Boolean canDelete, Boolean canApprove) {
+        if (canRead != null) this.canRead = canRead;
+        if (canWrite != null) this.canWrite = canWrite;
+        if (canDelete != null) this.canDelete = canDelete;
+        if (canApprove != null) this.canApprove = canApprove;
+    }
 }
