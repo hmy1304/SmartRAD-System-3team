@@ -1,7 +1,9 @@
 package com.tphr.hr.approval.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -10,6 +12,8 @@ public class ApprovalDto {
 
     @Getter
     @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CreateRequest {
         private String title;
         private String docTypeCode; // e.g., "DOC_VACATION", "DOC_WELFARE"
