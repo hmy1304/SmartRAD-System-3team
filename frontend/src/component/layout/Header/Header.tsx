@@ -40,7 +40,7 @@ export default function Header() {
           </nav>
 
           <div className={styles.actions}>
-            <Link href="/login" onClick={closeMenu}>
+            <Link href="#" onClick={closeMenu}>
               로그인
             </Link>
 

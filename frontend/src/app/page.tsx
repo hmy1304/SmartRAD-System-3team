@@ -8,6 +8,7 @@ import Onboarding from "@/component/sections/Onboarding/Onboarding";
 import Pricing from "@/component/sections/Pricing/Pricing";
 import FinalCta from "@/component/sections/FinalCta/FinalCta";
 import FloatingButtons from "@/component/common/FloatingButtons/FloatingButtons";
+
 export default function Home() {
   return (
     <>
