@@ -233,6 +233,7 @@ public class PayrollService {
                 .build();
     }
 
+<<<<<<< HEAD
     @Transactional(readOnly = true)
     public PayrollSummaryResponse getPayrollSummary(Integer year, Integer month) {
         List<PayrollRecord> records = payrollRecordRepository.findByPayrollYearAndPayrollMonth(year, month);
@@ -282,7 +283,6 @@ public class PayrollService {
         }
         return history;
     }
-
     private PayrollResponse mapToResponse(PayrollRecord record) {
         return PayrollResponse.builder()
                 .id(record.getId())
