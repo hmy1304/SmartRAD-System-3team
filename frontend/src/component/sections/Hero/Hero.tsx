@@ -18,7 +18,7 @@ export default function Hero() {
     <section className={styles.hero} id="top">
       <div className={styles.glow} aria-hidden="true" />
       <div className={styles.inner}>
-        <span className={styles.eyebrow}>● 병원 인사팀을 위한 통합 ERP</span>
+        <span className={styles.eyebrow}> <span className={styles.dot}>●</span>병원 인사팀을 위한 통합 ERP</span>
         <h1>
           복잡한 병원 인사를
           <br />한 화면에서 정확하게
@@ -42,6 +42,7 @@ export default function Hero() {
 
       <div className={styles.roleBar}>
         <span>병원 인사 업무에 필요한 기준 정보를 하나로 연결합니다</span>
+        <span className={styles.divider}>|</span>
         <div>
           {roles.map((role) => (
             <b key={role}>{role}</b>

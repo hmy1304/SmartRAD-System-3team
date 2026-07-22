@@ -36,6 +36,11 @@
   background: rgba(255, 255, 255, 0.06);
   font-size: 0.78rem;
   font-weight: 700;
+
+  .dot {
+    color: #2DD4BF;
+    margin-right: 5px;
+  }
 }
 
 .hero h1 {
@@ -68,17 +73,21 @@
 .roleBar {
   position: relative;
   z-index: 2;
-  min-height: 58px;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: 12px;
   padding: 12px 20px;
   color: #708099;
   background: #f1f6fc;
   font-size: 0.75rem;
 
-  > div {
+  .divider {
+    color: #CBD5E1;
+    font-weight: 600;
+  }
+
+  >div {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
@@ -87,7 +96,7 @@
   b {
     padding: 5px 10px;
     border: 1px solid #dce5f1;
-    border-radius: 999px;
+    border-radius: 6px;
     color: #59687d;
     background: #fff;
     font-size: 0.7rem;
@@ -116,5 +125,9 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 10px;
+  }
+
+  .divider {
+    display: none;
   }
 }

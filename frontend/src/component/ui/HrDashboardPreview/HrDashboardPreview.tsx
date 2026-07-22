@@ -8,9 +8,9 @@ const summaryItems = [
 ];
 
 const rows = [
-  ["경영지원팀", "선임비서팀", "완료"],
-  ["간호본부", "병동 이동", "완료"],
-  ["응급의학과", "보직 변경", "대기"],
+  ["김", "영상의학과", "전임의 발령", "완료"],
+  ["박", "간호본부", "병동 이동", "완료"],
+  ["이", "응급의학과", "보직 변경", "대기"],
 ];
 
 export default function HrDashboardPreview() {
@@ -51,11 +51,19 @@ export default function HrDashboardPreview() {
           <div className={styles.dashboardGrid}>
             <div className={styles.approvalCard}>
               <div className={styles.panelTitle}>인사 발령 현황</div>
-              {rows.map(([department, title, status]) => (
+              {rows.map(([name, department, title, status]) => (
                 <div key={`${department}-${title}`} className={styles.approvalRow}>
-                  <span className={styles.rowIcon}>↗</span>
-                  <span>{department} · {title}</span>
-                  <em className={status === "대기" ? styles.wait : ""}>{status}</em>
+                  <div className={styles.userInfo}>
+                    <span className={styles.rowIcon}>{name}</span>
+
+                    <span className={styles.userText}>
+                      {department} · {title}
+                    </span>
+                  </div>
+
+                  <em className={status === "대기" ? styles.wait : ""}>
+                    {status}
+                  </em>
                 </div>
               ))}
             </div>
@@ -63,7 +71,7 @@ export default function HrDashboardPreview() {
             <div className={styles.chartCard}>
               <div className={styles.panelTitle}>월별 근태 처리량</div>
               <div className={styles.chart}>
-                {[45, 72, 58, 86, 68, 94].map((height, index) => (
+                {[48, 78, 58, 88, 66].map((height, index) => (
                   <span key={index} style={{ height: `${height}%` }} />
                 ))}
               </div>

@@ -130,7 +130,7 @@ export const pricingPlans: PricingPlan[] = [
     ],
     button: "시작하기",
     featured: true,
-    label: "추천 요금제",
+    label: "🏥 인기 플랜",
   },
   {
     name: "Enterprise",

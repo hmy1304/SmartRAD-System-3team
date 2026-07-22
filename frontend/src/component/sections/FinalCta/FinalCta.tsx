@@ -15,7 +15,7 @@ export default function FinalCta() {
           도입 범위를 함께 설계합니다.
         </p>
         <div className={styles.actions}>
-          <ActionLink href="mailto:contact@smartrad.example">무료 데모 문의</ActionLink>
+          <ActionLink href="mailto:contact@smartrad.example">무료 데모 요청</ActionLink>
           <ActionLink href="#features" variant="secondary">
             기능 자세히 보기
           </ActionLink>

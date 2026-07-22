@@ -30,27 +30,24 @@ export default function FloatingButtons() {
       <a
         href="#contact"
         className={`${styles.floatingButton} ${styles.chat}`}
-        aria-label="채팅 상담"
-        title="채팅 상담"
+        aria-label="상담 신청"
+        title="상담 신청"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M20 11.5a8 8 0 0 1-8.5 8 9.3 9.3 0 0 1-3.8-.9L4 20l1.4-3.5A8 8 0 1 1 20 11.5Z" />
         </svg>
       </a>
 
-      {/* 도입 상담 */}
+      {/* 로그인 */}
       <a
-        href="#contact"
+        href="login"
         className={`${styles.floatingButton} ${styles.consult}`}
-        aria-label="도입 상담 신청"
-        title="도입 상담"
+        aria-label="로그인"
+        title="로그인"
       >
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="8" />
-          <circle cx="12" cy="12" r="3" />
-          <path d="M12 4v5" />
-          <path d="M15 12h5" />
-          <path d="M9.8 14.2 6.3 17.7" />
+          <circle cx="12" cy="8" r="4" />
+          <path d="M4 20c0-4 4-6 8-6s8 2 8 6" />
         </svg>
       </a>
     </aside>

@@ -78,13 +78,27 @@
   }
 }
 
+.head {
+  background: #f6f9fd;
+  font-weight: 800;
+  color: #2c3e50;
+}
+
 .status {
   width: fit-content;
   padding: 4px 7px;
   border-radius: 999px;
-  color: $color-blue-600;
-  background: $color-blue-50;
   font-weight: 800;
+
+  &.normal {
+    color: $color-blue-600;
+    background: $color-blue-50;
+  }
+
+  &.check {
+    color: #DC2626;
+    background: #FEE2E2;
+  }
 }
 
 @media (max-width: 520px) {

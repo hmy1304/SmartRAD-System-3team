@@ -1,5 +1,7 @@
 import styles from "./WorkDashboard.module.scss";
 
+const headers = ["부서", "근무", "상태", "비고"];
+
 const rows = [
   ["응급센터", "야간", "정상", "당직 12명"],
   ["중환자실", "데이", "정상", "간호 31명"],
@@ -26,13 +28,33 @@ export default function WorkDashboard() {
         })}
       </div>
       <div className={styles.table}>
+        <div className={styles.head}>
+          {headers.map((h) => (
+            <span key={h}>{h}</span>
+          ))}
+        </div>
+
         {rows.map((row) => (
           <div key={row.join("-")}>
-            {row.map((cell, index) => (
-              <span key={cell} className={index === 2 ? styles.status : ""}>
-                {cell}
-              </span>
-            ))}
+            {row.map((cell, index) => {
+              if (index === 2) {
+                const statusClass =
+                  cell === "정상"
+                    ? styles.normal
+                    : cell === "확인"
+                      ? styles.check
+                      : "";
+                return (
+                  <span
+                    key={cell}
+                    className={`${styles.status} ${statusClass}`}
+                  >
+                    {cell}
+                  </span>
+                );
+              }
+              return <span key={cell}>{cell}</span>;
+            })}
           </div>
         ))}
       </div>
