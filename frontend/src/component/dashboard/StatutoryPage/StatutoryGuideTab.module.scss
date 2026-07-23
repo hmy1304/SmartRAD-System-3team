@@ -1,0 +1,519 @@
+.guideContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* 상단 메인 카드 영역 */
+.topCards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+.mainCard {
+  border-radius: 12px;
+  padding: 24px;
+  color: white;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+
+  .iconWrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+
+  h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+
+  p {
+    margin: 0 0 24px 0;
+    font-size: 0.85rem;
+    opacity: 0.9;
+    line-height: 1.4;
+    flex: 1;
+  }
+
+  .linkBtn {
+    align-self: flex-start;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+
+  &.blue { background: linear-gradient(135deg, #2563eb, #3b82f6); }
+  &.orange { background: linear-gradient(135deg, #ea580c, #f97316); }
+  &.purple { background: linear-gradient(135deg, #7c3aed, #8b5cf6); }
+  &.green { background: linear-gradient(135deg, #059669, #10b981); }
+}
+
+/* 하단 2단 레이아웃 */
+.bottomLayout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* 공통 사이드 카드 스타일 */
+.sideCard {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  margin-bottom: 24px;
+
+  .cardTitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 20px 0;
+    font-size: 1.1rem;
+    color: #1e293b;
+    font-weight: 600;
+  }
+}
+
+/* 왼쪽 프로세스 섹션 */
+.processSection {
+  background: white;
+  border-radius: 12px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 32px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid #e2e8f0;
+
+  .headerTitle {
+    display: flex;
+    gap: 16px;
+
+    .listIcon {
+      font-size: 24px;
+      width: 48px;
+      height: 48px;
+      background: #eff6ff;
+      color: #3b82f6;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    h2 {
+      margin: 0 0 4px 0;
+      color: #0f172a;
+      font-size: 1.25rem;
+    }
+
+    p {
+      margin: 0;
+      color: #64748b;
+      font-size: 0.9rem;
+    }
+  }
+
+  .badgeProcess {
+    background: #f1f5f9;
+    color: #475569;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+}
+
+.stepsList {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.stepItem {
+  display: flex;
+  gap: 20px;
+  
+  .stepNumber {
+    width: 40px;
+    height: 40px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .stepContent {
+    flex: 1;
+
+    .stepTitle {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+
+      h3 {
+        margin: 0;
+        font-size: 1.1rem;
+        color: #1e293b;
+      }
+    }
+
+    p {
+      margin: 0 0 16px 0;
+      color: #475569;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+  }
+}
+
+.badgeBlue {
+  background: #eff6ff;
+  color: #2563eb;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badgeGreenRight {
+  margin-left: auto;
+  color: #10b981;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.badgeYellowRight {
+  margin-left: auto;
+  color: #f59e0b;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.stepBullets {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+
+  ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+      position: relative;
+      padding-left: 12px;
+      color: #334155;
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+
+      &::before {
+        content: '•';
+        position: absolute;
+        left: 0;
+        color: #3b82f6;
+      }
+    }
+  }
+}
+
+.checkRow {
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  display: flex;
+  gap: 24px;
+  
+  span {
+    color: #059669;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+}
+
+.checkRowGreen {
+  background: #ecfdf5;
+  padding: 16px;
+  border-radius: 8px;
+  display: flex;
+  gap: 24px;
+  
+  span {
+    color: #059669;
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+}
+
+.linkRow {
+  background: #fffbeb;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #fde68a;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  a {
+    color: #d97706;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+
+/* 오른쪽 서식 자료 목록 */
+.downloadList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+
+    .docInfo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .docIcon { color: #3b82f6; }
+      .docIconYellow { color: #f59e0b; }
+      .docIconPurple { color: #8b5cf6; }
+
+      div {
+        display: flex;
+        flex-direction: column;
+        
+        strong {
+          color: #1e293b;
+          font-size: 0.95rem;
+          margin-bottom: 4px;
+        }
+        span {
+          color: #64748b;
+          font-size: 0.8rem;
+        }
+      }
+    }
+
+    button {
+      background: white;
+      border: 1px solid #cbd5e1;
+      color: #3b82f6;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+
+      &:hover { background: #f1f5f9; }
+    }
+
+    .downloadBtnYellow { color: #d97706; }
+    .downloadBtnPurple { color: #7c3aed; }
+  }
+}
+
+/* FAQ 리스트 */
+.faqList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+
+  .faqItem {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 16px;
+
+    .question {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 600;
+      color: #1e293b;
+      font-size: 0.95rem;
+      margin-bottom: 12px;
+
+      .qMark {
+        color: #3b82f6;
+        background: #eff6ff;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 0.8rem;
+      }
+    }
+
+    .answer {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      color: #475569;
+      font-size: 0.9rem;
+      line-height: 1.5;
+
+      .aMark {
+        color: #10b981;
+        background: #ecfdf5;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 0.8rem;
+        flex-shrink: 0;
+      }
+    }
+
+    .answerRed {
+      @extend .answer;
+      
+      .aMarkRed {
+        color: #ef4444;
+        background: #fef2f2;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 0.8rem;
+        flex-shrink: 0;
+      }
+    }
+  }
+}
+
+/* 연락처 카드 (최하단) */
+.contactCard {
+  background: #1e40af;
+  border-radius: 12px;
+  padding: 24px;
+  color: white;
+
+  .contactHeader {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+
+    div {
+      display: flex;
+      flex-direction: column;
+
+      strong {
+        font-size: 1.1rem;
+        margin-bottom: 4px;
+      }
+      span {
+        font-size: 0.85rem;
+        opacity: 0.8;
+      }
+    }
+  }
+
+  .contactInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+
+    .contactRow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      div {
+        display: flex;
+        flex-direction: column;
+
+        span {
+          font-size: 0.8rem;
+          opacity: 0.8;
+          margin-bottom: 2px;
+        }
+        strong {
+          font-size: 1.1rem;
+        }
+      }
+    }
+  }
+
+  .chatBtn {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
