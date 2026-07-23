@@ -147,6 +147,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
   
 
   return (
+    <>
     <main className={styles.main}>
           {mode === "create" ? (
             <form className={styles.createForm} onSubmit={onCreateSubmit}>
@@ -562,5 +563,30 @@ export default function EmployeeManagementPage({ initialData }: Props) {
             </div>
           )}
         </main>
+      <AddressSearchModal
+        open={addressOpen}
+        onClose={() => setAddressOpen(false)}
+        onSelect={({ zipCode, address }) => {
+          setForm((prev) => ({
+            ...prev,
+            zipCode,
+            address,
+          }));
+        }}
+      />
+      <BankAccountVerifyModal
+        open={bankVerifyOpen}
+        bankName={form.bankName}
+        accountNo={form.bankAccount}
+        onClose={() => setBankVerifyOpen(false)}
+        onVerified={() => {
+          setBankVerified(true);
+          setBankVerifyOpen(false);
+        }}
+        onChangeAccount={() => {
+          setBankVerified(false);
+        }}
+      />
+    </>
   );
 }
