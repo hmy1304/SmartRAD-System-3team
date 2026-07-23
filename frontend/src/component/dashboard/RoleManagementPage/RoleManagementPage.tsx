@@ -79,6 +79,25 @@ const getRoleBadgeStyle = (roleName: string) => {
 export default function RoleManagementPage() {
   const [activeTab, setActiveTab] = useState<TabType>("EMPLOYEE");
 
+  // 권한 체크 로직 추가
+  useEffect(() => {
+    try {
+      const userStr = localStorage.getItem('userProfile');
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        if (user.roleGroupName !== '시스템 관리자') {
+          alert('시스템 관리자만 접근할 수 있는 페이지입니다.');
+          window.location.href = '/dashboard';
+        }
+      } else {
+        window.location.href = '/login';
+      }
+    } catch (e) {
+      console.error(e);
+      window.location.href = '/login';
+    }
+  }, []);
+
   // 권한 그룹 관련 State
   const [roleGroups, setRoleGroups] = useState<RoleGroupResponse[]>([]);
   const [selectedRoleGroupId, setSelectedRoleGroupId] = useState<number | null>(null);
