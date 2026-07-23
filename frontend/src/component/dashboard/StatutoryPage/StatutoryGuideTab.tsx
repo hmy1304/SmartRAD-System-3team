@@ -119,7 +119,7 @@ export default function StatutoryGuideTab() {
                     <span>국민연금 · 건강보험 · 고용 · 산재</span>
                   </div>
                 </div>
-                <a href="/documents/form_4insure_acquire.pdf" download className={styles.downloadBtn}>다운로드</a>
+                <a href="/documents/form_4insure_acquire.hwp" download className={styles.downloadBtn}>다운로드</a>
               </li>
               <li>
                 <div className={styles.docInfo}>
@@ -129,7 +129,7 @@ export default function StatutoryGuideTab() {
                     <span>퇴사자 자격상실 신고용</span>
                   </div>
                 </div>
-                <a href="/documents/form_4insure_loss.pdf" download className={styles.downloadBtn}>다운로드</a>
+                <a href="/documents/form_4insure_loss.hwp" download className={styles.downloadBtn}>다운로드</a>
               </li>
               <li>
                 <div className={styles.docInfo}>
@@ -139,7 +139,7 @@ export default function StatutoryGuideTab() {
                     <span>매월 10일까지 제출</span>
                   </div>
                 </div>
-                <a href="/documents/form_withholding_tax.pdf" download className={`${styles.downloadBtn} ${styles.downloadBtnYellow}`}>다운로드</a>
+                <a href="/documents/form_withholding_tax.hwp" download className={`${styles.downloadBtn} ${styles.downloadBtnYellow}`}>다운로드</a>
               </li>
               <li>
                 <div className={styles.docInfo}>
@@ -149,7 +149,7 @@ export default function StatutoryGuideTab() {
                     <span>연말정산 후 3월 제출</span>
                   </div>
                 </div>
-                <a href="/documents/form_payment_statement.pdf" download className={`${styles.downloadBtn} ${styles.downloadBtnPurple}`}>다운로드</a>
+                <a href="/documents/form_payment_statement.hwp" download className={`${styles.downloadBtn} ${styles.downloadBtnPurple}`}>다운로드</a>
               </li>
             </ul>
           </div>
