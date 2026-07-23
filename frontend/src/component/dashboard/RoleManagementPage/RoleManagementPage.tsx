@@ -79,6 +79,7 @@ const getRoleBadgeStyle = (roleName: string) => {
 export default function RoleManagementPage() {
   const [activeTab, setActiveTab] = useState<TabType>("EMPLOYEE");
   const [canEdit, setCanEdit] = useState(false);
+  const [loggedInUserId, setLoggedInUserId] = useState<number | null>(null);
 
   // 권한 체크 로직 추가
   useEffect(() => {
@@ -88,6 +89,10 @@ export default function RoleManagementPage() {
         const user = JSON.parse(userStr);
         let hasAccess = false;
         
+        if (user.employeeId) {
+          setLoggedInUserId(user.employeeId);
+        }
+
         if (user.permissions) {
           const sysPerm = user.permissions.find((p: any) => p.menuCode === 'SYSTEM_ADMIN');
           if (sysPerm && sysPerm.canRead) {
@@ -216,6 +221,10 @@ export default function RoleManagementPage() {
   };
 
   const handleStatusToggle = async (employeeId: number, currentStatus: string) => {
+    if (employeeId === loggedInUserId) {
+      alert("본인의 계정 상태는 변경할 수 없습니다.");
+      return;
+    }
     try {
       const newStatus = currentStatus === "ACTIVE" ? "LOCKED" : "ACTIVE";
       await updateAccountStatus(employeeId, newStatus);
@@ -514,6 +523,8 @@ export default function RoleManagementPage() {
                               <button
                                 className={`${styles.iconBtn} ${emp.accountStatus === "LOCKED" ? styles.lockedBtn : ""}`}
                                 onClick={() => handleStatusToggle(emp.id, emp.accountStatus)}
+                                disabled={emp.id === loggedInUserId || !canEdit}
+                                title={emp.id === loggedInUserId ? "본인 계정은 잠글 수 없습니다" : "계정 상태 변경"}
                               >
                                 {emp.accountStatus === "ACTIVE" ? <Unlock size={16} /> : <Lock size={16} />}
                               </button>
