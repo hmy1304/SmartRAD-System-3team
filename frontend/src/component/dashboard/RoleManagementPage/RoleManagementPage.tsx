@@ -337,36 +337,7 @@ export default function RoleManagementPage() {
   const lastSavedDate = "2026. 07. 11 오전 10:32";
 
   return (
-    <div className={layoutStyles.dashboard}>
-      <DashboardSidebar />
-      <div className={layoutStyles.pageArea} style={{ display: "flex", flexDirection: "column", minHeight: "100svh" }}>
-        <header className={layoutStyles.topHeader}>
-          <label className={layoutStyles.search}>
-            <Search size={18} color="#94a3b8" />
-            <input type="search" placeholder="직원, 부서 문서 등 검색하세요" />
-          </label>
-          <div className={layoutStyles.profile}>
-            <div className={layoutStyles.profileInfo}>
-              <span>A</span>
-              <div>
-                <strong>Admin</strong>
-                <small>시스템 관리자</small>
-              </div>
-            </div>
-            
-            <button
-              className={layoutStyles.logoutBtn}
-              onClick={() => {
-                localStorage.removeItem('accessToken');
-                localStorage.removeItem('userProfile');
-                window.location.href = '/login';
-              }}
-            >
-              로그아웃
-            </button>
-          </div>
-        </header>
-
+    <>
         <div className={styles.container}>
           <header className={styles.header}>
             <div className={styles.brand}>SMART HOSPITAL HR</div>
@@ -840,6 +811,6 @@ export default function RoleManagementPage() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

@@ -50,6 +50,16 @@ export default function DashboardHeader({ profile }: DashboardHeaderProps) {
             </small>
           </div>
         </div>
+        <button
+          className={styles.logoutBtn}
+          onClick={() => {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('userProfile');
+            window.location.href = '/login';
+          }}
+        >
+          로그아웃
+        </button>
       </div>
     </header>
   );
