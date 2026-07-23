@@ -1,29 +1,41 @@
 @use "@/styles/variables" as *;
 
 .dashboard {
-  min-height: 100svh;
+  height: 100svh;
+  overflow: hidden;
   display: grid;
   grid-template-columns: $dashboard-sidebar-width minmax(0, 1fr);
   background: #edf3f9;
 }
+
 .pageArea {
   min-width: 0;
+  min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
+
 .main {
+  flex: 1;
+  min-height: 0;
   padding: 24px;
-  overflow-y: auto;
-  height: calc(100svh - 72px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .pageHeader {
+  flex-shrink: 0;
   margin-bottom: 16px;
+
   h1 {
     margin: 0 0 4px;
     font-size: 22px;
     color: #111c33;
   }
+
   p {
     margin: 0;
     color: #8a97ad;
@@ -32,26 +44,55 @@
 }
 
 .form {
+  flex: 1;
+  min-height: 0;
+  max-width: 1080px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.formBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-width: 1080px;
+  padding-right: 4px;
+  padding-bottom: 12px;
+  -webkit-overflow-scrolling: touch;
 }
+
+.formFooter {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e4eaf3;
+  background: #edf3f9;
+}
+
 .card {
   background: #fff;
   border: 1px solid #e4eaf3;
   border-radius: 16px;
   padding: 20px;
+  flex-shrink: 0;
 }
+
 .cardTitle {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 16px;
+
   h2 {
     margin: 0;
     font-size: 16px;
   }
+
   em {
     margin-left: auto;
     font-style: normal;
@@ -59,6 +100,7 @@
     color: #9aa8bc;
   }
 }
+
 .badgeBlue,
 .badgeGreen,
 .badgePurple {
@@ -68,12 +110,15 @@
   display: grid;
   place-items: center;
 }
+
 .badgeBlue {
   background: #e8f0ff;
 }
+
 .badgeGreen {
   background: #e6f9f0;
 }
+
 .badgePurple {
   background: #f3e8ff;
 }
@@ -83,6 +128,7 @@
   grid-template-columns: 1fr 1fr;
   gap: 12px;
 }
+
 .grid3 {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -95,11 +141,13 @@
   gap: 6px;
   font-size: 13px;
   color: #3a5a8c;
+
   span b {
     color: #e14d55;
     font-size: 11px;
     margin-left: 4px;
   }
+
   input,
   select {
     height: 42px;
@@ -108,6 +156,7 @@
     padding: 0 12px;
     background: #f8fafd;
     outline: none;
+
     &:focus {
       border-color: #3a7bff;
       background: #fff;
@@ -119,6 +168,7 @@
   display: flex;
   gap: 8px;
 }
+
 .segment button {
   flex: 1;
   height: 42px;
@@ -127,6 +177,7 @@
   background: #f8fafd;
   cursor: pointer;
 }
+
 .segActive {
   background: #e8f0ff !important;
   border-color: #3a7bff !important;
@@ -137,18 +188,21 @@
 .error {
   color: #e14d55;
   font-size: 13px;
+  margin: 0;
 }
+
 .note {
   font-size: 12px;
   color: #9aa8bc;
+  margin: 0;
 }
 
 .actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding-bottom: 20px;
 }
+
 .cancelBtn {
   height: 44px;
   padding: 0 18px;
@@ -158,6 +212,7 @@
   cursor: pointer;
   font-weight: 600;
 }
+
 .submitBtn {
   height: 44px;
   padding: 0 20px;
@@ -167,6 +222,7 @@
   color: #fff;
   font-weight: 700;
   cursor: pointer;
+
   &:disabled {
     opacity: 0.6;
   }

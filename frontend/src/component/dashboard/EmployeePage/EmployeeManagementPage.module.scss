@@ -2,7 +2,8 @@
 
 /* ========== 전체 레이아웃 ========== */
 .dashboard {
-  min-height: 100svh;
+  height: 100svh;
+  overflow: hidden;
   display: grid;
   grid-template-columns: $dashboard-sidebar-width minmax(0, 1fr);
   background: #edf3f9;
@@ -10,14 +11,15 @@
 
 .pageArea {
   min-width: 0;
+  min-height: 0;
+  height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .topHeader {
-  position: sticky;
-  top: 0;
-  z-index: 30;
+  flex-shrink: 0;
   height: 72px;
   display: flex;
   align-items: center;
@@ -104,8 +106,9 @@
 
 /* ========== 메인 콘텐츠 ========== */
 .main {
+  flex: 1;
+  min-height: 0;
   padding: 20px 24px;
-  height: calc(100svh - 72px);
   overflow: hidden;
 }
 
@@ -114,7 +117,6 @@
   grid-template-columns: 340px minmax(0, 1fr);
   gap: 20px;
   height: 100%;
-  align-items: stretch;
 }
 
 /* ========== 왼쪽 리스트 박스 ========== */
@@ -1388,13 +1390,20 @@
   padding-left: 4px;
 }
 
+/* ========== 직원 추가 작성 폼 ========== */
 .createForm {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  height: 100%;
+  min-height: 0;
   max-width: 1080px;
+  overflow: hidden;
 }
+
 .createHeader {
+  flex-shrink: 0;
+  margin-bottom: 16px;
+
   h1 {
     margin: 0 0 4px;
     font-size: 22px;
@@ -1406,21 +1415,44 @@
     font-size: 14px;
   }
 }
+
+.createBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-right: 6px;
+  padding-bottom: 12px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.createFooter {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e4eaf3;
+  background: #edf3f9;
+}
+
 .createCard {
   background: #fff;
   border: 1px solid #e4eaf3;
   border-radius: 16px;
   padding: 20px;
+  flex-shrink: 0;
 }
+
 .createCardTitle {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-bottom: 14px;
-  h2 {
-    margin: 0;
-    font-size: 16px;
-  }
+
+  h2 { margin: 0; font-size: 16px; }
   em {
     margin-left: auto;
     font-style: normal;
@@ -1428,6 +1460,7 @@
     color: #9aa8bc;
   }
 }
+
 .createBadgeBlue,
 .createBadgeGreen,
 .createBadgePurple {
@@ -1437,15 +1470,9 @@
   display: grid;
   place-items: center;
 }
-.createBadgeBlue {
-  background: #e8f0ff;
-}
-.createBadgeGreen {
-  background: #e6f9f0;
-}
-.createBadgePurple {
-  background: #f3e8ff;
-}
+.createBadgeBlue { background: #e8f0ff; }
+.createBadgeGreen { background: #e6f9f0; }
+.createBadgePurple { background: #f3e8ff; }
 
 .createGrid2 {
   display: grid;
@@ -1459,6 +1486,7 @@
   gap: 12px;
   margin-bottom: 12px;
 }
+
 .createField {
   display: flex;
   flex-direction: column;
@@ -1466,11 +1494,13 @@
   font-size: 13px;
   color: #3a5a8c;
   margin-bottom: 8px;
+
   span b {
     color: #e14d55;
     font-size: 11px;
     margin-left: 4px;
   }
+
   input,
   select {
     height: 42px;
@@ -1479,12 +1509,14 @@
     padding: 0 12px;
     background: #f8fafd;
     outline: none;
+
     &:focus {
       border-color: #3a7bff;
       background: #fff;
     }
   }
 }
+
 .segment {
   display: flex;
   gap: 8px;
@@ -1503,6 +1535,7 @@
   color: #2155d9;
   font-weight: 600;
 }
+
 .formError {
   color: #e14d55;
   font-size: 13px;
@@ -1517,7 +1550,6 @@
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  padding-bottom: 12px;
 }
 .cancelBtn {
   height: 44px;
@@ -1537,13 +1569,72 @@
   color: #fff;
   font-weight: 700;
   cursor: pointer;
-  &:disabled {
-    opacity: 0.6;
-  }
+
+  &:disabled { opacity: 0.6; }
 }
+
 @media (max-width: 900px) {
   .createGrid2,
   .createGrid3 {
     grid-template-columns: 1fr;
+  }
+}
+
+.addressRow {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+
+  input {
+    flex: 1;
+  }
+}
+
+.addressSearchBtn {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #dce5f3;
+  background: #f0f5ff;
+  color: #2155d9;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: #e8f0ff;
+  }
+}
+
+.accountRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+
+  select {
+    width: 130px;
+    flex-shrink: 0;
+  }
+
+  input {
+    flex: 1;
+  }
+}
+
+.verifyBtn {
+  height: 42px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #dce5f3;
+  background: #f0f5ff;
+  color: #2155d9;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+
+  &:hover {
+    background: #e8f0ff;
   }
 }
