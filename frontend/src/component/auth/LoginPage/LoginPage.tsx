@@ -28,8 +28,15 @@ export default function LoginPage() {
         throw new Error(errorData.message || '로그인에 실패했습니다. 다시 시도해주세요.');
       }
 
-      // Success, typically backend sets HTTP-only cookie with JWT
-      // Wait for it and redirect to dashboard
+      const data = await response.json();
+      
+      // 토큰과 사용자 정보를 브라우저 로컬 스토리지에 저장합니다.
+      if (data.accessToken) {
+        localStorage.setItem('accessToken', data.accessToken);
+        localStorage.setItem('userProfile', JSON.stringify(data));
+      }
+
+      // 대시보드로 이동
       router.push('/dashboard');
     } catch (err: any) {
       setErrorMsg(err.message);
