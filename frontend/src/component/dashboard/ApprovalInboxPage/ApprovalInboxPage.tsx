@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import DashboardSidebar from "@/component/dashboard/DashboardSidebar/DashboardSidebar";
-import DashboardHeader from "@/component/dashboard/DashboardHeader/DashboardHeader";
+
 
 import type {
   ApprovalComment,
@@ -273,12 +272,7 @@ export default function ApprovalInboxPage({
   };
 
   return (
-    <div className={styles.dashboard}>
-      <DashboardSidebar />
-
-      <div className={styles.pageArea}>
-        {/* 상단 헤더 */}
-        <DashboardHeader showNotification={true} />
+    <>
 
         <div
           className={`${styles.contentGrid} ${
@@ -715,7 +709,6 @@ export default function ApprovalInboxPage({
             </aside>
           )}
         </div>
-      </div>
-    </div>
+    </>
   );
 }

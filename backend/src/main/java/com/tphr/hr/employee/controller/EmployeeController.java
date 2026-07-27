@@ -32,10 +32,11 @@ public class EmployeeController {
             @RequestParam(required = false) String positionCode,
             @RequestParam(required = false) String accountStatus,
             @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Long roleGroupId,
             @PageableDefault(size = 20) Pageable pageable) {
 
         EmployeeSearchCondition condition =
-                new EmployeeSearchCondition(departmentId, positionCode, accountStatus, keyword);
+                new EmployeeSearchCondition(departmentId, positionCode, accountStatus, keyword, roleGroupId);
         return ResponseEntity.ok(employeeService.getEmployees(condition, pageable));
     }
 
@@ -63,5 +64,12 @@ public class EmployeeController {
     @PostMapping("/{id}/issue-account")
     public ResponseEntity<AccountIssueResponse> issueAccount(@PathVariable Long id) {
         return ResponseEntity.ok(employeeService.issueAccount(id));
+    }
+
+    // DELETE /employees - 다중 직원 삭제
+    @DeleteMapping
+    public ResponseEntity<Void> deleteEmployees(@RequestParam java.util.List<Long> ids) {
+        employeeService.deleteEmployees(ids);
+        return ResponseEntity.noContent().build();
     }
 }

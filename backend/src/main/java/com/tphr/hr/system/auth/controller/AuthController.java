@@ -13,6 +13,11 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import com.tphr.hr.system.service.RoleGroupService;
+import java.util.Collections;
+import java.util.List;
+import com.tphr.hr.system.dto.RolePermissionResponse;
+
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
@@ -20,6 +25,7 @@ public class AuthController {
 
     private final AuthenticationManager authenticationManager;
     private final JwtTokenProvider jwtTokenProvider;
+    private final RoleGroupService roleGroupService;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
@@ -42,6 +48,11 @@ public class AuthController {
         String departmentName = employee.getDepartment() != null ? employee.getDepartment().getName() : null;
         String positionName = employee.getPosition() != null ? employee.getPosition().getName() : null;
         String roleGroupName = employee.getRoleGroup() != null ? employee.getRoleGroup().getName() : null;
+        
+        List<RolePermissionResponse> permissions = Collections.emptyList();
+        if (employee.getRoleGroup() != null) {
+            permissions = roleGroupService.getPermissions(employee.getRoleGroup().getId());
+        }
 
         // 6. LoginResponse DTO 생성하여 반환
         LoginResponse response = LoginResponse.builder()
@@ -52,6 +63,7 @@ public class AuthController {
                 .departmentName(departmentName)
                 .positionName(positionName)
                 .roleGroupName(roleGroupName)
+                .permissions(permissions)
                 .build();
 
         return ResponseEntity.ok(response);

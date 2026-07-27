@@ -1,0 +1,1096 @@
+@use "@/styles/variables" as vars;
+
+/* Container & Layout */
+.container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 2rem 2.5rem;
+  background-color: #f1f5f9;
+}
+
+.header {
+  margin-bottom: 2rem;
+
+  .brand {
+    color: vars.$color-blue-600;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.5px;
+  }
+
+  h1 {
+    font-size: 1.75rem;
+    font-weight: 800;
+    color: vars.$color-text;
+    margin: 0 0 0.5rem 0;
+    letter-spacing: -0.5px;
+  }
+
+  p {
+    color: vars.$color-muted;
+    font-size: 0.875rem;
+    margin: 0;
+  }
+}
+
+.tabs {
+  display: flex;
+  gap: 2rem;
+  border-bottom: 1px solid #e2e8f0;
+  margin-bottom: 1.5rem;
+
+  button {
+    background: none;
+    border: none;
+    padding: 0.75rem 0;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #64748b;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+
+    &:hover {
+      color: vars.$color-blue-600;
+    }
+
+    &.active {
+      color: vars.$color-blue-600;
+
+      &::after {
+        content: "";
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: vars.$color-blue-600;
+      }
+    }
+  }
+}
+
+.contentArea {
+  flex: 1;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  border: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 탭 내용 상단 툴바 */
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+
+  .titleSection {
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-bottom: 0.375rem;
+      
+      .currentCrumb {
+        color: vars.$color-blue-600;
+        font-weight: 600;
+      }
+    }
+    h2 {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: vars.$color-text;
+      letter-spacing: -0.5px;
+    }
+  }
+
+  .primaryBtn {
+    background-color: vars.$color-blue-600;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background-color 0.2s, transform 0.1s;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+
+    &:hover {
+      background-color: vars.$color-blue-700;
+      transform: translateY(-1px);
+    }
+  }
+
+  .btnGroup {
+    display: flex;
+    gap: 0.5rem;
+
+    .outlineBtn {
+      background: white;
+      border: 1px solid #e2e8f0;
+      padding: 0.625rem 1.25rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        background-color: #f8fafc;
+      }
+
+      &.dangerBtn {
+        color: #ef4444;
+        border-color: #fca5a5;
+
+        &:hover:not(:disabled) {
+          background-color: #fef2f2;
+          border-color: #ef4444;
+        }
+
+        &:disabled {
+          color: #94a3b8;
+          border-color: #e2e8f0;
+          cursor: not-allowed;
+          background: #f8fafc;
+        }
+      }
+    }
+  }
+}
+
+/* 직원 계정 목록 탭용 필터/검색 */
+.filterBar {
+  display: flex;
+  padding: 0.75rem 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+  gap: 1rem;
+  align-items: center;
+
+  .searchWrap {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0 0.75rem;
+    width: 280px;
+
+    input {
+      flex: 1;
+      background: none;
+      border: none;
+      padding: 0.625rem 0;
+      font-size: 0.875rem;
+      outline: none;
+      &::placeholder {
+        color: #94a3b8;
+      }
+    }
+  }
+  
+  .selectWrap select {
+    padding: 0.625rem 2.5rem 0.625rem 1rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: #475569;
+    outline: none;
+    background-color: white;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 1rem;
+  }
+  
+  .totalBadge {
+    margin-left: auto;
+    background-color: #eff6ff;
+    color: vars.$color-blue-600;
+    padding: 0.375rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+}
+
+/* 직원 목록 테이블 */
+.tableContainer {
+  flex: 1;
+  overflow: auto;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th {
+      background-color: #f8fafc;
+      text-align: left;
+      padding: 0.875rem 1.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #64748b;
+      border-bottom: 1px solid #f1f5f9;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    td {
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: middle;
+      font-size: 0.875rem;
+    }
+  }
+  
+  .empNo {
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.8125rem;
+  }
+
+  .department {
+    color: #64748b;
+    font-size: 0.8125rem;
+  }
+
+  .empInfo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.875rem;
+    }
+    
+    .details {
+      display: flex;
+      flex-direction: column;
+      
+      .name {
+        font-weight: 700;
+        color: vars.$color-text;
+      }
+      .position {
+        font-size: 0.75rem;
+        color: #94a3b8;
+      }
+    }
+  }
+}
+
+/* 시스템 권한 셀렉트 */
+.roleSelectWrapper {
+  position: relative;
+  display: inline-block;
+
+  .roleDot {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .dotBlue { background-color: #3b82f6; }
+  .dotGrey { background-color: #94a3b8; }
+  .dotPurple { background-color: #a855f7; }
+  .dotYellow { background-color: #eab308; }
+
+  .roleSelect {
+    padding: 0.375rem 2rem 0.375rem 1.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #334155;
+    appearance: none;
+    background-color: white;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%2394a3b8%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpolyline%20points%3D%226%209%2012%2015%2018%209%22%3E%3C%2Fpolyline%3E%3C%2Fsvg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1rem;
+
+    &:focus {
+      outline: none;
+      border-color: vars.$color-blue-600;
+    }
+  }
+}
+
+/* 계정 상태 배지 */
+.statusBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  
+  &::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+  
+  &.active {
+    background-color: #dcfce7;
+    color: #16a34a;
+    &::before { background-color: #16a34a; }
+  }
+  
+  &.locked {
+    background-color: #fee2e2;
+    color: #dc2626;
+    &::before { background-color: #dc2626; }
+  }
+}
+
+/* 액션 버튼 */
+.actionButtons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
+
+  .iconBtn {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background-color: #f8fafc;
+      color: #334155;
+    }
+
+    &.lockedBtn {
+      color: #ef4444;
+      border-color: #fca5a5;
+      background-color: #fef2f2;
+      
+      &:hover {
+        background-color: #fee2e2;
+      }
+    }
+  }
+}
+
+/* 페이징 행 */
+.paginationRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid #f1f5f9;
+  background-color: #f8fafc;
+
+  .pageInfo {
+    font-size: 0.75rem;
+    color: #64748b;
+  }
+
+  .pagination {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+
+    button {
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: #475569;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover {
+        background: #f1f5f9;
+      }
+
+      &.active {
+        background: vars.$color-blue-600;
+        color: white;
+        border-color: vars.$color-blue-600;
+        font-weight: 600;
+      }
+      
+      &.pageNav {
+        color: #94a3b8;
+      }
+    }
+  }
+}
+
+/* 권한 그룹 설정 탭용 분할 레이아웃 */
+.splitLayout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.leftPanel {
+  width: 380px;
+  border-right: 1px solid #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  background-color: #f8fafc;
+  
+  .panelHeader {
+    padding: 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    .panelTitleWrap {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      
+      h3 {
+        margin: 0;
+        font-size: 0.9375rem;
+        font-weight: 700;
+        color: vars.$color-text;
+      }
+    }
+    
+    .groupCount {
+      background-color: #eff6ff;
+      color: vars.$color-blue-600;
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+      font-size: 0.6875rem;
+      font-weight: 600;
+    }
+  }
+
+  .searchBox {
+    margin: 0 1.25rem 1rem;
+    background-color: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    input {
+      border: none;
+      background: none;
+      outline: none;
+      font-size: 0.8125rem;
+      flex: 1;
+      &::placeholder {
+        color: #94a3b8;
+      }
+    }
+  }
+  
+  .groupList {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 1.25rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .groupCard {
+    background-color: white;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 0.875rem;
+    padding-right: 2.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+    
+    .iconBox {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .info {
+      flex: 1;
+      
+      h4 {
+        margin: 0 0 0.125rem 0;
+        font-size: 0.875rem;
+        font-weight: 700;
+        color: vars.$color-text;
+      }
+      p {
+        margin: 0;
+        font-size: 0.6875rem;
+        color: #94a3b8;
+      }
+    }
+
+    .roleBadge {
+      font-size: 0.625rem;
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 600;
+    }
+    
+    &:hover {
+      border-color: #cbd5e1;
+    }
+    
+    &.active {
+      background-color: #eff6ff;
+      border-color: #bfdbfe;
+      
+      .activeIndicator {
+        position: absolute;
+        right: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        color: vars.$color-blue-600;
+        
+        .dot {
+          width: 4px;
+          height: 4px;
+          border-radius: 50%;
+          background-color: vars.$color-blue-600;
+        }
+      }
+    }
+
+    .deleteGroupBtn {
+      background: none;
+      border: none;
+      color: #94a3b8;
+      padding: 0.25rem;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      opacity: 0;
+
+      &:hover {
+        background-color: #fee2e2;
+        color: #ef4444;
+      }
+    }
+
+    &:hover .deleteGroupBtn {
+      opacity: 1;
+    }
+  }
+
+  .badgePurple { background-color: #f3e8ff; color: #a855f7; }
+  .badgeGreen { background-color: #dcfce7; color: #22c55e; }
+  .badgeBlue { background-color: #eff6ff; color: #3b82f6; }
+  .badgeGrey { background-color: #f1f5f9; color: #64748b; }
+  
+  .addGroupBtn {
+    margin-top: 0.5rem;
+    background: none;
+    border: none;
+    padding: 0.75rem;
+    color: vars.$color-blue-600;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    
+    .plusIcon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border: 1px solid vars.$color-blue-600;
+      border-radius: 50%;
+      font-size: 0.75rem;
+    }
+  }
+}
+
+.rightPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 2rem;
+  overflow-y: auto;
+  
+  .panelHeaderRight {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+
+    .titleArea {
+      .currentSelectionBadge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        background-color: #eff6ff;
+        color: vars.$color-blue-600;
+        padding: 0.25rem 0.625rem;
+        border-radius: 12px;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+
+        .dot {
+          width: 4px;
+          height: 4px;
+          border-radius: 50%;
+          background-color: vars.$color-blue-600;
+        }
+      }
+      
+      h3 {
+        margin: 0 0 0.25rem 0;
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: vars.$color-text;
+      }
+      
+      p {
+        margin: 0;
+        color: #64748b;
+        font-size: 0.8125rem;
+      }
+    }
+
+    .rightActionBtns {
+      display: flex;
+      gap: 0.5rem;
+
+      .outlineBtn {
+        background: white;
+        border: 1px solid #e2e8f0;
+        padding: 0.5rem 0.75rem;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #475569;
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+          background-color: #f8fafc;
+        }
+      }
+    }
+  }
+}
+
+.permissionsTable {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  overflow: hidden;
+  background-color: white;
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    
+    th {
+      background-color: #f8fafc;
+      padding: 1rem;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: center;
+      
+      &:first-child {
+        text-align: left;
+        padding-left: 1.5rem;
+      }
+
+      .thContent {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #64748b;
+      }
+    }
+    
+    td {
+      padding: 1rem;
+      border-bottom: 1px solid #f1f5f9;
+      text-align: center;
+      vertical-align: middle;
+      
+      &:first-child {
+        text-align: left;
+        padding-left: 1.5rem;
+      }
+    }
+    
+    tr:last-child td {
+      border-bottom: none;
+    }
+  }
+  
+  .menuName {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    
+    .menuIcon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &.iconBlue { background-color: #eff6ff; color: #3b82f6; }
+      &.iconGreen { background-color: #dcfce7; color: #22c55e; }
+      &.iconRed { background-color: #fee2e2; color: #ef4444; }
+      &.iconYellow { background-color: #fef3c7; color: #eab308; }
+    }
+    
+    .menuText {
+      .title {
+        margin: 0 0 0.125rem 0;
+        font-weight: 700;
+        font-size: 0.875rem;
+        color: vars.$color-text;
+      }
+      .desc {
+        margin: 0;
+        font-size: 0.6875rem;
+        color: #94a3b8;
+      }
+    }
+  }
+
+  .tableFooter {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    background-color: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+
+    .infoText {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      color: #64748b;
+
+      .infoIcon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        border: 1px solid #94a3b8;
+        font-size: 0.625rem;
+      }
+    }
+
+    .selectAll {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #475569;
+    }
+  }
+}
+
+.customCheckbox {
+  position: relative;
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+
+    &:checked ~ .checkmark {
+      background-color: vars.$color-blue-600;
+      border-color: vars.$color-blue-600;
+
+      &.orange {
+        background-color: #f97316;
+        border-color: #f97316;
+      }
+    }
+
+    &:checked ~ .checkmark:after {
+      display: block;
+    }
+  }
+
+  .checkmark {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 20px;
+    width: 20px;
+    background-color: white;
+    border: 2px solid #cbd5e1;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:after {
+      content: "";
+      position: absolute;
+      display: none;
+      left: 5px;
+      top: 1px;
+      width: 6px;
+      height: 11px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+  }
+}
+
+.actionFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 1.5rem;
+  margin-top: auto;
+  
+  .lastSaved {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    font-size: 0.75rem;
+    color: #94a3b8;
+  }
+
+  .buttons {
+    display: flex;
+    gap: 0.75rem;
+
+    button {
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.375rem;
+      
+      &.cancelBtn {
+        background: white;
+        border: 1px solid #e2e8f0;
+        color: #475569;
+      }
+      
+      &.saveBtn {
+        background: vars.$color-blue-600;
+        border: none;
+        color: white;
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+        
+        &:hover {
+          background: vars.$color-blue-700;
+        }
+      }
+    }
+  }
+}
+
+/* -------------------------------------
+   직원 초대 모달 (Modal)
+------------------------------------- */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.modalContent {
+  background: white;
+  width: 480px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  .modalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e2e8f0;
+
+    h3 {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: vars.$color-text;
+    }
+
+    .closeBtn {
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      color: #94a3b8;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+      
+      &:hover {
+        color: #475569;
+      }
+    }
+  }
+
+  .modalBody {
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+
+    .formGroup {
+      display: flex;
+      flex-direction: column;
+      gap: 0.375rem;
+
+      label {
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: #475569;
+      }
+
+      input, select {
+        padding: 0.625rem 0.875rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        color: vars.$color-text;
+        outline: none;
+        transition: border-color 0.2s;
+
+        &:focus {
+          border-color: vars.$color-blue-600;
+        }
+
+        &::placeholder {
+          color: #94a3b8;
+        }
+      }
+    }
+  }
+
+  .modalFooter {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e2e8f0;
+    background-color: #f8fafc;
+
+    button {
+      padding: 0.625rem 1.25rem;
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      cursor: pointer;
+
+      &.cancelBtn {
+        background: white;
+        border: 1px solid #cbd5e1;
+        color: #475569;
+
+        &:hover {
+          background-color: #f1f5f9;
+        }
+      }
+
+      &.saveBtn {
+        background: vars.$color-blue-600;
+        border: none;
+        color: white;
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+
+        &:hover {
+          background: vars.$color-blue-700;
+        }
+      }
+    }
+  }
+}

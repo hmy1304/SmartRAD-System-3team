@@ -95,6 +95,9 @@ public class Employee extends BaseEntity {
     @Column(name = "bank_account", length = 50)
     private String bankAccount;
 
+    @Column(name = "bank_name", length = 50)
+    private String bankName;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tax_type_code")
     private CommonCode taxType;
@@ -127,7 +130,7 @@ public class Employee extends BaseEntity {
                                String address, String internalPhone, String emergencyContact, String emergencyRelation,
                                Department department, CommonCode position, CommonCode jobCategory,
                                CommonCode employmentType, CommonCode hireRoute, CommonCode workType, String workWard,
-                               Integer payStep, CommonCode payrollType, Integer payrollDate, String bankAccount,
+                               Integer payStep, CommonCode payrollType, Integer payrollDate, String bankAccount, String bankName,
                                CommonCode taxType, RoleGroup roleGroup, Boolean isShiftWorker) {
         if (name != null) this.name = name;
         if (email != null) this.email = email;
@@ -149,6 +152,7 @@ public class Employee extends BaseEntity {
         if (payrollType != null) this.payrollType = payrollType;
         if (payrollDate != null) this.payrollDate = payrollDate;
         if (bankAccount != null) this.bankAccount = bankAccount;
+        if (bankName != null) this.bankName = bankName;
         if (taxType != null) this.taxType = taxType;
         if (roleGroup != null) this.roleGroup = roleGroup;
         if (isShiftWorker != null) this.isShiftWorker = isShiftWorker;

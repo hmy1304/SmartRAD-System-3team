@@ -53,6 +53,18 @@ public class RoleGroupService {
         return RoleGroupResponse.from(roleGroup);
     }
 
+    // DELETE /role-groups/{id} - 권한 그룹 삭제
+    @Transactional
+    public void deleteRoleGroup(Long id) {
+        RoleGroup roleGroup = getRoleGroupEntity(id);
+        
+        // 해당 권한 그룹에 연관된 권한 매핑 삭제
+        rolePermissionRepository.deleteAll(rolePermissionRepository.findByRoleGroupIdOrderByMenuId(id));
+        
+        // 그룹 자체 삭제
+        roleGroupRepository.delete(roleGroup);
+    }
+
     // GET /role-groups/{roleGroupId}/permissions - 해당 권한 그룹의 메뉴별 권한 전체 조회
     public List<RolePermissionResponse> getPermissions(Long roleGroupId) {
         getRoleGroupEntity(roleGroupId); // 존재 검증

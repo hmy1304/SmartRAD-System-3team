@@ -7,6 +7,7 @@ public record EmployeeSearchCondition(
         Long departmentId,
         String positionCode,
         String accountStatus,
-        String keyword // 이름/사번 검색
+        String keyword, // 이름/사번 검색
+        Long roleGroupId
 ) {
 }

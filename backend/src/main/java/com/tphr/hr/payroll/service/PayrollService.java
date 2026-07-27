@@ -233,6 +233,55 @@ public class PayrollService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public PayrollSummaryResponse getPayrollSummary(Integer year, Integer month) {
+        List<PayrollRecord> records = payrollRecordRepository.findByPayrollYearAndPayrollMonth(year, month);
+        
+        int targetCount = records.size();
+        BigDecimal totalAmount = records.stream()
+                .map(PayrollRecord::getNetPay)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        int pendingCount = (int) records.stream()
+                .filter(r -> "PENDING".equals(r.getStatus()))
+                .count();
+                
+        int transferFailedCount = (int) records.stream()
+                .filter(r -> "FAILED".equals(r.getTransferStatus()))
+                .count();
+                
+        return PayrollSummaryResponse.builder()
+                .targetCount(targetCount)
+                .totalAmount(totalAmount)
+                .pendingCount(pendingCount)
+                .transferFailedCount(transferFailedCount)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PayrollMonthlyHistoryResponse> getPayrollHistory(Integer year) {
+        List<PayrollMonthlyHistoryResponse> history = new ArrayList<>();
+        
+        // Loop from month 1 to 12
+        for (int m = 1; m <= 12; m++) {
+            List<PayrollRecord> records = payrollRecordRepository.findByPayrollYearAndPayrollMonth(year, m);
+            if (!records.isEmpty()) {
+                BigDecimal gross = records.stream().map(r -> r.getBaseSalary().add(r.getTotalAllowance())).reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal ded = records.stream().map(PayrollRecord::getTotalDeduction).reduce(BigDecimal.ZERO, BigDecimal::add);
+                BigDecimal net = records.stream().map(PayrollRecord::getNetPay).reduce(BigDecimal.ZERO, BigDecimal::add);
+                
+                history.add(PayrollMonthlyHistoryResponse.builder()
+                        .year(year)
+                        .month(m)
+                        .employeeCount(records.size())
+                        .totalGrossAmount(gross)
+                        .totalDeductionAmount(ded)
+                        .totalNetAmount(net)
+                        .build());
+            }
+        }
+        return history;
+    }
     private PayrollResponse mapToResponse(PayrollRecord record) {
         return PayrollResponse.builder()
                 .id(record.getId())
@@ -245,6 +294,12 @@ public class PayrollService {
                 .totalDeduction(record.getTotalDeduction())
                 .netPay(record.getNetPay())
                 .status(record.getStatus())
+                .departmentName(record.getEmployee().getDepartment() != null ? record.getEmployee().getDepartment().getName() : null)
+                .empNo(record.getEmployee().getEmpNo())
+                .bankName(record.getEmployee().getBankName())
+                .bankAccount(record.getEmployee().getBankAccount())
+                .transferStatus(record.getTransferStatus())
+                .transferDate(record.getTransferDate())
                 .build();
     }
 }

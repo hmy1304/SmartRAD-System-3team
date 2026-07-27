@@ -37,6 +37,10 @@ public final class EmployeeSpecifications {
                 ));
             }
 
+            if (condition.roleGroupId() != null) {
+                predicates.add(cb.equal(root.get("roleGroup").get("id"), condition.roleGroupId()));
+            }
+
             return cb.and(predicates.toArray(new jakarta.persistence.criteria.Predicate[0]));
         };
     }

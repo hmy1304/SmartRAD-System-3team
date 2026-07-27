@@ -94,4 +94,25 @@ public class PayrollController {
         PayrollResponse response = payrollService.updatePayroll(recordId, request);
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * 7. 상단 요약 카드 데이터 (특정 월)
+     */
+    @GetMapping("/{year}/{month}/summary")
+    public ResponseEntity<PayrollSummaryResponse> getPayrollSummary(
+            @PathVariable Integer year,
+            @PathVariable Integer month) {
+        PayrollSummaryResponse response = payrollService.getPayrollSummary(year, month);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 8. 월별 급여 지급 추이 (특정 연도)
+     */
+    @GetMapping("/history")
+    public ResponseEntity<List<PayrollMonthlyHistoryResponse>> getPayrollHistory(
+            @RequestParam(defaultValue = "2026") Integer year) {
+        List<PayrollMonthlyHistoryResponse> response = payrollService.getPayrollHistory(year);
+        return ResponseEntity.ok(response);
+    }
 }

@@ -1,0 +1,292 @@
+.pageContainer {
+  padding: 2rem;
+  background-color: #f8fafc;
+  min-height: 100vh;
+  font-family: inherit;
+}
+
+.header {
+  margin-bottom: 2rem;
+  
+  .titleBox {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0;
+    }
+
+    p {
+      color: #64748b;
+      font-size: 0.875rem;
+      margin-top: 0.25rem;
+    }
+  }
+}
+
+.tabList {
+  display: flex;
+  gap: 1rem;
+  
+  .tabButton {
+    padding: 0.5rem 1rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.2s;
+
+    &:hover {
+      background: #f1f5f9;
+    }
+
+    &.active {
+      background: white;
+      border-color: #3b82f6;
+      color: #3b82f6;
+      font-weight: 600;
+      box-shadow: 0 1px 2px rgba(59, 130, 246, 0.1);
+    }
+  }
+
+  .primaryAction {
+    margin-left: auto;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+    cursor: pointer;
+
+    &:hover {
+      background: #2563eb;
+    }
+  }
+}
+
+/* Dashboard Summary Cards */
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.summaryCard {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  .cardHeader {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #475569;
+    font-size: 0.875rem;
+    font-weight: 600;
+
+    .icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .iconBlue { background: #eff6ff; color: #3b82f6; }
+    .iconOrange { background: #fff7ed; color: #f97316; }
+    .iconGreen { background: #f0fdf4; color: #22c55e; }
+    .iconPurple { background: #faf5ff; color: #a855f7; }
+  }
+
+  .cardBody {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+
+    .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .label {
+      font-size: 0.875rem;
+      color: #64748b;
+    }
+  }
+}
+
+/* Main Dashboard Layout */
+.dashboardMain {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+}
+
+.section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  margin-bottom: 1.5rem;
+
+  .sectionHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+
+    h2 {
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0;
+    }
+  }
+}
+
+.dataTable {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    text-align: left;
+    padding: 0.75rem;
+    color: #64748b;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  td {
+    padding: 1rem 0.75rem;
+    color: #334155;
+    font-size: 0.875rem;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+  }
+}
+
+.badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+
+  &.success { background: #dcfce7; color: #166534; }
+  &.warning { background: #fef08a; color: #854d0e; }
+  &.danger { background: #fee2e2; color: #991b1b; }
+  &.info { background: #e0e7ff; color: #3730a3; }
+}
+
+.btnSmall {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  border-radius: 4px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #475569;
+  cursor: pointer;
+  
+  &:hover {
+    background: #f8fafc;
+  }
+}
+
+.btnPrimary {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  
+  &:hover {
+    background: #2563eb;
+  }
+}
+
+/* Calendar Specific */
+.calendarContainer {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+
+  .calendarHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    
+    .nav {
+      display: flex;
+      gap: 0.5rem;
+      button {
+        padding: 0.25rem 0.75rem;
+        border: 1px solid #e2e8f0;
+        background: white;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+    }
+  }
+
+  .calendarGrid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border: 1px solid #e2e8f0;
+    
+    .dayName {
+      padding: 0.5rem;
+      text-align: center;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #64748b;
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    .dayCell {
+      min-height: 100px;
+      padding: 0.5rem;
+      border-right: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+
+      &:nth-child(7n) {
+        border-right: none;
+      }
+
+      .dateNum {
+        font-size: 0.875rem;
+        color: #334155;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+      }
+
+      .event {
+        font-size: 0.75rem;
+        padding: 0.25rem;
+        border-radius: 4px;
+        margin-bottom: 0.25rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        
+        &.urgent { background: #fee2e2; color: #991b1b; }
+        &.done { background: #dcfce7; color: #166534; }
+        &.pending { background: #fef08a; color: #854d0e; }
+      }
+    }
+  }
+}

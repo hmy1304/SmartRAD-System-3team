@@ -18,4 +18,5 @@ public class LoginResponse {
     private String departmentName;
     private String positionName;
     private String roleGroupName;
+    private java.util.List<com.tphr.hr.system.dto.RolePermissionResponse> permissions;
 }

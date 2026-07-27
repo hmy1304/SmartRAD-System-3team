@@ -40,7 +40,7 @@ export default function FloatingButtons() {
 
       {/* 로그인 */}
       <a
-        href="login"
+        href="/login"
         className={`${styles.floatingButton} ${styles.consult}`}
         aria-label="로그인"
         title="로그인"

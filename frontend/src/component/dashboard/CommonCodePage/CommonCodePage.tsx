@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import DashboardSidebar from "../DashboardSidebar/DashboardSidebar";
-import DashboardHeader from "../DashboardHeader/DashboardHeader";
 import type { DashboardData } from "@/types/dashboard";
 import styles from "./CommonCodePage.module.scss";
 import { fetchGroupCodes, fetchCommonCodes, CommonCode, createCommonCode, updateCommonCode } from "@/services/commonCodeService";
@@ -61,13 +59,7 @@ export default function CommonCodePage({ initialData }: CommonCodePageProps) {
   const filteredGroups = groupCodes.filter(g => g.toLowerCase().includes(searchGroupQuery.toLowerCase()));
 
   return (
-    <div className={styles.dashboard}>
-      <DashboardSidebar />
-
-      <div className={styles.pageArea}>
-        {/* 상단 헤더 */}
-        {/* 상단 헤더 */}
-        <DashboardHeader profile={profile} />
+    <>
 
         {/* 본문 영역 */}
         <main className={styles.mainContent}>
@@ -184,7 +176,6 @@ export default function CommonCodePage({ initialData }: CommonCodePageProps) {
             </section>
           </div>
         </main>
-      </div>
 
       {/* 모달 */}
       {isModalOpen && (
@@ -204,7 +195,7 @@ export default function CommonCodePage({ initialData }: CommonCodePageProps) {
           }}
         />
       )}
-    </div>
+    </>
   );
 }
 

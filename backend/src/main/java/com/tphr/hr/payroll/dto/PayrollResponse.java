@@ -17,4 +17,10 @@ public class PayrollResponse {
     private BigDecimal totalDeduction;
     private BigDecimal netPay;
     private String status;
+    private String departmentName;
+    private String empNo;
+    private String bankName;
+    private String bankAccount;
+    private String transferStatus;
+    private java.time.LocalDateTime transferDate;
 }

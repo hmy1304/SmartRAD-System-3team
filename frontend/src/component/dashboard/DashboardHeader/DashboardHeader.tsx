@@ -12,7 +12,6 @@ interface ProfileData {
 
 interface DashboardHeaderProps {
   profile?: ProfileData;
-  showNotification?: boolean;
 }
 
 function BellIcon() {
@@ -24,7 +23,7 @@ function BellIcon() {
   );
 }
 
-export default function DashboardHeader({ profile, showNotification = false }: DashboardHeaderProps) {
+export default function DashboardHeader({ profile }: DashboardHeaderProps) {
   const defaultProfile = {
     initial: "김",
     name: "김관리",
@@ -42,21 +41,25 @@ export default function DashboardHeader({ profile, showNotification = false }: D
       </label>
 
       <div className={styles.topActions}>
-        {showNotification && (
-          <button type="button" className={styles.notificationButton} aria-label="알림">
-            <BellIcon />
-          </button>
-        )}
-
         <div className={styles.profile}>
           <span>{currentProfile.initial || currentProfile.name?.[0] || "김"}</span>
           <div>
-            <strong>{currentProfile.name}</strong>
+            <strong>{currentProfile.name}님</strong>
             <small>
               {currentProfile.department} · {currentProfile.role}
             </small>
           </div>
         </div>
+        <button
+          className={styles.logoutBtn}
+          onClick={() => {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('userProfile');
+            window.location.href = '/login';
+          }}
+        >
+          로그아웃
+        </button>
       </div>
     </header>
   );

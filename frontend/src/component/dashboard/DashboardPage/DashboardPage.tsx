@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-import DashboardSidebar from "../DashboardSidebar/DashboardSidebar";
-import DashboardHeader from "../DashboardHeader/DashboardHeader";
+
 
 import type { DashboardData } from "@/types/dashboard";
 
@@ -51,12 +50,7 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
   }, []);
 
   return (
-    <div className={styles.dashboard}>
-      <DashboardSidebar />
-
-      <div className={styles.pageArea}>
-        {/* 상단 헤더 */}
-        <DashboardHeader profile={profile} />
+    <>
 
         <main className={styles.main}>
           <section className={styles.welcome}>
@@ -225,7 +219,6 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
             </article>
           </section>
         </main>
-      </div>
-    </div>
+    </>
   );
 }

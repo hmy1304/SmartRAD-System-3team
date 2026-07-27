@@ -48,6 +48,13 @@ public class PayrollRecord extends BaseEntity {
     @Builder.Default
     private String status = "PENDING"; // 대기, 완료 등
 
+    @Column(name = "transfer_status", length = 20)
+    @Builder.Default
+    private String transferStatus = "NONE"; // NONE, SUCCESS, FAILED
+
+    @Column(name = "transfer_date")
+    private java.time.LocalDateTime transferDate;
+
     public void confirm() {
         this.status = "CONFIRMED";
     }

@@ -11,6 +11,8 @@ public record EmployeeSummaryResponse(
         String departmentName,
         String positionName,
         String jobCategoryName,
+        String roleGroupName,
+        Long roleGroupId,
         String accountStatus,
         LocalDate joinDate
 ) {
@@ -22,6 +24,8 @@ public record EmployeeSummaryResponse(
                 e.getDepartment() != null ? e.getDepartment().getName() : null,
                 e.getPosition() != null ? e.getPosition().getName() : null,
                 e.getJobCategory() != null ? e.getJobCategory().getName() : null,
+                e.getRoleGroup() != null ? e.getRoleGroup().getName() : null,
+                e.getRoleGroup() != null ? e.getRoleGroup().getId() : null,
                 e.getAccountStatus(),
                 e.getJoinDate()
         );

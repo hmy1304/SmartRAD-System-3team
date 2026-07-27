@@ -1,0 +1,675 @@
+@use "../../../styles/variables" as *;
+
+.dashboard {
+  min-height: 100svh;
+  display: grid;
+  grid-template-columns: $dashboard-sidebar-width minmax(0, 1fr);
+  background: #F2F4F7; // Off-white gray background
+}
+
+.pageArea {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pageContainer {
+  padding: 2.5rem 3rem;
+  max-width: 1440px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 2rem;
+
+  .titleBox {
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #191f28;
+      margin-bottom: 0.5rem;
+      letter-spacing: -0.02em;
+    }
+    p {
+      color: #8b95a1;
+      font-size: 0.9375rem;
+      font-weight: 500;
+    }
+  }
+
+  .actionBox {
+    display: flex;
+    gap: 0.75rem;
+
+    button {
+      padding: 0.625rem 1rem;
+      background-color: white;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 600;
+      color: #4e5968;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: background 0.2s;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+
+      &:hover { background-color: #f9fafb; }
+      
+      svg { width: 16px; height: 16px; color: #8b95a1; }
+      
+      &.greenText {
+        color: #0B6B49;
+        svg { color: #0E8A5E; }
+      }
+    }
+  }
+}
+
+.summaryCards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+
+  .card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .cardLeft {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+
+      .iconBox {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        
+        &.blue { background-color: #eff6ff; color: #3182f6; }
+        &.green { background-color: #E8F5E9; color: #0E8A5E; }
+        &.red { background-color: #fff1f0; color: #ff4d4f; }
+        &.yellow { background-color: #fefce8; color: #eab308; }
+        
+        svg { width: 24px; height: 24px; }
+      }
+
+      .infoBox {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+
+        .cardTitle {
+          font-size: 0.875rem;
+          color: #4e5968;
+          font-weight: 600;
+        }
+
+        .cardValue {
+          font-size: 1.5rem;
+          font-weight: 800;
+          color: #191f28;
+          display: flex;
+          align-items: baseline;
+          gap: 0.25rem;
+          
+          span {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #4e5968;
+          }
+        }
+      }
+    }
+
+    .cardRight {
+      .badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        
+        &.blueText { color: #3182f6; }
+        &.greenBg { background-color: #e6f4ea; color: #0B6B49; }
+        &.redBg { background-color: #fde8e8; color: #c81e1e; }
+        &.orangeText { color: #ea580c; }
+      }
+    }
+  }
+}
+
+.mainLayout {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  gap: 1.5rem;
+
+  .leftCol, .rightCol {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+}
+
+.dataCard {
+  background: white;
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 1.5rem;
+
+  .cardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+
+    .cardTitle {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      
+      .titleIcon {
+        width: 32px;
+        height: 32px;
+        border-radius: 0.5rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        
+        &.blue { background-color: #eff6ff; color: #3182f6; }
+        &.red { background-color: #fff1f0; color: #ff4d4f; }
+        &.green { background-color: #E8F5E9; color: #0E8A5E; }
+        &.yellow { background-color: #fefce8; color: #eab308; }
+        
+        svg { width: 16px; height: 16px; }
+      }
+
+      h2 {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: #191f28;
+      }
+
+      p {
+        font-size: 0.8125rem;
+        color: #8b95a1;
+        margin-left: 0.5rem;
+      }
+    }
+
+    .headerAction {
+      .badge {
+        padding: 0.375rem 0.75rem;
+        background-color: #eff6ff;
+        color: #3182f6;
+        border-radius: 0.5rem;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        border: 1px solid #dbeafe;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+      }
+      
+      .solidBtn {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background-color: #3182f6;
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: filter 0.2s;
+
+        &.green { background-color: #0E8A5E; }
+
+        &:hover { filter: brightness(0.9); }
+      }
+    }
+  }
+}
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+  
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    
+    th {
+      font-size: 0.8125rem;
+      color: #8b95a1;
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      border-bottom: 2px solid #f2f4f6;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 1rem;
+      font-size: 0.875rem;
+      color: #333d4b;
+      border-bottom: 1px solid #f2f4f6;
+      vertical-align: middle;
+      font-weight: 600;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+  }
+}
+
+.editBtn {
+  width: 32px;
+  height: 32px;
+  background: white;
+  border: 1px solid #e5e8eb;
+  border-radius: 0.5rem;
+  color: #8b95a1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  
+  &:hover {
+    background-color: #f9fafb;
+    color: #4e5968;
+    border-color: #d1d5db;
+  }
+  
+  svg { width: 14px; height: 14px; }
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem 0 0.5rem 0;
+  
+  .pageBtn {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: white;
+    border: 1px solid #e5e8eb;
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #4e5968;
+    cursor: pointer;
+    transition: all 0.2s;
+    
+    &:hover {
+      background-color: #f9fafb;
+      border-color: #d1d5db;
+    }
+    
+    &.active {
+      background-color: #3182f6;
+      border-color: #3182f6;
+      color: white;
+    }
+  }
+}
+
+/* Custom Table cell styles */
+.jobBadge {
+  display: inline-flex;
+  padding: 0.25rem 0.625rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  
+  &.purple { background-color: #f3e8ff; color: #7e22ce; }
+  &.blue { background-color: #dbeafe; color: #1d4ed8; }
+  &.green { background-color: #dcfce7; color: #15803d; }
+  &.yellow { background-color: #fef08a; color: #a16207; }
+  &.gray { background-color: #e5e7eb; color: #374151; }
+}
+
+.rangeBar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  
+  .value {
+    font-weight: 800;
+    color: #191f28;
+  }
+  
+  .bar {
+    height: 4px;
+    border-radius: 2px;
+    background-color: #f3f4f6;
+    width: 100%;
+    overflow: hidden;
+    
+    .fill {
+      height: 100%;
+      border-radius: 2px;
+      
+      &.purple { background-color: #a855f7; width: 60%; }
+      &.blue { background-color: #3b82f6; width: 50%; }
+      &.green { background-color: #22c55e; width: 40%; }
+      &.yellow { background-color: #eab308; width: 80%; }
+      &.gray { background-color: #9ca3af; width: 30%; }
+    }
+  }
+}
+
+.typeBadge {
+  display: inline-flex;
+  padding: 0.25rem 0.625rem;
+  border-radius: 1rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background-color: white;
+  
+  &.red { border: 1px solid #fca5a5; color: #ef4444; }
+  &.purple { border: 1px solid #d8b4fe; color: #a855f7; }
+}
+
+.calcMethod {
+  font-size: 0.8125rem;
+  color: #4e5968;
+  font-weight: 600;
+}
+
+.rateValue {
+  font-size: 0.875rem;
+  font-weight: 800;
+  
+  &.blue { color: #3182f6; }
+  &.orange { color: #f97316; }
+  &.purple { color: #a855f7; }
+}
+
+.tabList {
+  display: flex;
+  gap: 1.5rem;
+  border-bottom: 1px solid #e5e8eb;
+  margin-bottom: 1.5rem;
+  
+  .tabBtn {
+    padding: 0.75rem 0;
+    background: none;
+    border: none;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #8b95a1;
+    cursor: pointer;
+    position: relative;
+    
+    &.active {
+      color: #3182f6;
+      font-weight: 700;
+      
+      &::after {
+        content: '';
+        position: absolute;
+        bottom: -1px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: #3182f6;
+      }
+    }
+  }
+}
+
+.allowanceList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  
+  .allowanceItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid #f2f4f6;
+    border-radius: 1rem;
+    background-color: #fafbfc;
+    transition: background-color 0.2s;
+    
+    &:hover { background-color: #f9fafb; border-color: #e5e8eb; }
+    
+    .itemLeft {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      
+      .itemIcon {
+        width: 40px;
+        height: 40px;
+        background-color: #eff6ff;
+        border-radius: 0.75rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #3182f6;
+        
+        svg { width: 20px; height: 20px; }
+      }
+      
+      .itemInfo {
+        h3 {
+          font-size: 0.875rem;
+          font-weight: 700;
+          color: #191f28;
+          margin-bottom: 0.25rem;
+        }
+        p {
+          font-size: 0.75rem;
+          color: #8b95a1;
+          font-weight: 500;
+        }
+      }
+    }
+    
+    .itemRight {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      
+      .itemRate {
+        font-size: 0.9375rem;
+        font-weight: 800;
+        color: #3182f6;
+        width: 50px;
+        text-align: right;
+      }
+      
+      .itemActions {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+      }
+    }
+  }
+}
+
+.toggleSwitch {
+  position: relative;
+  display: inline-block;
+  width: 40px;
+  height: 22px;
+  
+  input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    
+    &:checked + .slider {
+      background-color: #3182f6;
+    }
+    
+    &:checked + .slider:before {
+      transform: translateX(18px);
+    }
+  }
+  
+  .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: #cbd5e1;
+    transition: .3s;
+    border-radius: 22px;
+    
+    &:before {
+      position: absolute;
+      content: "";
+      height: 18px;
+      width: 18px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    }
+  }
+}
+
+/* Minimum Wage Component */
+.minWageWrap {
+  margin-top: 1rem;
+  
+  .minWageDetails {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    
+    .detailCol {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      
+      .label {
+        font-size: 0.8125rem;
+        color: #8b95a1;
+        font-weight: 600;
+      }
+      
+      .amount {
+        font-size: 1.125rem;
+        font-weight: 800;
+        color: #191f28;
+      }
+    }
+  }
+  
+  .complianceAlert {
+    background-color: #e6f4ea;
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    
+    .alertText {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: #0B6B49;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .alertStatus {
+      font-size: 0.875rem;
+      font-weight: 800;
+      color: #0B6B49;
+      background-color: white;
+      padding: 0.25rem 0.75rem;
+      border-radius: 1rem;
+    }
+  }
+}
+
+/* --------------------------------------
+ * Media Queries for Responsiveness
+ * -------------------------------------- */
+@media (max-width: 1200px) {
+  .mainLayout {
+    grid-template-columns: 1fr;
+  }
+  
+  .summaryCards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .pageContainer {
+    padding: 2rem 1.5rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .summaryCards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .pageContainer {
+    padding: 1.5rem 1rem;
+  }
+
+  .summaryCards {
+    grid-template-columns: 1fr;
+  }
+
+  .allowanceList .allowanceItem {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+    
+    .itemRight {
+      width: 100%;
+      justify-content: space-between;
+    }
+  }
+
+  .minWageWrap .minWageDetails {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .complianceAlert {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+}

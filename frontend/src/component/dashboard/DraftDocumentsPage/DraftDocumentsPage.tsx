@@ -2,8 +2,7 @@
 
 import { useMemo, useState } from "react";
 
-import DashboardSidebar from "@/component/dashboard/DashboardSidebar/DashboardSidebar";
-import DashboardHeader from "@/component/dashboard/DashboardHeader/DashboardHeader";
+
 
 import styles from "./DraftDocumentsPage.module.scss";
 
@@ -323,12 +322,7 @@ export default function DraftDocumentsPage() {
   }, [activeTab, keyword]);
 
   return (
-    <div className={styles.dashboard}>
-      <DashboardSidebar />
-
-      <div className={styles.pageArea}>
-        {/* 상단 헤더 */}
-        <DashboardHeader />
+    <>
 
         <main className={styles.main}>
           <section className={styles.pageHeader}>
@@ -560,7 +554,6 @@ export default function DraftDocumentsPage() {
             </div>
           </section>
         </main>
-      </div>
-    </div>
+    </>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import DashboardSidebar from "@/component/dashboard/DashboardSidebar/DashboardSidebar";
+
 import styles from "./OrganizationPage.module.scss";
 
 const DEPARTMENTS = [
@@ -65,54 +65,7 @@ export default function OrganizationPage() {
   const filteredDepts = DEPARTMENTS.filter((d) => d.name.includes(deptKeyword));
 
   return (
-    <div className={styles.dashboard}>
-      <DashboardSidebar />
-
-      <div className={styles.pageArea}>
-        {/* ===== 상단 헤더 (직원관리와 동일) ===== */}
-        <header className={styles.topHeader}>
-          <div className={styles.globalSearch}>
-            <svg
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-            <input placeholder="직원, 부서, 문서를 검색하세요" />
-          </div>
-
-          <div className={styles.topActions}>
-            <button type="button" className={styles.notifBtn} aria-label="알림">
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-                <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-              </svg>
-            </button>
-
-            <div className={styles.userChip}>
-              <span className={styles.userAvatar}>김</span>
-              <div>
-                <strong>김관리</strong>
-                <small>인사팀 · 관리자</small>
-              </div>
-            </div>
-          </div>
-        </header>
-
-        {/* ===== 메인 ===== */}
-        <main className={styles.main}>
+    <main className={styles.main}>
           {/* 페이지 헤더 */}
           <div className={styles.pageHeader}>
             <div>
@@ -396,7 +349,5 @@ export default function OrganizationPage() {
             </section>
           </div>
         </main>
-      </div>
-    </div>
   );
 }

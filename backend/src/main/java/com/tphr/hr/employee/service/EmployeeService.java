@@ -122,6 +122,7 @@ public class EmployeeService {
                 getCommonCodeOrNull(request.payrollTypeCode()),
                 request.payrollDate(),
                 request.bankAccount(),
+                request.bankName(),
                 getCommonCodeOrNull(request.taxTypeCode()),
                 roleGroup,
                 request.isShiftWorker()
@@ -148,6 +149,11 @@ public class EmployeeService {
         employee.changePassword(passwordEncoder.encode(rawPassword));
         
         return new AccountIssueResponse(employee.getId(), employee.getEmpNo(), rawPassword);
+    }
+
+    @Transactional
+    public void deleteEmployees(java.util.List<Long> ids) {
+        employeeRepository.deleteAllByIdInBatch(ids);
     }
 
     Employee getEmployeeEntity(Long id) {
@@ -177,12 +183,8 @@ public class EmployeeService {
     }
 
     // 임의의 초기 비밀번호를 생성한다. 관리자는 발급된 비밀번호를 최초 1회 신규 직원에게 전달한다.
+    // 데모/테스트 환경을 위해 무조건 '1234'로 발급되도록 수정
     private String generateInitialPassword() {
-        StringBuilder sb = new StringBuilder(INITIAL_PASSWORD_LENGTH);
-        for (int i = 0; i < INITIAL_PASSWORD_LENGTH; i++) {
-            int index = secureRandom.nextInt(INITIAL_PASSWORD_CHARS.length());
-            sb.append(INITIAL_PASSWORD_CHARS.charAt(index));
-        }
-        return sb.toString();
+        return "1234";
     }
 }

@@ -55,4 +55,11 @@ public class RoleGroupController {
                                                                   @Valid @RequestBody RolePermissionUpdateRequest request) {
         return ResponseEntity.ok(roleGroupService.setPermission(roleGroupId, menuId, request));
     }
+
+    // DELETE /role-groups/{id} - 권한 그룹 삭제
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteRoleGroup(@PathVariable Long id) {
+        roleGroupService.deleteRoleGroup(id);
+        return ResponseEntity.noContent().build();
+    }
 }

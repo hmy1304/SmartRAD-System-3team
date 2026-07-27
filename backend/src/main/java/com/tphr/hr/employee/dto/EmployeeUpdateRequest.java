@@ -49,6 +49,8 @@ public record EmployeeUpdateRequest(
 
         String bankAccount,
 
+        String bankName,
+
         String taxTypeCode,
 
         Long roleGroupId,
