@@ -64,10 +64,11 @@ const getIconForRole = (roleName: string) => {
 
 const getMenuIcon = (menuName: string) => {
   if (menuName.includes("듀티표")) return <Calendar size={18} />;
-  if (menuName.includes("전자결재")) return <FileText size={18} />;
-  if (menuName.includes("시스템")) return <Settings size={18} />;
-  if (menuName.includes("인사")) return <Users size={18} />;
-  if (menuName.includes("휴가")) return <Umbrella size={18} />;
+  if (menuName.includes("결재") || menuName.includes("기안")) return <FileText size={18} />;
+  if (menuName.includes("권한") || menuName.includes("공통") || menuName.includes("시스템")) return <Settings size={18} />;
+  if (menuName.includes("직원") || menuName.includes("조직") || menuName.includes("인사")) return <Users size={18} />;
+  if (menuName.includes("휴가") || menuName.includes("근태") || menuName.includes("출퇴근")) return <Umbrella size={18} />;
+  if (menuName.includes("급여") || menuName.includes("법정") || menuName.includes("마감")) return <Shield size={18} />;
   return <FileText size={18} />;
 };
 
@@ -95,14 +96,14 @@ export default function RoleManagementPage() {
           setLoggedInUserId(user.employeeId);
         }
 
-        if (user.permissions) {
-          const sysPerm = user.permissions.find((p: any) => p.menuCode === 'SYSTEM_ADMIN');
+        if (user.permissions && Array.isArray(user.permissions)) {
+          const sysPerm = user.permissions.find((p: any) => p.menuCode === 'SYSTEM_ROLES' || p.menuCode === 'SYSTEM_ADMIN');
           if (sysPerm && sysPerm.canRead) {
             hasAccess = true;
-            setCanEdit(sysPerm.canWrite);
+            setCanEdit(!!sysPerm.canWrite);
           }
-        } else if (user.roleGroupName === '시스템 관리자') {
-          hasAccess = true; // Fallback
+        } else if (user.roleGroupName === '최고관리자' || user.roleGroupName === '시스템 관리자') {
+          hasAccess = true;
           setCanEdit(true);
         }
 

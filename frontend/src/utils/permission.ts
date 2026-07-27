@@ -3,15 +3,21 @@
 import { useEffect, useState } from "react";
 
 export type MenuCode =
-  | "EMP_MASTER"
+  | "APPROVAL_INBOX"
+  | "APPROVAL_DRAFT"
+  | "EMP_LIST"
+  | "EMP_ORG"
   | "APPOINTMENT"
   | "DUTY_SCHEDULE"
-  | "ATTENDANCE"
-  | "LICENSE_EDU_HEALTH"
-  | "PAYROLL"
-  | "APPROVAL"
+  | "ATTEND_ADMIN"
+  | "ATTEND_CHECK"
+  | "LEAVE_STATUS"
+  | "PAYROLL_INFO"
+  | "PAYROLL_PROC"
+  | "STATUTORY_REPORT"
+  | "SYSTEM_ROLES"
+  | "SYSTEM_CODE"
   | "NOTICE"
-  | "SYSTEM_ADMIN"
   | string;
 
 export function hasPermission(menuCode: MenuCode, action: "canRead" | "canWrite" | "canDelete" | "canApprove"): boolean {
@@ -21,7 +27,7 @@ export function hasPermission(menuCode: MenuCode, action: "canRead" | "canWrite"
     if (!userStr) return false;
     const user = JSON.parse(userStr);
     
-    // 최고관리자나 시스템 관리자 또는 마에스터 계정인 경우 슈퍼권한 부여
+    // 최고관리자나 시스템 관리자 또는 관리자 계정인 경우 슈퍼권한 부여
     if (user.roleGroupName === "최고관리자" || user.roleGroupName === "시스템 관리자" || user.roleGroupName?.includes("관리자") || user.empNo === "ADMIN-001") {
       return true;
     }
@@ -32,7 +38,7 @@ export function hasPermission(menuCode: MenuCode, action: "canRead" | "canWrite"
         return !!p[action];
       }
     }
-    // 권한 항목이 없거나 false이면 거부
+    // 기본값 거부 (False)
     return false;
   } catch (e) {
     return false;
@@ -46,7 +52,7 @@ export function usePageGuard(menuCode: MenuCode, action: "canRead" | "canWrite" 
     const allowed = hasPermission(menuCode, action);
     setAuthorized(allowed);
     if (!allowed) {
-      alert(`[접근 차단] 해당 기능(${menuCode})에 대한 접근/조회 권한이 없습니다. 권한 관리자에게 문의하세요.`);
+      alert(`[접근 차단] 해당 기능(${menuCode})에 대한 접근/조회 권한이 없습니다. 관리자에게 문의하세요.`);
       window.location.href = "/dashboard";
     }
   }, [menuCode, action]);

@@ -155,7 +155,7 @@ function SummaryIcon({ type }: { type: SummaryIconType }) {
 export default function ApprovalInboxPage({
   initialData,
 }: ApprovalInboxPageProps) {
-  usePageGuard("APPROVAL", "canRead");
+  usePageGuard("APPROVAL_INBOX", "canRead");
   const [filter, setFilter] = useState<FilterType>("all");
   const [keyword, setKeyword] = useState("");
 
@@ -701,7 +701,7 @@ export default function ApprovalInboxPage({
                   type="button" 
                   className={styles.rejectButton}
                   onClick={() => {
-                    if (!hasPermission("APPROVAL", "canApprove")) {
+                    if (!hasPermission("APPROVAL_INBOX", "canApprove")) {
                       alert("결재 처리(반려) 권한이 없습니다.");
                       return;
                     }
@@ -715,7 +715,7 @@ export default function ApprovalInboxPage({
                   type="button" 
                   className={styles.approveButton}
                   onClick={() => {
-                    if (!hasPermission("APPROVAL", "canApprove")) {
+                    if (!hasPermission("APPROVAL_INBOX", "canApprove")) {
                       alert("결재 승인 권한이 없습니다.");
                       return;
                     }

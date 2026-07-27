@@ -73,21 +73,52 @@ function SidebarIcon({ name }: SidebarIconProps) {
 export default function DashboardSidebar() {
   const pathname = usePathname();
   const [isAdmin, setIsAdmin] = useState(false);
+  const [perms, setPerms] = useState({
+    approvalInbox: true,
+    approvalDraft: true,
+    empList: true,
+    empOrg: true,
+    appointment: true,
+    dutySchedule: true,
+    attendAdmin: true,
+    attendCheck: true,
+    leaveStatus: true,
+    payrollInfo: true,
+    payrollProc: true,
+    statutoryReport: true,
+  });
 
   useEffect(() => {
     try {
       const userStr = localStorage.getItem('userProfile');
       if (userStr) {
         const user = JSON.parse(userStr);
-        if (user.permissions) {
-          const sysPerm = user.permissions.find((p: any) => p.menuCode === 'SYSTEM_ADMIN');
-          if (sysPerm && sysPerm.canRead) {
-            setIsAdmin(true);
+        const isAdminRole = user.roleGroupName === "최고관리자" || user.roleGroupName === "시스템 관리자" || user.roleGroupName?.includes("관리자") || user.empNo === "ADMIN-001";
+        const canRead = (code: string) => {
+          if (isAdminRole) return true;
+          if (user.permissions && Array.isArray(user.permissions)) {
+            const p = user.permissions.find((perm: any) => perm.menuCode === code || perm.menuName === code);
+            return p ? !!p.canRead : false;
           }
-        } else if (user.roleGroupName === '시스템 관리자') {
-          // Fallback if permissions aren't loaded yet
-          setIsAdmin(true);
-        }
+          return true;
+        };
+
+        setPerms({
+          approvalInbox: canRead("APPROVAL_INBOX"),
+          approvalDraft: canRead("APPROVAL_DRAFT"),
+          empList: canRead("EMP_LIST"),
+          empOrg: canRead("EMP_ORG"),
+          appointment: canRead("APPOINTMENT"),
+          dutySchedule: canRead("DUTY_SCHEDULE"),
+          attendAdmin: canRead("ATTEND_ADMIN"),
+          attendCheck: canRead("ATTEND_CHECK"),
+          leaveStatus: canRead("LEAVE_STATUS"),
+          payrollInfo: canRead("PAYROLL_INFO"),
+          payrollProc: canRead("PAYROLL_PROC"),
+          statutoryReport: canRead("STATUTORY_REPORT"),
+        });
+
+        setIsAdmin(isAdminRole || canRead("SYSTEM_ROLES") || canRead("SYSTEM_CODE") || canRead("SYSTEM_ADMIN"));
       }
     } catch (e) {
       console.error(e);
@@ -193,196 +224,226 @@ export default function DashboardSidebar() {
         </Link>
 
         {/* 전자결재 */}
-        <div className={styles.menuGroup}>
-          <button
-            type="button"
-            className={`${styles.sideLink} ${
-              isApprovalRoute || isApprovalOpen ? styles.groupActive : ""
-            }`}
-            onClick={() => setIsApprovalOpen(prev => !prev)}
-            aria-expanded={isApprovalOpen}
-            aria-controls="electronic-approval-submenu"
-          >
-            <span className={styles.iconBox}>
-              <SidebarIcon name="approval" />
-            </span>
-
-            <span className={styles.menuLabel}>전자결재</span>
-
-            <span
-              className={`${styles.arrow} ${
-                isApprovalOpen ? styles.arrowOpen : ""
+        {(perms.approvalInbox || perms.approvalDraft) && (
+          <div className={styles.menuGroup}>
+            <button
+              type="button"
+              className={`${styles.sideLink} ${
+                isApprovalRoute || isApprovalOpen ? styles.groupActive : ""
               }`}
-              aria-hidden="true"
+              onClick={() => setIsApprovalOpen(prev => !prev)}
+              aria-expanded={isApprovalOpen}
+              aria-controls="electronic-approval-submenu"
             >
-              ⌄
-            </span>
-          </button>
+              <span className={styles.iconBox}>
+                <SidebarIcon name="approval" />
+              </span>
 
-          <div
-            id="electronic-approval-submenu"
-            className={`${styles.subMenu} ${
-              isApprovalOpen ? styles.subMenuOpen : ""
-            }`}
-          >
-            <Link
-              href="/dashboard/approvals"
-              className={isApprovalInboxPage ? styles.subMenuActive : ""}
-              aria-current={isApprovalInboxPage ? "page" : undefined}
-            >
-              결재 대기함
-            </Link>
+              <span className={styles.menuLabel}>전자결재</span>
 
-            <Link
-              href="/dashboard/drafts"
-              className={isDraftDocumentsPage ? styles.subMenuActive : ""}
-              aria-current={isDraftDocumentsPage ? "page" : undefined}
+              <span
+                className={`${styles.arrow} ${
+                  isApprovalOpen ? styles.arrowOpen : ""
+                }`}
+                aria-hidden="true"
+              >
+                ⌄
+              </span>
+            </button>
+
+            <div
+              id="electronic-approval-submenu"
+              className={`${styles.subMenu} ${
+                isApprovalOpen ? styles.subMenuOpen : ""
+              }`}
             >
-              기안 문서함
-            </Link>
+              {perms.approvalInbox && (
+                <Link
+                  href="/dashboard/approvals"
+                  className={isApprovalInboxPage ? styles.subMenuActive : ""}
+                  aria-current={isApprovalInboxPage ? "page" : undefined}
+                >
+                  결재 대기함
+                </Link>
+              )}
+
+              {perms.approvalDraft && (
+                <Link
+                  href="/dashboard/drafts"
+                  className={isDraftDocumentsPage ? styles.subMenuActive : ""}
+                  aria-current={isDraftDocumentsPage ? "page" : undefined}
+                >
+                  기안 문서함
+                </Link>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 인사관리 */}
-        <div className={styles.menuGroup}>
-          <button
-            type="button"
-            className={`${styles.sideLink} ${
-              isEmployeeRoute || isEmployeeOpen ? styles.groupActive : ""
-            }`}
-            onClick={() => setIsEmployeeOpen((prev) => !prev)}
-            aria-expanded={isEmployeeOpen}
-          >
-            <span className={styles.iconBox}>
-              <SidebarIcon name="employee" />
-            </span>
-            <span className={styles.menuLabel}>인사관리</span>
-            <span
-              className={`${styles.arrow} ${isEmployeeOpen ? styles.arrowOpen : ""}`}
-              aria-hidden="true"
+        {(perms.empList || perms.empOrg || perms.appointment || perms.dutySchedule || perms.attendAdmin || perms.attendCheck || perms.leaveStatus) && (
+          <div className={styles.menuGroup}>
+            <button
+              type="button"
+              className={`${styles.sideLink} ${
+                isEmployeeRoute || isEmployeeOpen ? styles.groupActive : ""
+              }`}
+              onClick={() => setIsEmployeeOpen((prev) => !prev)}
+              aria-expanded={isEmployeeOpen}
             >
-              ⌄
-            </span>
-          </button>
+              <span className={styles.iconBox}>
+                <SidebarIcon name="employee" />
+              </span>
+              <span className={styles.menuLabel}>인사관리</span>
+              <span
+                className={`${styles.arrow} ${isEmployeeOpen ? styles.arrowOpen : ""}`}
+                aria-hidden="true"
+              >
+                ⌄
+              </span>
+            </button>
 
-          <div
-            className={`${styles.subMenu} ${isEmployeeOpen ? styles.subMenuOpen : ""}`}
-          >
-            <Link
-              href="/dashboard/employees"
-              className={isEmployeePage ? styles.subMenuActive : ""}
-              aria-current={isEmployeePage ? "page" : undefined}
+            <div
+              className={`${styles.subMenu} ${isEmployeeOpen ? styles.subMenuOpen : ""}`}
             >
-              직원관리
-            </Link>
+              {perms.empList && (
+                <Link
+                  href="/dashboard/employees"
+                  className={isEmployeePage ? styles.subMenuActive : ""}
+                  aria-current={isEmployeePage ? "page" : undefined}
+                >
+                  직원관리
+                </Link>
+              )}
 
-            <Link
-              href="/dashboard/organization"
-              className={isOrganizationPage ? styles.subMenuActive : ""}
-              aria-current={isOrganizationPage ? "page" : undefined}
-            >
-              조직관리
-            </Link>
+              {perms.empOrg && (
+                <Link
+                  href="/dashboard/organization"
+                  className={isOrganizationPage ? styles.subMenuActive : ""}
+                  aria-current={isOrganizationPage ? "page" : undefined}
+                >
+                  조직관리
+                </Link>
+              )}
 
-            <Link
-              href="/dashboard/appointments"
-              className={isAppointmentPage ? styles.subMenuActive : ""}
-              aria-current={isAppointmentPage ? "page" : undefined}
-            >
-              인사발령 관리
-            </Link>
+              {perms.appointment && (
+                <Link
+                  href="/dashboard/appointments"
+                  className={isAppointmentPage ? styles.subMenuActive : ""}
+                  aria-current={isAppointmentPage ? "page" : undefined}
+                >
+                  인사발령 관리
+                </Link>
+              )}
 
-            <Link
-              href="/dashboard/duty"
-              className={isDutyPage ? styles.subMenuActive : ""}
-              aria-current={isDutyPage ? "page" : undefined}
-            >
-              듀티표 편성
-            </Link>
+              {perms.dutySchedule && (
+                <Link
+                  href="/dashboard/duty"
+                  className={isDutyPage ? styles.subMenuActive : ""}
+                  aria-current={isDutyPage ? "page" : undefined}
+                >
+                  듀티표 편성
+                </Link>
+              )}
 
-            <Link
-              href="/dashboard/attendance"
-              className={isAttendancePage ? styles.subMenuActive : ""}
-              aria-current={isAttendancePage ? "page" : undefined}
-            >
-              출퇴근 관리
-            </Link>
+              {perms.attendAdmin && (
+                <Link
+                  href="/dashboard/attendance"
+                  className={isAttendancePage ? styles.subMenuActive : ""}
+                  aria-current={isAttendancePage ? "page" : undefined}
+                >
+                  출퇴근 관리
+                </Link>
+              )}
 
-            <Link
-              href="/dashboard/attendance-link"
-              className={isAttendanceLinkPage ? styles.subMenuActive : ""}
-            >
-              근태 연동
-            </Link>
+              {perms.attendCheck && (
+                <Link
+                  href="/dashboard/attendance-link"
+                  className={isAttendanceLinkPage ? styles.subMenuActive : ""}
+                >
+                  근태 연동
+                </Link>
+              )}
 
-            <Link
-              href="/dashboard/leave"
-              className={isLeavePage ? styles.subMenuActive : ""}
-            >
-              휴가 관리
-            </Link>
+              {perms.leaveStatus && (
+                <Link
+                  href="/dashboard/leave"
+                  className={isLeavePage ? styles.subMenuActive : ""}
+                >
+                  휴가 관리
+                </Link>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* 급여관리 */}
-        <div className={styles.menuGroup}>
-          <button
-            type="button"
-            className={`${styles.sideLink} ${
-              isPayrollRoute || isPayrollOpen ? styles.groupActive : ""
-            }`}
-            onClick={() => setIsPayrollOpen(prev => !prev)}
-            aria-expanded={isPayrollOpen}
-            aria-controls="payroll-submenu"
-          >
-            <span className={styles.iconBox}>
-              <SidebarIcon name="payroll" />
-            </span>
-
-            <span className={styles.menuLabel}>급여관리</span>
-
-            <span
-              className={`${styles.arrow} ${
-                isPayrollOpen ? styles.arrowOpen : ""
+        {(perms.payrollInfo || perms.payrollProc || perms.statutoryReport) && (
+          <div className={styles.menuGroup}>
+            <button
+              type="button"
+              className={`${styles.sideLink} ${
+                isPayrollRoute || isPayrollOpen ? styles.groupActive : ""
               }`}
-              aria-hidden="true"
+              onClick={() => setIsPayrollOpen(prev => !prev)}
+              aria-expanded={isPayrollOpen}
+              aria-controls="payroll-submenu"
             >
-              ⌄
-            </span>
-          </button>
+              <span className={styles.iconBox}>
+                <SidebarIcon name="payroll" />
+              </span>
 
-          <div
-            id="payroll-submenu"
-            className={`${styles.subMenu} ${
-              isPayrollOpen ? styles.subMenuOpen : ""
-            }`}
-            aria-hidden={!isPayrollOpen}
-          >
-            <Link
-              href="/dashboard/payroll/info"
-              className={isPayrollInfoPage ? styles.subMenuActive : ""}
-              aria-current={isPayrollInfoPage ? "page" : undefined}
-            >
-              기본 정보 관리
-            </Link>
+              <span className={styles.menuLabel}>급여관리</span>
 
-            <Link
-              href="/dashboard/payroll/processing"
-              className={isPayrollProcessingPage ? styles.subMenuActive : ""}
-              aria-current={isPayrollProcessingPage ? "page" : undefined}
-            >
-              급여 처리
-            </Link>
+              <span
+                className={`${styles.arrow} ${
+                  isPayrollOpen ? styles.arrowOpen : ""
+                }`}
+                aria-hidden="true"
+              >
+                ⌄
+              </span>
+            </button>
 
-            <Link
-              href="/dashboard/statutory"
-              className={isPayrollStatutoryPage ? styles.subMenuActive : ""}
-              aria-current={isPayrollStatutoryPage ? "page" : undefined}
+            <div
+              id="payroll-submenu"
+              className={`${styles.subMenu} ${
+                isPayrollOpen ? styles.subMenuOpen : ""
+              }`}
+              aria-hidden={!isPayrollOpen}
             >
-              법정 신고
-            </Link>
+              {perms.payrollInfo && (
+                <Link
+                  href="/dashboard/payroll/info"
+                  className={isPayrollInfoPage ? styles.subMenuActive : ""}
+                  aria-current={isPayrollInfoPage ? "page" : undefined}
+                >
+                  기본 정보 관리
+                </Link>
+              )}
+
+              {perms.payrollProc && (
+                <Link
+                  href="/dashboard/payroll/processing"
+                  className={isPayrollProcessingPage ? styles.subMenuActive : ""}
+                  aria-current={isPayrollProcessingPage ? "page" : undefined}
+                >
+                  급여 처리
+                </Link>
+              )}
+
+              {perms.statutoryReport && (
+                <Link
+                  href="/dashboard/statutory"
+                  className={isPayrollStatutoryPage ? styles.subMenuActive : ""}
+                  aria-current={isPayrollStatutoryPage ? "page" : undefined}
+                >
+                  법정 신고
+                </Link>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {isAdmin && (
           <>
