@@ -30,7 +30,22 @@ public class RoleGroupService {
                 .description(request.description())
                 .build();
 
-        return RoleGroupResponse.from(roleGroupRepository.save(roleGroup));
+        RoleGroup saved = roleGroupRepository.save(roleGroup);
+
+        // 신규 권한 그룹 생성 시 전체 메뉴에 대한 기본 권한(OFF) 자동 셋업
+        List<Menu> allMenus = menuRepository.findAll();
+        for (Menu menu : allMenus) {
+            rolePermissionRepository.save(RolePermission.builder()
+                    .roleGroup(saved)
+                    .menu(menu)
+                    .canRead(false)
+                    .canWrite(false)
+                    .canDelete(false)
+                    .canApprove(false)
+                    .build());
+        }
+
+        return RoleGroupResponse.from(saved);
     }
 
     // GET /role-groups - 전체 권한 그룹 목록 조회
@@ -65,10 +80,35 @@ public class RoleGroupService {
         roleGroupRepository.delete(roleGroup);
     }
 
-    // GET /role-groups/{roleGroupId}/permissions - 해당 권한 그룹의 메뉴별 권한 전체 조회
+    // GET /role-groups/{roleGroupId}/permissions - 해당 권한 그룹의 메뉴별 권한 전체 조회 (누락된 신규 메뉴 자동 보완 자가치유)
+    @Transactional
     public List<RolePermissionResponse> getPermissions(Long roleGroupId) {
-        getRoleGroupEntity(roleGroupId); // 존재 검증
-        return rolePermissionRepository.findByRoleGroupIdOrderByMenuId(roleGroupId).stream()
+        RoleGroup roleGroup = getRoleGroupEntity(roleGroupId);
+        List<RolePermission> existing = rolePermissionRepository.findByRoleGroupIdOrderByMenuId(roleGroupId);
+        List<Menu> allMenus = menuRepository.findAll();
+
+        if (existing.size() != allMenus.size()) {
+            List<Long> existingMenuIds = existing.stream()
+                    .map(p -> p.getMenu().getId())
+                    .toList();
+            for (Menu menu : allMenus) {
+                if (!existingMenuIds.contains(menu.getId())) {
+                    RolePermission newPerm = rolePermissionRepository.save(RolePermission.builder()
+                            .roleGroup(roleGroup)
+                            .menu(menu)
+                            .canRead(false)
+                            .canWrite(false)
+                            .canDelete(false)
+                            .canApprove(false)
+                            .build());
+                }
+            }
+            return rolePermissionRepository.findByRoleGroupIdOrderByMenuId(roleGroupId).stream()
+                    .map(RolePermissionResponse::from)
+                    .toList();
+        }
+
+        return existing.stream()
                 .map(RolePermissionResponse::from)
                 .toList();
     }

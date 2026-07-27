@@ -16,6 +16,7 @@ import {
   updateRolePermission,
   getDepartments,
   deleteRoleGroup,
+  createRoleGroup,
 } from "@/services/systemService";
 import type { DepartmentResponse } from "@/types/system";
 import {
@@ -260,6 +261,37 @@ export default function RoleManagementPage() {
       alert("저장되었습니다.");
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleResetPermissions = async () => {
+    if (!selectedRoleGroupId) return;
+    if (!confirm("현재 변경된 권한 설정들을 저장된 원본 상태로 초기화하시겠습니까?")) return;
+    try {
+      const perms = await getRolePermissions(selectedRoleGroupId);
+      setPermissions(perms);
+      alert("권한 설정이 원래대로 초기화되었습니다.");
+    } catch (e) {
+      console.error(e);
+      alert("초기화 실패");
+    }
+  };
+
+  const handleCreateRoleGroup = async () => {
+    if (!canEdit) {
+      alert("수정 권한이 없습니다.");
+      return;
+    }
+    const name = prompt("새로운 권한 그룹의 이름을 입력하세요 (예: 수석 전공의, 안전관리팀):");
+    if (!name || !name.trim()) return;
+    const description = prompt("해당 권한 그룹에 대한 간단한 설명을 입력하세요:") || "신규 권한 그룹";
+    try {
+      await createRoleGroup({ name: name.trim(), description: description.trim() });
+      alert("새 권한 그룹이 성공적으로 신설되었습니다.");
+      await fetchRoleGroups();
+    } catch (e) {
+      console.error(e);
+      alert("권한 그룹 생성에 실패했습니다.");
     }
   };
 
@@ -533,7 +565,7 @@ export default function RoleManagementPage() {
                     </div>
                     <h2>권한 그룹 및 메뉴 권한 설정</h2>
                   </div>
-                  <button className={styles.primaryBtn}>+ 새 권한 그룹 만들기</button>
+                  <button className={styles.primaryBtn} onClick={handleCreateRoleGroup}>+ 새 권한 그룹 만들기</button>
                 </div>
                 
                 <div className={styles.splitLayout}>
@@ -601,7 +633,7 @@ export default function RoleManagementPage() {
                         <p>아래 체크박스를 통해 각 메뉴별 접근 권한을 세밀하게 설정하세요.</p>
                       </div>
                       <div className={styles.rightActionBtns}>
-                        <button className={styles.outlineBtn} disabled={!canEdit}><RotateCcw size={16} /> 초기화</button>
+                        <button className={styles.outlineBtn} disabled={!canEdit} onClick={handleResetPermissions}><RotateCcw size={16} /> 초기화</button>
                         <button className={styles.outlineBtn} disabled={!canEdit}><MonitorPlay size={16} /> 미리보기</button>
                       </div>
                     </div>

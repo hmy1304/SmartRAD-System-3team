@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-
-
+import { usePageGuard, hasPermission } from "@/utils/permission";
 
 import type {
   ApprovalComment,
@@ -156,8 +155,8 @@ function SummaryIcon({ type }: { type: SummaryIconType }) {
 export default function ApprovalInboxPage({
   initialData,
 }: ApprovalInboxPageProps) {
+  usePageGuard("APPROVAL", "canRead");
   const [filter, setFilter] = useState<FilterType>("all");
-
   const [keyword, setKeyword] = useState("");
 
   const [documents, setDocuments] = useState<ApprovalDocument[]>(
@@ -698,11 +697,31 @@ export default function ApprovalInboxPage({
               </div>
 
               <div className={styles.detailActions}>
-                <button type="button" className={styles.rejectButton}>
+                <button 
+                  type="button" 
+                  className={styles.rejectButton}
+                  onClick={() => {
+                    if (!hasPermission("APPROVAL", "canApprove")) {
+                      alert("결재 처리(반려) 권한이 없습니다.");
+                      return;
+                    }
+                    alert("반려 처리되었습니다.");
+                  }}
+                >
                   × 반려
                 </button>
 
-                <button type="button" className={styles.approveButton}>
+                <button 
+                  type="button" 
+                  className={styles.approveButton}
+                  onClick={() => {
+                    if (!hasPermission("APPROVAL", "canApprove")) {
+                      alert("결재 승인 권한이 없습니다.");
+                      return;
+                    }
+                    alert("승인 처리되었습니다.");
+                  }}
+                >
                   ✓ 승인
                 </button>
               </div>
