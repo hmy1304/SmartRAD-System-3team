@@ -24,14 +24,36 @@ function BellIcon() {
 }
 
 export default function DashboardHeader({ profile }: DashboardHeaderProps) {
-  const defaultProfile = {
-    initial: "김",
-    name: "김관리",
-    department: "인사팀",
-    role: "관리자",
-  };
+  const [currentUser, setCurrentUser] = React.useState<ProfileData>({
+    initial: "유",
+    name: "사용자",
+    department: "부서",
+    role: "직무",
+  });
 
-  const currentProfile = profile || defaultProfile;
+  React.useEffect(() => {
+    if (profile) {
+      setCurrentUser(profile);
+      return;
+    }
+    const stored = localStorage.getItem("userProfile");
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        const name = parsed.name || "사용자";
+        setCurrentUser({
+          initial: name[0] || "유",
+          name: name,
+          department: parsed.departmentName || "부서 미지정",
+          role: parsed.roleGroupName || parsed.positionName || "일반직원",
+        });
+      } catch (e) {
+        // ignore JSON parse error
+      }
+    }
+  }, [profile]);
+
+  const currentProfile = currentUser;
 
   return (
     <header className={styles.topHeader}>
