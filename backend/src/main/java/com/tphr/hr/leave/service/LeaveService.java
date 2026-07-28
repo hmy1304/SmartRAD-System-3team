@@ -16,11 +16,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -38,33 +41,60 @@ public class LeaveService {
     private static final String UPLOAD_DIR = "uploads/leave/";
 
     /**
-     * 1. 상단 KPI 카드 및 우측 사이드 패널 위젯 통계 조회
+     * 날짜 범위 계산 유틸리티
+     */
+    private LocalDate[] getDateRange(Integer year, Integer month) {
+        int targetYear = (year != null && year > 1900) ? year : LocalDate.now().getYear();
+        LocalDate startDate;
+        LocalDate endDate;
+        if (month != null && month >= 1 && month <= 12) {
+            YearMonth ym = YearMonth.of(targetYear, month);
+            startDate = ym.atDay(1);
+            endDate = ym.atEndOfMonth();
+        } else {
+            startDate = LocalDate.of(targetYear, 1, 1);
+            endDate = LocalDate.of(targetYear, 12, 31);
+        }
+        return new LocalDate[]{startDate, endDate};
+    }
+
+    /**
+     * 1. 상단 KPI 카드 및 우측 사이드 패널 위젯 통계 실시간 DB 연산 (하드코딩 완전 제거)
      */
     public LeaveSummaryResponse getLeaveSummary(Integer year, Integer month, Long departmentId) {
-        int targetYear = (year != null) ? year : LocalDate.now().getYear();
+        int targetYear = (year != null && year > 1900) ? year : LocalDate.now().getYear();
+        LocalDate[] dates = getDateRange(year, month);
 
-        // 실시간 DB 승인대기 건수 계산
-        long realPendingCount = leaveRepository.countByStatus("승인대기");
-        long allCount = leaveRepository.count();
+        // 해당 년도 DB 연차 대장 실시간 합산
+        List<EmployeeLeaveQuota> quotas = quotaRepository.findByYear(targetYear);
+        if (departmentId != null) {
+            quotas = quotas.stream().filter(q -> q.getEmployee().getDepartment() != null 
+                    && q.getEmployee().getDepartment().getId().equals(departmentId)).collect(Collectors.toList());
+        }
 
-        // 대규모 종합 현황 시그니처 KPI 보정 (시드 7건 기준 디자인 시안 수치 매핑 + 실시간 증가량 반영)
-        double totalAllocated = 26208.0;
-        double totalUsed = 8736.0 + (allCount > 7 ? (allCount - 7) * 2.0 : 0.0);
-        double percentage = Math.round((totalUsed / totalAllocated * 100.0) * 10.0) / 10.0;
-        double remaining = totalAllocated - totalUsed;
-        long monthApplications = 240 + allCount;
+        double totalAllocated = quotas.stream().mapToDouble(EmployeeLeaveQuota::getTotalDays).sum();
+        double totalUsed = quotas.stream().mapToDouble(EmployeeLeaveQuota::getUsedDays).sum();
+        double totalRemaining = quotas.stream().mapToDouble(EmployeeLeaveQuota::getRemainingDays).sum();
+        double percentage = totalAllocated > 0 ? Math.round((totalUsed / totalAllocated * 100.0) * 10.0) / 10.0 : 0.0;
 
-        // 고위험군 (잔여 연차 2일 이하) 실시간 조회
-        List<EmployeeLeaveQuota> riskQuotas = quotaRepository.findByYearAndRemainingDaysLessThanEqualOrderByRemainingDaysAsc(targetYear, 2.0);
-        long riskCount = Math.max(38L, (long) riskQuotas.size());
+        // 해당 기간(연/월) 실제 휴가 신청 목록 조회
+        List<LeaveApplication> apps = leaveRepository.findWithFilters(dates[0], dates[1], null, null, null);
+        long monthApplications = apps.size();
+        long realPendingCount = apps.stream().filter(a -> "승인대기".equals(a.getStatus())).count();
+
+        // 고위험군 (잔여 연차 5일 이하 사원 오름차순 조회)
+        List<EmployeeLeaveQuota> riskQuotas = quotas.stream()
+                .filter(q -> q.getRemainingDays() <= 5.0)
+                .sorted(Comparator.comparingDouble(EmployeeLeaveQuota::getRemainingDays))
+                .collect(Collectors.toList());
 
         List<LeaveSummaryResponse.RiskEmployeeDto> riskEmployees = riskQuotas.stream().limit(5).map(q -> {
             String name = q.getEmployee().getName();
             String initial = name != null && name.length() > 0 ? name.substring(0, 1) : "사";
             String dept = q.getEmployee().getDepartment() != null ? q.getEmployee().getDepartment().getName() : "부서없음";
             double rem = q.getRemainingDays();
-            String tone = rem <= 1.0 ? "red" : "orange";
-            String tagStyle = rem <= 1.0 ? "riskOne" : "riskTwo";
+            String tone = rem <= 2.0 ? "red" : "orange";
+            String tagStyle = rem <= 2.0 ? "riskOne" : "riskTwo";
 
             return LeaveSummaryResponse.RiskEmployeeDto.builder()
                     .employeeId(q.getEmployee().getId())
@@ -77,32 +107,44 @@ public class LeaveService {
                     .build();
         }).collect(Collectors.toList());
 
-        // 유형별 통계 (디자인 시안 비율 및 실 DB 통계 결합)
+        // 유형별 통계 (실제 DB 신청 내역 기반 동적 계산)
+        long annualCount = apps.stream().filter(a -> a.getLeaveType().contains("연차")).count();
+        long halfCount = apps.stream().filter(a -> a.getLeaveType().contains("반차")).count();
+        long sickCount = apps.stream().filter(a -> a.getLeaveType().contains("병가")).count();
+        long otherCount = apps.stream().filter(a -> a.getLeaveType().contains("기타")).count();
+        long totalAppCount = apps.size();
+
+        double annualPct = totalAppCount > 0 ? Math.round((annualCount * 1000.0 / totalAppCount)) / 10.0 : 0.0;
+        double halfPct = totalAppCount > 0 ? Math.round((halfCount * 1000.0 / totalAppCount)) / 10.0 : 0.0;
+        double sickPct = totalAppCount > 0 ? Math.round((sickCount * 1000.0 / totalAppCount)) / 10.0 : 0.0;
+        double otherPct = totalAppCount > 0 ? Math.round((otherCount * 1000.0 / totalAppCount)) / 10.0 : 0.0;
+
         List<LeaveSummaryResponse.TypeStatDto> typeStats = List.of(
-            LeaveSummaryResponse.TypeStatDto.builder().type("연차").count(189L + Math.max(0L, allCount - 7)).percentage(76.5).build(),
-            LeaveSummaryResponse.TypeStatDto.builder().type("반차").count(32L).percentage(13.0).build(),
-            LeaveSummaryResponse.TypeStatDto.builder().type("병가").count(18L).percentage(7.3).build(),
-            LeaveSummaryResponse.TypeStatDto.builder().type("기타").count(8L).percentage(3.2).build()
+            LeaveSummaryResponse.TypeStatDto.builder().type("연차").count(annualCount).percentage(annualPct).build(),
+            LeaveSummaryResponse.TypeStatDto.builder().type("반차").count(halfCount).percentage(halfPct).build(),
+            LeaveSummaryResponse.TypeStatDto.builder().type("병가").count(sickCount).percentage(sickPct).build(),
+            LeaveSummaryResponse.TypeStatDto.builder().type("기타").count(otherCount).percentage(otherPct).build()
         );
 
         return LeaveSummaryResponse.builder()
                 .totalAllocatedDays(totalAllocated)
                 .totalUsedDays(totalUsed)
                 .usedPercentage(percentage)
-                .totalRemainingDays(remaining)
+                .totalRemainingDays(totalRemaining)
                 .thisMonthApplications(monthApplications)
                 .pendingApplications(realPendingCount)
-                .riskEmployeeCount(riskCount)
+                .riskEmployeeCount((long) riskQuotas.size())
                 .typeStats(typeStats)
                 .riskEmployees(riskEmployees)
                 .build();
     }
 
     /**
-     * 2. 휴가 신청 현황 목록 조회 (검색어, 상태, 유형 필터링)
+     * 2. 휴가 신청 현황 목록 조회 (연도/월 날짜 범위 및 검색어, 상태, 유형 필터링 적용)
      */
-    public List<LeaveApplicationResponse> getApplications(String status, String type, String keyword) {
-        List<LeaveApplication> list = leaveRepository.findWithFilters(status, type, keyword);
+    public List<LeaveApplicationResponse> getApplications(Integer year, Integer month, String status, String type, String keyword) {
+        LocalDate[] dates = getDateRange(year, month);
+        List<LeaveApplication> list = leaveRepository.findWithFilters(dates[0], dates[1], status, type, keyword);
         return list.stream().map(LeaveApplicationResponse::from).collect(Collectors.toList());
     }
 
@@ -278,5 +320,62 @@ public class LeaveService {
         } catch (Exception e) {
             log.error("자동 파일 클린업 중 예외 발생: {}", e.getMessage(), e);
         }
+    }
+
+    /**
+     * 8. 서버 사이드 엑셀(CSV) 고급 감사 보고서 스트림 생성 (UTF-8 BOM 첨부)
+     */
+    public byte[] generateLeaveReportCsv(Integer year, Integer month, String status, String type, String keyword) {
+        LocalDate[] dates = getDateRange(year, month);
+        List<LeaveApplication> apps = leaveRepository.findWithFilters(dates[0], dates[1], status, type, keyword);
+        LeaveSummaryResponse summary = getLeaveSummary(year, month, null);
+
+        StringBuilder sb = new StringBuilder();
+        // UTF-8 BOM 표시 (엑셀 한글 깨짐 원천 차단)
+        sb.append("\uFEFF");
+        sb.append("[TP-HR 인사관리 그룹] 휴가 및 연차 사용 현황 감사 보고서\n");
+        sb.append("조회 기준 기간,").append(year != null ? year + "년 " : "전체 연도 ").append(month != null ? month + "월" : "전체 월").append("\n");
+        sb.append("보고서 생성 일시,").append(LocalDate.now().format(DateTimeFormatter.ISO_DATE)).append("\n\n");
+
+        // KPI 통계 섹션
+        sb.append("== [종합 연차 KPI 현황] ==\n");
+        sb.append("전체 부여 연차,사용 연차,소진율,잔여 연차,기간 내 신청건수,승인 대기건수,소진 위험 직원수\n");
+        sb.append(summary.getTotalAllocatedDays()).append("일,")
+          .append(summary.getTotalUsedDays()).append("일,")
+          .append(summary.getUsedPercentage()).append("%,")
+          .append(summary.getTotalRemainingDays()).append("일,")
+          .append(summary.getThisMonthApplications()).append("건,")
+          .append(summary.getPendingApplications()).append("건,")
+          .append(summary.getRiskEmployeeCount()).append("명\n\n");
+
+        // 상세 신청 내역 테이블 섹션
+        sb.append("== [상세 휴가 신청 및 결재 내역] ==\n");
+        sb.append("번호,사원번호,직원명,부서,휴가유형,신청기간,일수,잔여연차변동,대리인,승인권자,결재상태,첨부파일,비고\n");
+
+        int idx = 1;
+        for (LeaveApplication app : apps) {
+            String empNo = app.getEmployee().getEmpNo() != null ? app.getEmployee().getEmpNo() : "-";
+            String name = app.getEmployee().getName() != null ? app.getEmployee().getName() : "-";
+            String dept = app.getEmployee().getDepartment() != null ? app.getEmployee().getDepartment().getName() : "-";
+            String period = app.getStartDate().toString() + (app.getStartDate().equals(app.getEndDate()) ? "" : " ~ " + app.getEndDate().toString());
+            String attach = app.getAttachmentName() != null ? app.getAttachmentName() : "없음";
+            String noteStr = app.getNote() != null ? app.getNote().replace(",", " ") : "";
+
+            sb.append(idx++).append(",")
+              .append("\"").append(empNo).append("\",")
+              .append("\"").append(name).append("\",")
+              .append("\"").append(dept).append("\",")
+              .append("\"").append(app.getLeaveType()).append("\",")
+              .append("\"").append(period).append("\",")
+              .append(app.getDays()).append("일,")
+              .append("\"").append(app.getRemainText() != null ? app.getRemainText() : "-").append("\",")
+              .append("\"").append(app.getProxyEmployeeName() != null ? app.getProxyEmployeeName() : "-").append("\",")
+              .append("\"").append(app.getApproverName() != null ? app.getApproverName() : "-").append("\",")
+              .append("\"").append(app.getStatus()).append("\",")
+              .append("\"").append(attach).append("\",")
+              .append("\"").append(noteStr).append("\"\n");
+        }
+
+        return sb.toString().getBytes(StandardCharsets.UTF_8);
     }
 }

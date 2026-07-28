@@ -30,7 +30,7 @@ import {
   fetchEmployeeQuota,
   submitLeaveApplication,
   updateLeaveStatuses,
-  deleteLeaveApplication,
+  downloadLeaveReportServer,
 } from "@/services/leaveService";
 import { getEmployees } from "@/services/employeeService";
 
@@ -43,7 +43,7 @@ interface EmpOption {
   tone: "blue" | "cyan" | "green" | "purple" | "red" | "orange" | "amber";
 }
 
-// 오프라인/최초 로드 시 서버가 내려주지 않을 때만 대비한 폴백 데이터
+// 오프라인 방어 폴백 (단, DB 연결 성공 시 실시간 데이터로 즉시 대체됨)
 const MOCK_EMPLOYEES: EmpOption[] = [
   { id: 1, name: "박시준", dept: "영상의학과", pos: "부장", initial: "박", tone: "blue" },
   { id: 2, name: "이다영", dept: "간호부", pos: "수간호사", initial: "이", tone: "cyan" },
@@ -55,155 +55,19 @@ const MOCK_EMPLOYEES: EmpOption[] = [
   { id: 8, name: "김관리", dept: "인사총무팀", pos: "수석", initial: "김", tone: "blue" },
 ];
 
-const MOCK_APPLICATIONS_DEFAULT: LeaveApplicationResponse[] = [
-  {
-    id: 1,
-    employeeId: 1,
-    name: "박시준",
-    initial: "박",
-    position: "영상의학과 · 부장",
-    department: "영상의학과",
-    tone: "blue",
-    type: "연차",
-    applyDate: "07.08",
-    period: "07.14 ~ 07.15",
-    days: "2일",
-    remainText: "13일 → 11일",
-    remainType: "normal",
-    proxy: "오하늘 과장",
-    approver: "김관리",
-    status: "승인완료",
-    note: "—",
-  },
-  {
-    id: 2,
-    employeeId: 2,
-    name: "이다영",
-    initial: "이",
-    position: "간호부 · 수간호사",
-    department: "간호부",
-    tone: "cyan",
-    type: "반차 (오후)",
-    applyDate: "07.11",
-    period: "07.15 (화) 오후",
-    days: "0.5일",
-    remainText: "6일 → 5.5일",
-    remainType: "normal",
-    proxy: "최지은 과장",
-    approver: "김관리",
-    status: "승인대기",
-    note: "",
-  },
-  {
-    id: 3,
-    employeeId: 3,
-    name: "김민서",
-    initial: "김",
-    position: "진단검사의학과 · 사원",
-    department: "진단검사의학과",
-    tone: "green",
-    type: "연차",
-    applyDate: "07.10",
-    period: "07.21 ~ 07.25",
-    days: "5일",
-    remainText: "9일 → 4일",
-    remainType: "normal",
-    proxy: "박시준 부장",
-    approver: "김관리",
-    status: "승인대기",
-    note: "",
-  },
-  {
-    id: 4,
-    employeeId: 4,
-    name: "신유나",
-    initial: "신",
-    position: "영상의학과 · 대리",
-    department: "영상의학과",
-    tone: "purple",
-    type: "병가",
-    applyDate: "07.09",
-    period: "07.16 ~ 07.18",
-    days: "3일",
-    remainText: "진단서 첨부",
-    remainType: "doc",
-    proxy: "오하늘 과장",
-    approver: "김관리",
-    status: "승인완료",
-    note: "진단서 확인 완료",
-  },
-  {
-    id: 5,
-    employeeId: 5,
-    name: "최지은",
-    initial: "최",
-    position: "인사총무팀 · 과장",
-    department: "인사총무팀",
-    tone: "red",
-    type: "연차",
-    applyDate: "07.11",
-    period: "07.12 ~ 07.13",
-    days: "2일",
-    remainText: "1일 → -1일!",
-    remainType: "danger",
-    proxy: "박시준 부장",
-    approver: "—",
-    status: "반려",
-    note: "연차 초과",
-  },
-  {
-    id: 6,
-    employeeId: 6,
-    name: "정우진",
-    initial: "정",
-    position: "응급의학과 · 인턴",
-    department: "응급의학과",
-    tone: "orange",
-    type: "반차 (오전)",
-    applyDate: "07.11",
-    period: "07.12 (토) 오전",
-    days: "0.5일",
-    remainText: "3일 → 2.5일",
-    remainType: "normal",
-    proxy: "—",
-    approver: "김관리",
-    status: "승인완료",
-    note: "—",
-  },
-  {
-    id: 7,
-    employeeId: 7,
-    name: "배준혁",
-    initial: "배",
-    position: "원무과 · 주임",
-    department: "원무과",
-    tone: "amber",
-    type: "연차",
-    applyDate: "07.11",
-    period: "07.28 ~ 07.30",
-    days: "3일",
-    remainText: "8일 → 5일",
-    remainType: "normal",
-    proxy: "—",
-    approver: "김관리",
-    status: "승인대기",
-    note: "",
-  },
-];
-
 const MOCK_SUMMARY_DEFAULT: LeaveSummaryResponse = {
-  totalAllocatedDays: 26208,
-  totalUsedDays: 8736,
-  usedPercentage: 33.3,
-  totalRemainingDays: 17472,
-  thisMonthApplications: 247,
-  pendingApplications: 12,
-  riskEmployeeCount: 38,
+  totalAllocatedDays: 132,
+  totalUsedDays: 73.5,
+  usedPercentage: 55.7,
+  totalRemainingDays: 58.5,
+  thisMonthApplications: 7,
+  pendingApplications: 2,
+  riskEmployeeCount: 3,
   typeStats: [
-    { type: "연차", count: 189, percentage: 76.5 },
-    { type: "반차", count: 32, percentage: 13.0 },
-    { type: "병가", count: 18, percentage: 7.3 },
-    { type: "기타", count: 8, percentage: 3.2 },
+    { type: "연차", count: 4, percentage: 57.1 },
+    { type: "반차", count: 2, percentage: 28.6 },
+    { type: "병가", count: 1, percentage: 14.3 },
+    { type: "기타", count: 0, percentage: 0.0 },
   ],
   riskEmployees: [
     { employeeId: 5, name: "최지은", initial: "최", department: "인사총무팀", remainingDays: 1, tone: "red", tagStyle: "riskOne" },
@@ -215,9 +79,13 @@ const MOCK_SUMMARY_DEFAULT: LeaveSummaryResponse = {
 const FILTERS = ["전체", "승인대기", "승인완료", "반려"] as const;
 
 export default function LeavePage() {
-  const [applications, setApplications] = useState<LeaveApplicationResponse[]>(MOCK_APPLICATIONS_DEFAULT);
+  const [applications, setApplications] = useState<LeaveApplicationResponse[]>([]);
   const [summary, setSummary] = useState<LeaveSummaryResponse>(MOCK_SUMMARY_DEFAULT);
   const [empList, setEmpList] = useState<EmpOption[]>(MOCK_EMPLOYEES);
+
+  // 상단 연도 및 월 실시간 조회 필터 (해당 기간 DB 연동)
+  const [selectedYear, setSelectedYear] = useState<number>(2026);
+  const [selectedMonth, setSelectedMonth] = useState<number | undefined>(7);
 
   // 테이블 제어 필터 상태
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("전체");
@@ -245,7 +113,7 @@ export default function LeavePage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // DB 실데이터 기반 부서 리스트 및 승인권자 목록 동적 생성 (하드코딩 제거)
+  // DB 실데이터 기반 부서 및 승인권자 리스트 동적 생성
   const availableDepts = useMemo(() => {
     const depts = new Set<string>(["전체 부서"]);
     empList.forEach((e) => { if (e.dept && e.dept !== "부서없음") depts.add(e.dept); });
@@ -260,10 +128,10 @@ export default function LeavePage() {
     return mgrs.length > 0 ? mgrs : empList.slice(0, 4);
   }, [empList]);
 
-  // API 데이터 실시간 로드 (0건이 되어도 확실하게 반영되도록 보정)
+  // API 실시간 로드 (연도/월/필터 변경 시마다 백엔드 DB 직접 호출)
   const loadData = useCallback(async () => {
     try {
-      const summaryData = await fetchLeaveSummary();
+      const summaryData = await fetchLeaveSummary(selectedYear, selectedMonth);
       if (summaryData) {
         setSummary(summaryData);
       }
@@ -272,21 +140,23 @@ export default function LeavePage() {
         filter === "전체" ? undefined : filter,
         typeFilter === "≡ 유형 전체" ? undefined : typeFilter,
         keyword || undefined,
+        selectedYear,
+        selectedMonth
       );
-      // null이나 undefined가 아닐 경우 0건([])이 와도 state에 정확히 셋업!
+      // DB 응답이 빈 배열 [] 이어도 정확하게 반영 (과거 목록 남김 방지)
       if (apps) {
         setApplications(apps);
       }
     } catch (err) {
-      // Offline 시 백엔드 연결 불가능한 환경을 위한 폴백 방어주행
+      // 오프라인 방어 코드
     }
-  }, [filter, typeFilter, keyword]);
+  }, [selectedYear, selectedMonth, filter, typeFilter, keyword]);
 
   useEffect(() => {
     loadData();
   }, [loadData]);
 
-  // 사원 정보 로드 (실데이터가 있을 시 MOCK 사원 중복을 배제하고 실데이터만 채택)
+  // 사원 정보 실 DB 연동
   useEffect(() => {
     getEmployees(50)
       .then((res) => {
@@ -310,15 +180,13 @@ export default function LeavePage() {
           }
         }
       })
-      .catch(() => {
-        // 백엔드 미동작 시 기본 옵션 유지
-      });
+      .catch(() => {});
   }, []);
 
-  // 선택 사원의 연차 할당 대장 실시간 재조회 (0일일 때 nullish coalescing ?? 적용)
+  // 선택 사원의 해당 연도 연차 대장 실시간 호출
   useEffect(() => {
     if (!selectedEmp) return;
-    fetchEmployeeQuota(selectedEmp.id, 2026)
+    fetchEmployeeQuota(selectedEmp.id, selectedYear)
       .then((q) => {
         if (q) {
           setQuotaInfo({
@@ -329,12 +197,11 @@ export default function LeavePage() {
         }
       })
       .catch(() => {
-        const isLow = selectedEmp.name === "최지은" ? 1.0 : selectedEmp.name === "배준혁" ? 2.0 : 13.0;
-        setQuotaInfo({ totalDays: 15.0, usedDays: 15.0 - isLow, remainingDays: isLow });
+        setQuotaInfo({ totalDays: 15.0, usedDays: 3.0, remainingDays: 12.0 });
       });
-  }, [selectedEmp]);
+  }, [selectedEmp, selectedYear]);
 
-  // 영업일(주말 제외) 일수 계산 로직
+  // 영업일 계산 로직
   const calculatedDays = useMemo(() => {
     if (modalLeaveType.includes("반차")) return 0.5;
     const s = new Date(startDate);
@@ -345,9 +212,7 @@ export default function LeavePage() {
     const cur = new Date(s);
     while (cur <= e) {
       const day = cur.getDay();
-      if (day !== 0 && day !== 6) {
-        workDays++;
-      }
+      if (day !== 0 && day !== 6) workDays++;
       cur.setDate(cur.getDate() + 1);
     }
     return workDays;
@@ -357,30 +222,13 @@ export default function LeavePage() {
     return Math.round((quotaInfo.remainingDays - calculatedDays) * 100.0) / 100.0;
   }, [quotaInfo.remainingDays, calculatedDays]);
 
-  // 필터링 적용 목록
+  // 부서 등 프론트 필터링 반영
   const filtered = useMemo(() => {
     return applications.filter((row) => {
-      const matchFilter =
-        filter === "전체" ||
-        (filter === "승인대기" && row.status === "승인대기") ||
-        (filter === "승인완료" && row.status === "승인완료") ||
-        (filter === "반려" && row.status === "반려");
-
-      const matchType =
-        typeFilter === "≡ 유형 전체" ||
-        row.type.includes(typeFilter.replace("≡ ", ""));
-
-      const matchDept =
-        deptFilter === "전체 부서" || row.department === deptFilter;
-
-      const matchKeyword =
-        !keyword ||
-        row.name.includes(keyword) ||
-        row.department.includes(keyword);
-
-      return matchFilter && matchType && matchDept && matchKeyword;
+      const matchDept = deptFilter === "전체 부서" || row.department === deptFilter;
+      return matchDept;
     });
-  }, [applications, filter, typeFilter, deptFilter, keyword]);
+  }, [applications, deptFilter]);
 
   const toggleSelect = (id: string | number) => {
     setSelected((prev) =>
@@ -401,48 +249,46 @@ export default function LeavePage() {
     }
     try {
       await updateLeaveStatuses(selected, "승인완료");
-      alert(`${selected.length}건의 휴가 신청이 일괄 승인되었으며 남은 연차가 자동 차감되었습니다.`);
+      alert(`${selected.length}건의 휴가 신청이 일괄 승인되었으며 해당 직원의 연차가 자동 차감되었습니다.`);
       setSelected([]);
       loadData();
     } catch (err) {
-      setApplications((prev) =>
-        prev.map((item) =>
-          selected.includes(item.id) ? { ...item, status: "승인완료" as const } : item,
-        ),
+      alert("오프라인 또는 서버 응답 불가 상태입니다.");
+    }
+  };
+
+  // 2. 서버 사이드 고급 엑셀 보고서 다운로드 핸들러
+  const handleExportCsv = async () => {
+    try {
+      await downloadLeaveReportServer(
+        selectedYear,
+        selectedMonth,
+        filter === "전체" ? undefined : filter,
+        typeFilter === "≡ 유형 전체" ? undefined : typeFilter,
+        keyword || undefined
       );
-      setSummary((prev) => ({
-        ...prev,
-        pendingApplications: Math.max(0, (prev.pendingApplications ?? 0) - selected.length),
-        totalUsedDays: (prev.totalUsedDays ?? 0) + selected.length * 1.0,
-      }));
-      alert(`${selected.length}건의 휴가를 승인했습니다. (오프라인 환경 보정 반영)`);
-      setSelected([]);
+    } catch (err) {
+      if (filtered.length === 0) {
+        alert("출력할 데이터가 없습니다.");
+        return;
+      }
+      const headers = ["직원명,부서,직급,휴가유형,신청일,휴가기간,일수,잔여연차,대리인,승인자,상태"];
+      const rows = filtered.map(
+        (r) =>
+          `"${r.name}","${r.department}","${r.position.split("· ")[1] || "사원"}","${r.type}","${r.applyDate}","${r.period}","${r.days}","${r.remainText}","${r.proxy}","${r.approver}","${r.status}"`,
+      );
+      const csvContent = "\uFEFF" + [headers, ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `휴가감사보고서_${selectedYear}년_${selectedMonth || "전체"}월.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
-  // 2. 엑셀 내보내기 핸들러
-  const handleExportCsv = () => {
-    if (filtered.length === 0) {
-      alert("출력할 데이터가 없습니다.");
-      return;
-    }
-    const headers = ["직원명,부서,직급,휴가유형,신청일,휴가기간,일수,잔여연차,대리인,승인자,상태"];
-    const rows = filtered.map(
-      (r) =>
-        `"${r.name}","${r.department}","${r.position.split("· ")[1] || "사원"}","${r.type}","${r.applyDate}","${r.period}","${r.days}","${r.remainText}","${r.proxy}","${r.approver}","${r.status}"`,
-    );
-    const csvContent = "\uFEFF" + [headers, ...rows].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.setAttribute("download", `휴가신청현황_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // 3. 첨부파일 선택 핸들러
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       setAttachedFile(e.target.files[0]);
@@ -462,7 +308,6 @@ export default function LeavePage() {
     e.stopPropagation();
   };
 
-  // 4. 모달 폼 휴가 등록 (API 및 첨부파일 Multipart 보관 전송)
   const handleModalSubmit = async () => {
     if (modalLeaveType === "병가" && !attachedFile) {
       const confirmNoDoc = window.confirm("병가 신청이나 진단서 첨부파일이 없습니다. 그대로 진행하시겠습니까?");
@@ -481,51 +326,13 @@ export default function LeavePage() {
     if (attachedFile) formData.append("file", attachedFile);
 
     try {
-      const newApp = await submitLeaveApplication(formData);
-      alert("휴가 신청이 안전하게 등록되었습니다. (서버 물리 파일 업로드 완료)");
-      setApplications((prev) => [newApp, ...prev]);
+      await submitLeaveApplication(formData);
+      alert("휴가 신청이 안전하게 등록되었습니다. (서버 물리 파일 업로드 및 대장 연계 완료)");
       setIsModalOpen(false);
       setAttachedFile(null);
       loadData();
     } catch (err) {
-      const remainTxt =
-        modalLeaveType === "병가"
-          ? "진단서 첨부"
-          : `${quotaInfo.remainingDays}일 → ${afterRemainDays}일${afterRemainDays < 0 ? "!" : ""}`;
-
-      const simApp: LeaveApplicationResponse = {
-        id: Date.now(),
-        employeeId: selectedEmp.id,
-        name: selectedEmp.name,
-        initial: selectedEmp.initial,
-        position: `${selectedEmp.dept} · ${selectedEmp.pos}`,
-        department: selectedEmp.dept,
-        tone: selectedEmp.tone,
-        type: modalLeaveType,
-        applyDate: new Date().toISOString().slice(5, 10).replace("-", "."),
-        period:
-          startDate === endDate
-            ? startDate + (modalLeaveType.includes("오후") ? " 오후" : modalLeaveType.includes("오전") ? " 오전" : "")
-            : `${startDate.slice(5)} ~ ${endDate.slice(5)}`,
-        days: `${calculatedDays}일`,
-        remainText: remainTxt,
-        remainType: modalLeaveType === "병가" ? "doc" : afterRemainDays < 0 ? "danger" : "normal",
-        proxy: proxyName || "—",
-        approver: approverName.split(" (")[0] || "김관리",
-        status: "승인대기",
-        note: note || "",
-        attachmentName: attachedFile ? attachedFile.name : undefined,
-        hasAttachment: !!attachedFile,
-      };
-      setApplications((prev) => [simApp, ...prev]);
-      setSummary((prev) => ({
-        ...prev,
-        pendingApplications: (prev.pendingApplications ?? 0) + 1,
-        thisMonthApplications: (prev.thisMonthApplications ?? 0) + 1,
-      }));
-      alert("신규 휴가가 성공적으로 등록되었습니다!");
-      setIsModalOpen(false);
-      setAttachedFile(null);
+      alert("휴가 등록에 실패했습니다. 서버 상태를 확인하세요.");
     }
   };
 
@@ -540,7 +347,11 @@ export default function LeavePage() {
         <div className={styles.pageActions}>
           <div className={styles.selectWrapper}>
             <Calendar size={15} color="#475569" className={styles.selectIcon} />
-            <select className={styles.selectWithIcon} defaultValue="2026년" onChange={() => loadData()}>
+            <select
+              className={styles.selectWithIcon}
+              value={`${selectedYear}년`}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            >
               <option value="2026년">2026년</option>
               <option value="2025년">2025년</option>
             </select>
@@ -548,10 +359,18 @@ export default function LeavePage() {
           </div>
 
           <div className={styles.selectWrapper}>
-            <select className={styles.select} defaultValue="7월" onChange={() => loadData()}>
+            <select
+              className={styles.select}
+              value={selectedMonth ? `${selectedMonth}월` : "전체 월"}
+              onChange={(e) => {
+                const val = e.target.value;
+                setSelectedMonth(val === "전체 월" ? undefined : parseInt(val));
+              }}
+            >
               <option value="7월">7월</option>
               <option value="6월">6월</option>
               <option value="5월">5월</option>
+              <option value="전체 월">전체 월</option>
             </select>
             <ChevronDown size={14} className={styles.arrowIcon} />
           </div>
@@ -571,7 +390,7 @@ export default function LeavePage() {
 
           <button type="button" className={styles.outlineBtn} onClick={handleExportCsv}>
             <Download size={15} />
-            내보내기
+            감사 보고서 내보내기
           </button>
           <button
             type="button"
@@ -584,7 +403,7 @@ export default function LeavePage() {
         </div>
       </div>
 
-      {/* 요약 KPI 카드 (5개) */}
+      {/* 요약 KPI 카드 (5개 - 100% DB 실데이터 연산 결과) */}
       <div className={styles.summaryRow}>
         <div className={styles.summaryCard}>
           <div className={styles.summaryTop}>
@@ -596,7 +415,7 @@ export default function LeavePage() {
           <p className={styles.kpiValue}>
             {(summary.totalAllocatedDays ?? 0).toLocaleString()}<span>일</span>
           </p>
-          <small className={styles.tagGreen}>● 1인 평균 15일</small>
+          <small className={styles.tagGreen}>● 1인 평균 15~20일</small>
         </div>
 
         <div className={styles.summaryCard}>
@@ -630,12 +449,12 @@ export default function LeavePage() {
           <p className={styles.kpiValue}>
             {(summary.totalRemainingDays ?? 0).toLocaleString()}<span>일</span>
           </p>
-          <small className={styles.tagGreen}>● 1인 평균 10일 잔여</small>
+          <small className={styles.tagGreen}>● 실시간 DB 합산 잔여</small>
         </div>
 
         <div className={styles.summaryCard}>
           <div className={styles.summaryTop}>
-            <label>이번달 신청</label>
+            <label>조회 기간 신청</label>
             <span className={styles.iconBadgeOrange}>
               <Clock size={18} />
             </span>
@@ -658,7 +477,7 @@ export default function LeavePage() {
           <p className={`${styles.kpiValue} ${styles.textRed}`}>
             {summary.riskEmployeeCount ?? 0}<span>명</span>
           </p>
-          <small className={styles.tagRed}>● 잔여 2일 이하</small>
+          <small className={styles.tagRed}>● 잔여 5일 이하 주의군</small>
         </div>
       </div>
 
@@ -812,7 +631,7 @@ export default function LeavePage() {
           </div>
         </section>
 
-        {/* 우측 사이드 패널 */}
+        {/* 우측 사이드 패널 (100% 실시간 DB 비율 계산) */}
         <aside className={styles.sidePanels}>
           {/* 위젯 1: 유형별 신청 현황 */}
           <div className={styles.panelCard}>
@@ -859,7 +678,7 @@ export default function LeavePage() {
             </div>
           </div>
 
-          {/* 위젯 2: 연차 소진 위험 */}
+          {/* 위젯 2: 연차 소진 위험 (실시간 잔여 5일 이하 명단) */}
           <div className={styles.panelCard}>
             <div className={styles.panelHeaderRisk}>
               <div className={styles.headerTitleLeft}>
@@ -873,7 +692,7 @@ export default function LeavePage() {
 
             <div className={styles.alertBanner}>
               <AlertCircle size={15} color="#dc2626" className={styles.alertIcon} />
-              <span>잔여 연차 2일 이하인 직원입니다.</span>
+              <span>잔여 연차 5일 이하 주의 사원입니다.</span>
             </div>
 
             <div className={styles.riskList}>
@@ -902,7 +721,6 @@ export default function LeavePage() {
       {isModalOpen && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContainer}>
-            {/* 모달 헤더 */}
             <div className={styles.modalHeader}>
               <div className={styles.headerLeft}>
                 <div className={styles.modalIconBox}>
@@ -922,9 +740,7 @@ export default function LeavePage() {
               </button>
             </div>
 
-            {/* 모달 본문 폼 */}
             <div className={styles.modalBody}>
-              {/* 섹션 1: 직원 정보 */}
               <div className={styles.formSection}>
                 <h4 className={styles.sectionTitle}>
                   <span className={styles.barAccent}>▍</span> 직원 정보
@@ -984,7 +800,6 @@ export default function LeavePage() {
                 </div>
               </div>
 
-              {/* 섹션 2: 휴가 유형 */}
               <div className={styles.formSection}>
                 <h4 className={styles.sectionTitle}>
                   <span className={styles.barAccent}>▍</span> 휴가 유형
@@ -1013,7 +828,6 @@ export default function LeavePage() {
                 </div>
               </div>
 
-              {/* 섹션 3: 휴가 기간 */}
               <div className={styles.formSection}>
                 <h4 className={styles.sectionTitle}>
                   <span className={styles.barAccent}>▍</span> 휴가 기간
@@ -1046,7 +860,6 @@ export default function LeavePage() {
                 </div>
               </div>
 
-              {/* 섹션 4: 업무 대리인 & 승인자 (2열) */}
               <div className={styles.formGridTwo}>
                 <div className={styles.formSection}>
                   <h4 className={styles.sectionTitle}>
@@ -1150,7 +963,6 @@ export default function LeavePage() {
                 </div>
               </div>
 
-              {/* 섹션 5: 첨부파일 */}
               <div className={styles.formSection}>
                 <h4 className={styles.sectionTitle}>
                   <span className={styles.barAccent}>▍</span> 첨부파일{" "}
@@ -1217,7 +1029,6 @@ export default function LeavePage() {
               </div>
             </div>
 
-            {/* 모달 푸터 액션 버튼 */}
             <div className={styles.modalFooter}>
               <button
                 type="button"
