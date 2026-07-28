@@ -12,6 +12,8 @@ import {
   createEmployeeDetailed,
   getAppointmentHistory,
   createAppointment,
+  getEmployeeManagementData,
+  getEmployeeById,
 } from "@/services/employeeService";
 import type {
   EmployeeManagementData,
@@ -85,6 +87,10 @@ const DEPT_ID_MAP: Record<string, number> = {
 export default function EmployeeManagementPage({ initialData }: Props) {
   const router = useRouter();
 
+  const [employees, setEmployees] = useState(initialData.employees);
+  const [totalCount, setTotalCount] = useState(initialData.totalCount);
+  const [listLoading, setListLoading] = useState(false);
+
   const [keyword, setKeyword] = useState("");
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("전체");
   const [selectedId, setSelectedId] = useState(
@@ -102,13 +108,16 @@ export default function EmployeeManagementPage({ initialData }: Props) {
   const [bankVerifyOpen, setBankVerifyOpen] = useState(false);
   const [bankVerified, setBankVerified] = useState(false);
 
-  // 재직·휴직
+  const [detail, setDetail] = useState<any | null>(null);
+
   const [histories, setHistories] = useState<AppointmentResponse[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyError, setHistoryError] = useState("");
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
-  const [leaveType, setLeaveType] = useState<"병가" | "육아휴직" | "개인사유" | "">("");
+  const [leaveType, setLeaveType] = useState<
+    "병가" | "육아휴직" | "개인사유" | ""
+  >("");
   const [leaveStart, setLeaveStart] = useState("");
   const [leaveEnd, setLeaveEnd] = useState("");
   const [leaveReason, setLeaveReason] = useState("");
@@ -119,8 +128,85 @@ export default function EmployeeManagementPage({ initialData }: Props) {
   const [retireDetail, setRetireDetail] = useState("");
   const [retireSubmitting, setRetireSubmitting] = useState(false);
 
+  const [licenses, setLicenses] = useState<EmployeeLicenseItem[]>([]);
+  const [educations, setEducations] = useState<EmployeeEducationItem[]>([]);
+  const [eduFilter, setEduFilter] = useState<"전체" | "이수완료" | "대기중">(
+    "전체",
+  );
+  const [licenseModal, setLicenseModal] = useState<{
+    open: boolean;
+    mode: "create" | "edit";
+    item?: EmployeeLicenseItem | null;
+  }>({ open: false, mode: "create" });
+  const [eduModal, setEduModal] = useState<{
+    open: boolean;
+    mode: "create" | "edit";
+    item?: EmployeeEducationItem | null;
+  }>({ open: false, mode: "create" });
+
+  const [healthRecords, setHealthRecords] = useState<HealthCheckRecord[]>([]);
+  const [selectedHealthId, setSelectedHealthId] = useState("");
+  const [nextSchedule, setNextSchedule] = useState<HealthSchedule | null>(null);
+  const [healthModalOpen, setHealthModalOpen] = useState(false);
+  const [scheduleModal, setScheduleModal] = useState<{
+    open: boolean;
+    mode: "create" | "edit";
+  }>({ open: false, mode: "create" });
+
+  const selectedHealth =
+    healthRecords.find((h) => h.id === selectedHealthId) ?? healthRecords[0];
+
+  const reloadEmployees = async () => {
+    try {
+      setListLoading(true);
+      const data = await getEmployeeManagementData();
+      setEmployees(data.employees);
+      setTotalCount(data.totalCount);
+      if (data.employees.length > 0) {
+        setSelectedId((prev) => {
+          if (prev && data.employees.some((e) => e.id === prev)) return prev;
+          return data.employees[0].id;
+        });
+      }
+    } catch (e) {
+      console.error("직원 목록 조회 실패:", e);
+    } finally {
+      setListLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void reloadEmployees();
+  }, []);
+
+  useEffect(() => {
+    setLicenses([]);
+    setEducations([]);
+    setHealthRecords([]);
+    setNextSchedule(null);
+    setSelectedHealthId("");
+    setDetail(null);
+
+    if (!selectedId) return;
+    const id = Number(selectedId);
+    if (Number.isNaN(id)) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const d = await getEmployeeById(id);
+        if (!cancelled) setDetail(d);
+      } catch {
+        if (!cancelled) setDetail(null);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedId]);
+
   const filteredEmployees = useMemo(() => {
-    return initialData.employees.filter((emp) => {
+    return employees.filter((emp) => {
       const matchFilter = filter === "전체" || emp.employmentType === filter;
       const matchKeyword =
         !keyword ||
@@ -129,14 +215,57 @@ export default function EmployeeManagementPage({ initialData }: Props) {
         emp.employeeNo.toLowerCase().includes(keyword.toLowerCase());
       return matchFilter && matchKeyword;
     });
-  }, [initialData.employees, filter, keyword]);
+  }, [employees, filter, keyword]);
 
-  const selected = initialData.selectedEmployee;
+  const selectedFromList = employees.find((e) => e.id === selectedId) ?? null;
+
+  const selected = selectedFromList
+    ? {
+        ...selectedFromList,
+        birthDate: detail?.birthDate
+          ? String(detail.birthDate).slice(0, 10)
+          : "",
+        gender:
+          detail?.gender === "M"
+            ? "남성"
+            : detail?.gender === "F"
+              ? "여성"
+              : (detail?.gender ?? ""),
+        phone: detail?.phone ?? "",
+        email: detail?.email ?? "",
+        address: detail?.address ?? "",
+        emergencyContact: detail?.emergencyContact ?? "",
+        licenseType: "",
+        licenseNo: "",
+        specialty: "",
+        acquiredDate: "",
+        departmentFull: detail?.departmentName ?? selectedFromList.department,
+        jobTitle: detail?.positionName ?? selectedFromList.position,
+        rank: "",
+        hireDate: detail?.joinDate ? String(detail.joinDate).slice(0, 10) : "",
+        employeeNoFull: detail?.empNo ?? selectedFromList.employeeNo,
+        workType: String(selectedFromList.employmentType ?? ""),
+        duty: detail?.workWard ?? "",
+        currentRank: detail?.positionName ?? selectedFromList.position,
+        currentPayGrade:
+          detail?.payStep != null ? `${detail.payStep}호봉` : "",
+        promotionDate: "",
+        nextPromotion: "",
+        bankName: detail?.bankName ?? "",
+        accountNo: detail?.bankAccount ?? "",
+        salaryDay:
+          detail?.payrollDate != null ? `매월 ${detail.payrollDate}일` : "",
+        rankHistory: [] as any[],
+      }
+    : null;
 
   const onFormChange = (
     e: ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
+    if (name === "bankName" || name === "bankAccount") {
+      setBankVerified(false);
+    }
     setForm((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -149,7 +278,6 @@ export default function EmployeeManagementPage({ initialData }: Props) {
 
   const onCreateSubmit = async (e: FormEvent) => {
     e.preventDefault();
-
     if (
       !form.empNo.trim() ||
       !form.name.trim() ||
@@ -159,10 +287,8 @@ export default function EmployeeManagementPage({ initialData }: Props) {
       setFormError("사번, 성명, 입사일, 부서는 필수입니다.");
       return;
     }
-
     setSubmitting(true);
     setFormError("");
-
     try {
       await createEmployeeDetailed({
         empNo: form.empNo.trim(),
@@ -189,10 +315,9 @@ export default function EmployeeManagementPage({ initialData }: Props) {
         bankAccount: form.bankAccount || undefined,
         taxTypeCode: form.taxTypeCode || undefined,
       });
-
       alert("직원이 등록되었습니다.");
       setMode("list");
-      router.refresh();
+      await reloadEmployees();
     } catch (err) {
       setFormError(err instanceof Error ? err.message : "등록에 실패했습니다.");
     } finally {
@@ -200,16 +325,13 @@ export default function EmployeeManagementPage({ initialData }: Props) {
     }
   };
 
-  // 발령 이력 조회
   useEffect(() => {
     if (!selectedId || activeTab !== "history") return;
-
     const empId = Number(selectedId);
     if (Number.isNaN(empId)) {
       setHistories([]);
       return;
     }
-
     let cancelled = false;
     (async () => {
       try {
@@ -228,7 +350,6 @@ export default function EmployeeManagementPage({ initialData }: Props) {
         if (!cancelled) setHistoryLoading(false);
       }
     })();
-
     return () => {
       cancelled = true;
     };
@@ -236,10 +357,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
 
   const onSaveHistory = async (data: EmploymentHistoryForm) => {
     const empId = Number(selectedId);
-    if (Number.isNaN(empId)) {
-      throw new Error("유효한 직원 ID가 아닙니다. (mock 데이터일 수 있습니다)");
-    }
-
+    if (Number.isNaN(empId)) throw new Error("유효한 직원 ID가 아닙니다.");
     await createAppointment({
       employeeId: empId,
       appointmentTypeCode: TYPE_CODE_MAP[data.type] ?? "APPOINT_HR",
@@ -254,9 +372,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
         .filter(Boolean)
         .join(" | "),
     });
-
-    const list = await getAppointmentHistory(empId);
-    setHistories(list);
+    setHistories(await getAppointmentHistory(empId));
     setHistoryModalOpen(false);
     alert("이력이 저장되었습니다.");
   };
@@ -267,15 +383,10 @@ export default function EmployeeManagementPage({ initialData }: Props) {
       alert("유효한 직원 ID가 아닙니다.");
       return;
     }
-    if (!leaveType) {
-      alert("휴직 유형을 선택하세요.");
+    if (!leaveType || !leaveStart) {
+      alert("휴직 유형과 시작일을 입력하세요.");
       return;
     }
-    if (!leaveStart) {
-      alert("휴직 시작일을 입력하세요.");
-      return;
-    }
-
     setLeaveSubmitting(true);
     try {
       await createAppointment({
@@ -290,9 +401,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
           .filter(Boolean)
           .join(" | "),
       });
-
-      const list = await getAppointmentHistory(empId);
-      setHistories(list);
+      setHistories(await getAppointmentHistory(empId));
       setLeaveType("");
       setLeaveStart("");
       setLeaveEnd("");
@@ -311,19 +420,14 @@ export default function EmployeeManagementPage({ initialData }: Props) {
       alert("유효한 직원 ID가 아닙니다.");
       return;
     }
-    if (!retireDate) {
-      alert("퇴직 예정일을 선택하세요.");
-      return;
-    }
-    if (!retireReason) {
-      alert("퇴직 사유를 선택하세요.");
+    if (!retireDate || !retireReason) {
+      alert("퇴직일과 사유를 입력하세요.");
       return;
     }
     if (retireReason === "other" && !retireDetail.trim()) {
       alert("기타 사유를 입력하세요.");
       return;
     }
-
     setRetireSubmitting(true);
     try {
       await createAppointment({
@@ -337,9 +441,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
           .filter(Boolean)
           .join(" | "),
       });
-
-      const list = await getAppointmentHistory(empId);
-      setHistories(list);
+      setHistories(await getAppointmentHistory(empId));
       setRetireDate("");
       setRetireReason("");
       setRetireDetail("");
@@ -350,182 +452,6 @@ export default function EmployeeManagementPage({ initialData }: Props) {
       setRetireSubmitting(false);
     }
   };
-
-    const [licenses, setLicenses] = useState<EmployeeLicenseItem[]>([
-    {
-      id: "1",
-      type: "의료면허",
-      name: "방사선사 면허",
-      number: "RAD-26-09821",
-      issuer: "보건복지부",
-      issueDate: "2019-01-15",
-      noExpire: true,
-      needRenewAlarm: false,
-      status: "valid",
-    },
-    {
-      id: "2",
-      type: "전문 자격증",
-      name: "전문방사선사",
-      number: "SRAD-2021-0447",
-      issuer: "대한방사선사협회",
-      issueDate: "2021-06-10",
-      noExpire: true,
-      needRenewAlarm: false,
-      status: "valid",
-    },
-    {
-      id: "3",
-      type: "안전 자격증",
-      name: "의료기기 안전관리 자격증",
-      number: "MED-2020-1193",
-      issuer: "",
-      issueDate: "2020-03-22",
-      expireDate: "2025-03-21",
-      noExpire: false,
-      needRenewAlarm: true,
-      status: "renew",
-    },
-  ]);
-
-  const [educations, setEducations] = useState<EmployeeEducationItem[]>([
-    {
-      id: "1",
-      category: "법정 의무교육",
-      name: "방사선 피폭 안전관리 교육",
-      startDate: "2025-03-14",
-      endDate: "2025-03-15",
-      hours: "8",
-      org: "한국방사선진흥협회",
-      status: "done",
-      score: "96",
-      completion: "수료",
-    },
-    {
-      id: "2",
-      category: "법정 의무교육",
-      name: "의료기기 품질 관리 법정교육",
-      startDate: "2024-11-05",
-      endDate: "2024-11-06",
-      hours: "16",
-      org: "의료기기안전관리원",
-      status: "done",
-      score: "88",
-      completion: "수료",
-    },
-    {
-      id: "3",
-      category: "전문 기술교육",
-      name: "인체조직 방사선 특수검사 심화과정",
-      startDate: "2025-08-20",
-      endDate: "2025-08-22",
-      hours: "24",
-      org: "국립암센터 교육원",
-      status: "pending",
-      completion: "예정",
-    },
-    {
-      id: "4",
-      category: "전문 기술교육",
-      name: "AI 의료영상 분석 기초 과정",
-      startDate: "2024-07-10",
-      endDate: "2024-07-12",
-      hours: "20",
-      org: "서울대 의과대학 연구소",
-      status: "done",
-      score: "100",
-      completion: "수료",
-    },
-  ]);
-
-  const [eduFilter, setEduFilter] = useState<"전체" | "이수완료" | "대기중">("전체");
-  const [licenseModal, setLicenseModal] = useState<{
-    open: boolean;
-    mode: "create" | "edit";
-    item?: EmployeeLicenseItem | null;
-  }>({ open: false, mode: "create" });
-  const [eduModal, setEduModal] = useState<{
-    open: boolean;
-    mode: "create" | "edit";
-    item?: EmployeeEducationItem | null;
-  }>({ open: false, mode: "create" });
-
-
-    const [healthRecords, setHealthRecords] = useState<HealthCheckRecord[]>([
-    {
-      id: "1",
-      date: "2024-11-15",
-      type: "일반 건강검진",
-      result: "normal",
-      resultLabel: "정상",
-      note: "이상 소견 없음",
-      org: "원내 의원",
-      grade: "정상 (A등급)",
-      items: [
-        { name: "신장 / 체중", value: "176cm / 74kg", range: "-", judgment: "정상" },
-        { name: "혈압", value: "118 / 76 mmHg", range: "120/80 미만", judgment: "정상" },
-        { name: "혈당 (공복)", value: "95 mg/dL", range: "100 미만", judgment: "정상" },
-        { name: "총 콜레스테롤", value: "188 mg/dL", range: "200 미만", judgment: "정상" },
-        { name: "방사선 피폭량", value: "2.1 mSv/년", range: "20 mSv 이하", judgment: "정상" },
-      ],
-    },
-    {
-      id: "2",
-      date: "2023-11-08",
-      type: "일반 건강검진",
-      result: "caution",
-      resultLabel: "주의",
-      note: "콜레스테롤 수치 경계",
-      org: "원내 의원",
-      items: [],
-    },
-    {
-      id: "3",
-      date: "2022-11-21",
-      type: "일반 건강검진",
-      result: "normal",
-      resultLabel: "정상",
-      note: "이상 소견 없음",
-      org: "원내 의원",
-      items: [],
-    },
-    {
-      id: "4",
-      date: "2021-10-19",
-      type: "특수 건강검진",
-      result: "normal",
-      resultLabel: "정상",
-      note: "방사선 피폭 이상 없음",
-      org: "원내 의원",
-      items: [],
-    },
-    {
-      id: "5",
-      date: "2020-11-03",
-      type: "일반 건강검진",
-      result: "normal",
-      resultLabel: "정상",
-      note: "이상 소견 없음",
-      org: "원내 의원",
-      items: [],
-    },
-  ]);
-
-  const [selectedHealthId, setSelectedHealthId] = useState("1");
-  const [nextSchedule, setNextSchedule] = useState<HealthSchedule | null>({
-    date: "2025-11-15",
-    type: "일반 건강검진",
-    org: "원내 의원",
-    alarm: "30",
-  });
-  const [healthModalOpen, setHealthModalOpen] = useState(false);
-  const [scheduleModal, setScheduleModal] = useState<{
-    open: boolean;
-    mode: "create" | "edit";
-  }>({ open: false, mode: "create" });
-
-  const selectedHealth =
-    healthRecords.find((h) => h.id === selectedHealthId) ?? healthRecords[0];
 
   return (
     <>
@@ -540,14 +466,12 @@ export default function EmployeeManagementPage({ initialData }: Props) {
             </div>
 
             <div className={styles.createBody}>
-              {/* 인적사항 */}
               <section className={styles.createCard}>
                 <div className={styles.createCardTitle}>
                   <span className={styles.createBadgeBlue}>👤</span>
                   <h2>인적사항</h2>
                   <em>필수 항목 포함</em>
                 </div>
-
                 <div className={styles.createGrid3}>
                   <label className={styles.createField}>
                     <span>
@@ -589,7 +513,6 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                     </div>
                   </div>
                 </div>
-
                 <div className={styles.createGrid3}>
                   <label className={styles.createField}>
                     <span>휴대폰</span>
@@ -619,16 +542,14 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                     />
                   </label>
                 </div>
-
                 <label className={styles.createField}>
                   <span>주소</span>
                   <div className={styles.addressRow}>
                     <input
                       name="zipCode"
                       value={form.zipCode}
-                      onChange={onFormChange}
-                      placeholder="우편번호"
                       readOnly
+                      placeholder="우편번호"
                     />
                     <button
                       type="button"
@@ -642,10 +563,9 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                     name="address"
                     value={form.address}
                     onChange={onFormChange}
-                    placeholder="상세 주소를 입력하세요 (동, 호수 등)"
+                    placeholder="상세 주소"
                   />
                 </label>
-
                 <div className={styles.createGrid2}>
                   <label className={styles.createField}>
                     <span>긴급 연락처</span>
@@ -653,7 +573,6 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                       name="emergencyContact"
                       value={form.emergencyContact}
                       onChange={onFormChange}
-                      placeholder="010-0000-0000"
                     />
                   </label>
                   <label className={styles.createField}>
@@ -662,19 +581,16 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                       name="emergencyRelation"
                       value={form.emergencyRelation}
                       onChange={onFormChange}
-                      placeholder="예) 배우자, 부모"
                     />
                   </label>
                 </div>
               </section>
 
-              {/* 소속 및 직무 */}
               <section className={styles.createCard}>
                 <div className={styles.createCardTitle}>
                   <span className={styles.createBadgeGreen}>🏢</span>
                   <h2>소속 및 직무</h2>
                 </div>
-
                 <div className={styles.createGrid3}>
                   <label className={styles.createField}>
                     <span>
@@ -720,7 +636,6 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                     </select>
                   </label>
                 </div>
-
                 <div className={styles.createGrid3}>
                   <label className={styles.createField}>
                     <span>고용 형태</span>
@@ -758,7 +673,6 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                     />
                   </label>
                 </div>
-
                 <div className={styles.createGrid3}>
                   <label className={styles.createField}>
                     <span>입사 경로</span>
@@ -790,19 +704,16 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                       name="workWard"
                       value={form.workWard}
                       onChange={onFormChange}
-                      placeholder="근무 장소"
                     />
                   </label>
                 </div>
               </section>
 
-              {/* 행정 / 급여 */}
               <section className={styles.createCard}>
                 <div className={styles.createCardTitle}>
                   <span className={styles.createBadgePurple}>💳</span>
-                  <h2>행정 / 급여</h2>
+                  <h2>직급 · 행정 / 급여</h2>
                 </div>
-
                 <div className={styles.createGrid3}>
                   <label className={styles.createField}>
                     <span>호봉</span>
@@ -810,7 +721,6 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                       name="payStep"
                       value={form.payStep}
                       onChange={onFormChange}
-                      placeholder="숫자"
                     />
                   </label>
                   <label className={styles.createField}>
@@ -826,7 +736,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                     </select>
                   </label>
                   <label className={styles.createField}>
-                    <span>지급일</span>
+                    <span>급여 지급일</span>
                     <select
                       name="payrollDate"
                       value={form.payrollDate}
@@ -838,17 +748,13 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                     </select>
                   </label>
                 </div>
-
                 <label className={styles.createField}>
                   <span>계좌 정보</span>
                   <div className={styles.accountRow}>
                     <select
                       name="bankName"
                       value={form.bankName}
-                      onChange={(e) => {
-                        setBankVerified(false);
-                        onFormChange(e);
-                      }}
+                      onChange={onFormChange}
                     >
                       <option value="">은행 선택</option>
                       <option value="국민은행">국민은행</option>
@@ -859,11 +765,8 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                     <input
                       name="bankAccount"
                       value={form.bankAccount}
-                      onChange={(e) => {
-                        setBankVerified(false);
-                        onFormChange(e);
-                      }}
-                      placeholder="계좌번호를 입력하세요"
+                      onChange={onFormChange}
+                      placeholder="계좌번호"
                     />
                     <button
                       type="button"
@@ -881,7 +784,6 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                     </button>
                   </div>
                 </label>
-
                 <label className={styles.createField}>
                   <span>세금 유형</span>
                   <select
@@ -921,12 +823,14 @@ export default function EmployeeManagementPage({ initialData }: Props) {
           </form>
         ) : (
           <div className={styles.contentLayout}>
+            {/* 왼쪽 목록 */}
             <section className={styles.listBox}>
               <div className={styles.listHeader}>
                 <div>
-                  <h1 className={styles.listTitle}>직원 목록</h1>
+                  <h2 className={styles.listTitle}>직원 목록</h2>
                   <p className={styles.listCount}>
-                    총 {initialData.totalCount.toLocaleString()}명
+                    총 {totalCount}명
+                    {listLoading ? " · 불러오는 중..." : ""}
                   </p>
                 </div>
                 <button
@@ -939,21 +843,11 @@ export default function EmployeeManagementPage({ initialData }: Props) {
               </div>
 
               <div className={styles.listSearch}>
-                <svg
-                  width="15"
-                  height="15"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="m21 21-4.3-4.3" />
-                </svg>
+                <span className={styles.searchIcon}>🔍</span>
                 <input
                   value={keyword}
                   onChange={(e) => setKeyword(e.target.value)}
-                  placeholder="직원 검색"
+                  placeholder="이름, 부서, 사번 검색"
                 />
               </div>
 
@@ -1001,9 +895,15 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                     </div>
                   </button>
                 ))}
+                {filteredEmployees.length === 0 && (
+                  <p style={{ padding: 16, color: "#8a97ad", fontSize: 14 }}>
+                    검색 결과가 없습니다.
+                  </p>
+                )}
               </div>
             </section>
 
+            {/* 오른쪽 상세 */}
             {selected && (
               <section className={styles.detailPanel}>
                 <div className={styles.profileHeader}>
@@ -1026,9 +926,9 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                         {selected.department} · {selected.position}
                       </p>
                       <p className={styles.profileSub}>
-                        <span>{selected.employeeNo}</span>
+                        {selected.employeeNo}
                         <span className={styles.dot}>·</span>
-                        <span>입사일 {selected.hireDate}</span>
+                        {selected.employmentType}
                       </p>
                     </div>
                   </div>
@@ -1045,23 +945,21 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                 </div>
 
                 <div className={styles.tabs}>
-                  {[
-                    { key: "basic", label: "기본정보" },
-                    { key: "history", label: "재직·휴직" },
-                    { key: "license", label: "자격증·교육" },
-                    { key: "health", label: "건강검진" },
-                  ].map((tab) => (
+                  {(
+                    [
+                      ["basic", "기본정보"],
+                      ["history", "재직 · 휴직"],
+                      ["license", "자격증 · 교육"],
+                      ["health", "건강검진"],
+                    ] as const
+                  ).map(([key, label]) => (
                     <button
-                      key={tab.key}
+                      key={key}
                       type="button"
-                      className={
-                        activeTab === tab.key ? styles.tabActive : ""
-                      }
-                      onClick={() =>
-                        setActiveTab(tab.key as typeof activeTab)
-                      }
+                      className={activeTab === key ? styles.tabActive : ""}
+                      onClick={() => setActiveTab(key)}
                     >
-                      {tab.label}
+                      {label}
                     </button>
                   ))}
                 </div>
@@ -1085,27 +983,27 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                           </div>
                           <div>
                             <label>생년월일</label>
-                            <p>{selected.birthDate}</p>
+                            <p>{selected.birthDate || "-"}</p>
                           </div>
                           <div>
                             <label>성별</label>
-                            <p>{selected.gender}</p>
+                            <p>{selected.gender || "-"}</p>
                           </div>
                           <div>
                             <label>연락처</label>
-                            <p>{selected.phone}</p>
+                            <p>{selected.phone || "-"}</p>
                           </div>
                           <div>
                             <label>이메일</label>
-                            <p>{selected.email}</p>
+                            <p>{selected.email || "-"}</p>
                           </div>
                           <div className={styles.full}>
                             <label>주소</label>
-                            <p>{selected.address}</p>
+                            <p>{selected.address || "-"}</p>
                           </div>
                           <div className={styles.full}>
                             <label>긴급 연락처</label>
-                            <p>{selected.emergencyContact}</p>
+                            <p>{selected.emergencyContact || "-"}</p>
                           </div>
                         </div>
                       </article>
@@ -1130,11 +1028,19 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                           </div>
                           <div>
                             <label>입사일</label>
-                            <p>{selected.hireDate}</p>
+                            <p>{selected.hireDate || "-"}</p>
                           </div>
                           <div>
                             <label>사번</label>
                             <p>{selected.employeeNoFull}</p>
+                          </div>
+                          <div>
+                            <label>근무 병동</label>
+                            <p>{selected.duty || "-"}</p>
+                          </div>
+                          <div>
+                            <label>호봉</label>
+                            <p>{selected.currentPayGrade || "-"}</p>
                           </div>
                         </div>
                       </article>
@@ -1146,33 +1052,31 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                   <div className={styles.detailBody}>
                     <div className={styles.summaryRow}>
                       <div className={styles.summaryCard}>
-                        <div className={styles.summaryIconGreen}>●</div>
+                        <div className={styles.summaryIconGreen}>📋</div>
                         <div>
-                          <label>현재 재직 상태</label>
-                          <p className={styles.statusText}>
-                            {selected.statusLabel || "재직"}
-                          </p>
+                          <label>이력 건수</label>
+                          <p>{histories.length}건</p>
                         </div>
                       </div>
                       <div className={styles.summaryCard}>
-                        <div className={styles.summaryIconBlue}>📅</div>
+                        <div className={styles.summaryIconBlue}>🏢</div>
+                        <div>
+                          <label>현재 부서</label>
+                          <p>{selected.department}</p>
+                        </div>
+                      </div>
+                      <div className={styles.summaryCard}>
+                        <div className={styles.summaryIconOrange}>📌</div>
+                        <div>
+                          <label>재직 상태</label>
+                          <p>{selected.statusLabel}</p>
+                        </div>
+                      </div>
+                      <div className={styles.summaryCard}>
+                        <div className={styles.summaryIconPurple}>📅</div>
                         <div>
                           <label>입사일</label>
                           <p>{selected.hireDate || "-"}</p>
-                        </div>
-                      </div>
-                      <div className={styles.summaryCard}>
-                        <div className={styles.summaryIconOrange}>⏱</div>
-                        <div>
-                          <label>근속 기간</label>
-                          <p>-</p>
-                        </div>
-                      </div>
-                      <div className={styles.summaryCard}>
-                        <div className={styles.summaryIconPurple}>📋</div>
-                        <div>
-                          <label>총 휴직 기간</label>
-                          <p>0일</p>
                         </div>
                       </div>
                     </div>
@@ -1184,9 +1088,9 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                             <span
                               className={`${styles.cardIcon} ${styles.iconGreen}`}
                             >
-                              📄
+                              📜
                             </span>
-                            <h3>재직·발령 이력</h3>
+                            <h3>재직 · 발령 이력</h3>
                           </div>
                           <button
                             type="button"
@@ -1196,19 +1100,17 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                             + 이력 추가
                           </button>
                         </div>
-
-                        {historyLoading && <p>이력을 불러오는 중...</p>}
+                        {historyLoading && <p>불러오는 중...</p>}
                         {historyError && (
                           <p className={styles.formError}>{historyError}</p>
                         )}
-
                         <div className={styles.timeline}>
                           {histories.map((h) => (
                             <div key={h.id} className={styles.timelineItem}>
                               <div
                                 className={`${styles.timelineDot} ${styles.dotBlue}`}
                               >
-                                ✓
+                                ●
                               </div>
                               <div className={styles.timelineContent}>
                                 <div className={styles.timelineHeader}>
@@ -1219,20 +1121,12 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                   <span>{h.applyDate}</span>
                                 </div>
                                 <p>
-                                  {[h.afterDepartmentName, h.afterPositionName]
-                                    .filter(Boolean)
-                                    .join(" · ") || "발령 정보"}
+                                  {h.afterDepartmentName ?? "-"} ·{" "}
+                                  {h.afterPositionName ??
+                                    h.afterPositionCode ??
+                                    "-"}
                                 </p>
-                                <small>
-                                  {[
-                                    h.afterPayStep != null
-                                      ? `호봉: ${h.afterPayStep}`
-                                      : "",
-                                    h.note ?? "",
-                                  ]
-                                    .filter(Boolean)
-                                    .join(" | ")}
-                                </small>
+                                {h.note && <small>{h.note}</small>}
                               </div>
                             </div>
                           ))}
@@ -1246,50 +1140,38 @@ export default function EmployeeManagementPage({ initialData }: Props) {
 
                       <div className={styles.rightColumn}>
                         <article className={styles.card}>
-                          <div className={styles.cardTitleRow}>
-                            <div className={styles.cardTitle}>
-                              <span
-                                className={`${styles.cardIcon} ${styles.iconOrange}`}
-                              >
-                                📝
-                              </span>
-                              <h3>휴직 신청</h3>
-                            </div>
-                            <button
-                              type="button"
-                              className={styles.leaveApplyBtn}
-                              onClick={onLeaveSubmit}
-                              disabled={leaveSubmitting}
+                          <div className={styles.cardTitle}>
+                            <span
+                              className={`${styles.cardIcon} ${styles.iconOrange}`}
                             >
-                              {leaveSubmitting ? "처리 중..." : "+ 휴직 신청"}
-                            </button>
+                              ⏸
+                            </span>
+                            <h3>휴직 신청</h3>
                           </div>
-
                           <div className={styles.formGroup}>
-                            <label>휴직 유형 선택</label>
+                            <label>휴직 유형</label>
                             <div className={styles.typeButtons}>
-                              {(
-                                ["병가", "육아휴직", "개인사유"] as const
-                              ).map((t) => (
-                                <button
-                                  key={t}
-                                  type="button"
-                                  className={
-                                    leaveType === t
-                                      ? styles.typeBtnActive
-                                      : styles.typeBtn
-                                  }
-                                  onClick={() => setLeaveType(t)}
-                                >
-                                  {t}
-                                </button>
-                              ))}
+                              {(["병가", "육아휴직", "개인사유"] as const).map(
+                                (t) => (
+                                  <button
+                                    key={t}
+                                    type="button"
+                                    className={
+                                      leaveType === t
+                                        ? styles.typeBtnActive
+                                        : styles.typeBtn
+                                    }
+                                    onClick={() => setLeaveType(t)}
+                                  >
+                                    {t}
+                                  </button>
+                                ),
+                              )}
                             </div>
                           </div>
-
                           <div className={styles.dateRow}>
                             <div className={styles.formGroup}>
-                              <label>휴직 시작일</label>
+                              <label>시작일</label>
                               <input
                                 type="date"
                                 className={styles.dateInput}
@@ -1298,7 +1180,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                               />
                             </div>
                             <div className={styles.formGroup}>
-                              <label>휴직 종료일 (예정)</label>
+                              <label>종료 예정</label>
                               <input
                                 type="date"
                                 className={styles.dateInput}
@@ -1307,68 +1189,61 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                               />
                             </div>
                           </div>
-
                           <div className={styles.formGroup}>
-                            <label>휴직 사유 작성</label>
+                            <label>사유</label>
                             <textarea
                               className={styles.textarea}
-                              rows={4}
-                              maxLength={500}
+                              rows={3}
                               value={leaveReason}
                               onChange={(e) => setLeaveReason(e.target.value)}
-                              placeholder={
-                                "개인 사유를 구체적으로 작성해 주세요.\n예) 부모님 간병으로 인한 휴직 신청이며, 요양 기간 동안 전담 보호가 필요합니다."
-                              }
                             />
-                            <div className={styles.charCount}>
-                              {leaveReason.length} / 500
-                            </div>
                           </div>
+                          <button
+                            type="button"
+                            className={styles.leaveApplyBtn}
+                            onClick={onLeaveSubmit}
+                            disabled={leaveSubmitting}
+                          >
+                            {leaveSubmitting ? "처리 중..." : "휴직 신청"}
+                          </button>
                         </article>
 
                         <article className={styles.card}>
                           <div className={styles.cardTitle}>
                             <span
-                              className={`${styles.cardIcon} ${styles.iconBlue}`}
+                              className={`${styles.cardIcon} ${styles.iconPurple}`}
                             >
-                              📤
+                              🚪
                             </span>
                             <h3>퇴직 처리</h3>
                           </div>
-
-                          <div className={styles.dateRow}>
-                            <div className={styles.formGroup}>
-                              <label>퇴직 예정일</label>
-                              <input
-                                type="date"
-                                className={styles.dateInput}
-                                value={retireDate}
-                                onChange={(e) => setRetireDate(e.target.value)}
-                              />
-                            </div>
-                            <div className={styles.formGroup}>
-                              <label>퇴직 사유</label>
-                              <select
-                                className={styles.selectInput}
-                                value={retireReason}
-                                onChange={(e) =>
-                                  setRetireReason(e.target.value)
-                                }
-                              >
-                                <option value="">선택</option>
-                                <option value="personal">개인 사유</option>
-                                <option value="career">이직</option>
-                                <option value="contract">계약 만료</option>
-                                <option value="other">기타</option>
-                              </select>
-                            </div>
+                          <div className={styles.formGroup}>
+                            <label>퇴직 예정일</label>
+                            <input
+                              type="date"
+                              className={styles.dateInput}
+                              value={retireDate}
+                              onChange={(e) => setRetireDate(e.target.value)}
+                            />
                           </div>
-
+                          <div className={styles.formGroup}>
+                            <label>퇴직 사유</label>
+                            <select
+                              className={styles.selectInput}
+                              value={retireReason}
+                              onChange={(e) => setRetireReason(e.target.value)}
+                            >
+                              <option value="">선택</option>
+                              <option value="personal">개인 사정</option>
+                              <option value="career">이직</option>
+                              <option value="health">건강</option>
+                              <option value="other">기타</option>
+                            </select>
+                          </div>
                           {retireReason === "other" && (
                             <div className={styles.formGroup}>
                               <label>
-                                기타 사유 상세 입력{" "}
-                                <b className={styles.required}>필수</b>
+                                기타 사유 <b className={styles.required}>필수</b>
                               </label>
                               <textarea
                                 className={`${styles.textarea} ${styles.retireDetail}`}
@@ -1378,20 +1253,13 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                 onChange={(e) =>
                                   setRetireDetail(e.target.value)
                                 }
-                                placeholder={
-                                  "기타 퇴직 사유를 구체적으로 작성해 주세요.\n퇴직 사유는 인사 기록에 영구 보존됩니다."
-                                }
+                                placeholder="기타 퇴직 사유를 작성해 주세요."
                               />
                               <div className={styles.charCount}>
                                 {retireDetail.length} / 300
                               </div>
-                              <p className={styles.retireHint}>
-                                ‘기타’ 선택 시 반드시 사유를 입력해야 처리가
-                                진행됩니다.
-                              </p>
                             </div>
                           )}
-
                           <button
                             type="button"
                             className={styles.retireBtn}
@@ -1408,7 +1276,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                   </div>
                 )}
 
-                {activeTab === "license" && selected && (
+                {activeTab === "license" && (
                   <div className={styles.detailBody}>
                     <div className={styles.summaryRow}>
                       <div className={styles.summaryCard}>
@@ -1422,21 +1290,39 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                         <div className={styles.summaryIconGreen}>🎓</div>
                         <div>
                           <label>이수 교육</label>
-                          <p>{educations.filter((e) => e.status === "done").length}건</p>
+                          <p>
+                            {
+                              educations.filter((e) => e.status === "done")
+                                .length
+                            }
+                            건
+                          </p>
                         </div>
                       </div>
                       <div className={styles.summaryCard}>
                         <div className={styles.summaryIconBlue}>⏳</div>
                         <div>
                           <label>이수 대기 교육</label>
-                          <p>{educations.filter((e) => e.status === "pending").length}건</p>
+                          <p>
+                            {
+                              educations.filter((e) => e.status === "pending")
+                                .length
+                            }
+                            건
+                          </p>
                         </div>
                       </div>
                       <div className={styles.summaryCard}>
                         <div className={styles.summaryIconPurple}>🔄</div>
                         <div>
                           <label>갱신 필요 자격</label>
-                          <p>{licenses.filter((l) => l.status === "renew").length}건</p>
+                          <p>
+                            {
+                              licenses.filter((l) => l.status === "renew")
+                                .length
+                            }
+                            건
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -1445,26 +1331,35 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                       <article className={styles.card}>
                         <div className={styles.cardTitleRow}>
                           <div className={styles.cardTitle}>
-                            <span className={`${styles.cardIcon} ${styles.iconOrange}`}>🏅</span>
+                            <span
+                              className={`${styles.cardIcon} ${styles.iconOrange}`}
+                            >
+                              🏅
+                            </span>
                             <h3>면허 / 자격증 목록</h3>
                           </div>
                           <button
                             type="button"
                             className={styles.addLicenseBtn}
                             onClick={() =>
-                              setLicenseModal({ open: true, mode: "create", item: null })
+                              setLicenseModal({
+                                open: true,
+                                mode: "create",
+                                item: null,
+                              })
                             }
                           >
                             + 자격 추가
                           </button>
                         </div>
-
                         <div className={styles.certList}>
                           {licenses.map((lic) => (
                             <div key={lic.id} className={styles.certItem}>
                               <div
                                 className={`${styles.certIcon} ${
-                                  lic.status === "renew" ? styles.certPurple : styles.certOrange
+                                  lic.status === "renew"
+                                    ? styles.certPurple
+                                    : styles.certOrange
                                 }`}
                               >
                                 🏅
@@ -1479,13 +1374,17 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                         : styles.badgeExpire
                                     }`}
                                   >
-                                    {lic.status === "valid" ? "유효" : "갱신 필요"}
+                                    {lic.status === "valid"
+                                      ? "유효"
+                                      : "갱신 필요"}
                                   </span>
                                 </div>
                                 <p className={styles.certNo}># {lic.number}</p>
                                 <div className={styles.certMeta}>
                                   <span>취득: {lic.issueDate}</span>
-                                  {lic.expireDate && <span>만료: {lic.expireDate}</span>}
+                                  {lic.expireDate && (
+                                    <span>만료: {lic.expireDate}</span>
+                                  )}
                                   {lic.issuer && <span>{lic.issuer}</span>}
                                 </div>
                               </div>
@@ -1493,7 +1392,11 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                 type="button"
                                 className={styles.iconBtn}
                                 onClick={() =>
-                                  setLicenseModal({ open: true, mode: "edit", item: lic })
+                                  setLicenseModal({
+                                    open: true,
+                                    mode: "edit",
+                                    item: lic,
+                                  })
                                 }
                               >
                                 ✎
@@ -1502,25 +1405,38 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                 type="button"
                                 className={styles.iconBtn}
                                 onClick={() =>
-                                  setLicenses((prev) => prev.filter((x) => x.id !== lic.id))
+                                  setLicenses((prev) =>
+                                    prev.filter((x) => x.id !== lic.id),
+                                  )
                                 }
                               >
                                 🗑
                               </button>
                             </div>
                           ))}
+                          {licenses.length === 0 && (
+                            <p style={{ color: "#8a97ad", fontSize: 14 }}>
+                              등록된 자격이 없습니다.
+                            </p>
+                          )}
                         </div>
                       </article>
 
                       <article className={styles.card}>
                         <div className={styles.cardTitleRow}>
                           <div className={styles.cardTitle}>
-                            <span className={`${styles.cardIcon} ${styles.iconGreen}`}>🎓</span>
+                            <span
+                              className={`${styles.cardIcon} ${styles.iconGreen}`}
+                            >
+                              🎓
+                            </span>
                             <h3>교육 이수 목록</h3>
                           </div>
                           <div className={styles.eduActions}>
                             <div className={styles.eduFilters}>
-                              {(["전체", "이수완료", "대기중"] as const).map((f) => (
+                              {(
+                                ["전체", "이수완료", "대기중"] as const
+                              ).map((f) => (
                                 <button
                                   key={f}
                                   type="button"
@@ -1539,19 +1455,24 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                               type="button"
                               className={styles.addEduBtn}
                               onClick={() =>
-                                setEduModal({ open: true, mode: "create", item: null })
+                                setEduModal({
+                                  open: true,
+                                  mode: "create",
+                                  item: null,
+                                })
                               }
                             >
                               + 추가
                             </button>
                           </div>
                         </div>
-
                         <div className={styles.eduList}>
                           {educations
                             .filter((e) => {
-                              if (eduFilter === "이수완료") return e.status === "done";
-                              if (eduFilter === "대기중") return e.status === "pending";
+                              if (eduFilter === "이수완료")
+                                return e.status === "done";
+                              if (eduFilter === "대기중")
+                                return e.status === "pending";
                               return true;
                             })
                             .map((edu) => (
@@ -1560,9 +1481,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                   className={`${styles.eduIcon} ${
                                     edu.status === "done"
                                       ? styles.eduGreen
-                                      : edu.status === "pending"
-                                        ? styles.eduOrange
-                                        : styles.eduPurple
+                                      : styles.eduOrange
                                   }`}
                                 >
                                   🎓
@@ -1579,9 +1498,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                     >
                                       {edu.status === "done"
                                         ? "이수완료"
-                                        : edu.status === "pending"
-                                          ? "대기중"
-                                          : "미이수"}
+                                        : "대기중"}
                                     </span>
                                   </div>
                                   <div className={styles.eduMeta}>
@@ -1602,20 +1519,29 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                   type="button"
                                   className={styles.iconBtn}
                                   onClick={() =>
-                                    setEduModal({ open: true, mode: "edit", item: edu })
+                                    setEduModal({
+                                      open: true,
+                                      mode: "edit",
+                                      item: edu,
+                                    })
                                   }
                                 >
                                   ✎
                                 </button>
                               </div>
                             ))}
+                          {educations.length === 0 && (
+                            <p style={{ color: "#8a97ad", fontSize: 14 }}>
+                              등록된 교육이 없습니다.
+                            </p>
+                          )}
                         </div>
                       </article>
                     </div>
                   </div>
                 )}
 
-                {activeTab === "health" && selected && (
+                {activeTab === "health" && (
                   <div className={styles.detailBody}>
                     <div className={styles.summaryRow}>
                       <div className={styles.summaryCard}>
@@ -1646,7 +1572,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                           <p className={styles.statusText}>
                             {selectedHealth?.result === "normal"
                               ? "정상"
-                              : selectedHealth?.resultLabel}
+                              : (selectedHealth?.resultLabel ?? "-")}
                           </p>
                         </div>
                       </div>
@@ -1656,7 +1582,11 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                       <article className={styles.card}>
                         <div className={styles.cardTitleRow}>
                           <div className={styles.cardTitle}>
-                            <span className={`${styles.cardIcon} ${styles.iconBlue}`}>📋</span>
+                            <span
+                              className={`${styles.cardIcon} ${styles.iconBlue}`}
+                            >
+                              📋
+                            </span>
                             <h3>건강검진 이력</h3>
                           </div>
                           <button
@@ -1667,7 +1597,6 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                             + 검진 추가
                           </button>
                         </div>
-
                         <table className={styles.healthTable}>
                           <thead>
                             <tr>
@@ -1706,6 +1635,16 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                 </td>
                               </tr>
                             ))}
+                            {healthRecords.length === 0 && (
+                              <tr>
+                                <td
+                                  colSpan={5}
+                                  style={{ color: "#8a97ad" }}
+                                >
+                                  등록된 검진이 없습니다.
+                                </td>
+                              </tr>
+                            )}
                           </tbody>
                         </table>
                       </article>
@@ -1714,23 +1653,29 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                         <article className={styles.card}>
                           <div className={styles.cardTitleRow}>
                             <div className={styles.cardTitle}>
-                              <span className={`${styles.cardIcon} ${styles.iconCyan}`}>🔬</span>
+                              <span
+                                className={`${styles.cardIcon} ${styles.iconCyan}`}
+                              >
+                                🔬
+                              </span>
                               <h3>최근 검진 결과 상세</h3>
                             </div>
-                            <span className={styles.healthDateBadge}>
-                              {selectedHealth?.date}
-                            </span>
+                            {selectedHealth && (
+                              <span className={styles.healthDateBadge}>
+                                {selectedHealth.date}
+                              </span>
+                            )}
                           </div>
-
-                          {selectedHealth && (
+                          {selectedHealth ? (
                             <>
                               <div className={styles.overallResult}>
                                 <span className={styles.overallIcon}>🛡</span>
                                 <strong>
-                                  종합 판정: {selectedHealth.grade ?? selectedHealth.resultLabel}
+                                  종합 판정:{" "}
+                                  {selectedHealth.grade ??
+                                    selectedHealth.resultLabel}
                                 </strong>
                               </div>
-
                               <table className={styles.resultTable}>
                                 <thead>
                                   <tr>
@@ -1761,7 +1706,10 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                   ))}
                                   {selectedHealth.items.length === 0 && (
                                     <tr>
-                                      <td colSpan={4} style={{ color: "#8a97ad" }}>
+                                      <td
+                                        colSpan={4}
+                                        style={{ color: "#8a97ad" }}
+                                      >
                                         상세 항목 없음
                                       </td>
                                     </tr>
@@ -1769,39 +1717,50 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                 </tbody>
                               </table>
                             </>
+                          ) : (
+                            <p style={{ color: "#8a97ad", fontSize: 14 }}>
+                              선택된 검진이 없습니다.
+                            </p>
                           )}
                         </article>
 
                         <article className={styles.card}>
                           <div className={styles.cardTitleRow}>
                             <div className={styles.cardTitle}>
-                              <span className={`${styles.cardIcon} ${styles.iconOrange}`}>📆</span>
+                              <span
+                                className={`${styles.cardIcon} ${styles.iconOrange}`}
+                              >
+                                📆
+                              </span>
                               <h3>다음 검진 일정</h3>
                             </div>
                             <div className={styles.scheduleActions}>
                               <button
                                 type="button"
                                 className={styles.scheduleBtn}
-                                onClick={() => setScheduleModal({ open: true, mode: "create" })}
+                                onClick={() =>
+                                  setScheduleModal({
+                                    open: true,
+                                    mode: "create",
+                                  })
+                                }
                               >
                                 일정 등록
                               </button>
                               <button
                                 type="button"
                                 className={styles.scheduleBtnOutline}
-                                onClick={() => {
-                                  if (!nextSchedule) {
-                                    setScheduleModal({ open: true, mode: "create" });
-                                    return;
-                                  }
-                                  setScheduleModal({ open: true, mode: "edit" });
-                                }}
+                                onClick={() =>
+                                  setScheduleModal({
+                                    open: true,
+                                    mode: nextSchedule ? "edit" : "create",
+                                  })
+                                }
                               >
                                 일정 수정
                               </button>
                             </div>
                           </div>
-
                           {nextSchedule ? (
                             <div className={styles.nextSchedule}>
                               <div className={styles.scheduleDate}>
@@ -1836,19 +1795,13 @@ export default function EmployeeManagementPage({ initialData }: Props) {
         )}
       </main>
 
-      {/* ===== 모달 ===== */}
       <AddressSearchModal
         open={addressOpen}
         onClose={() => setAddressOpen(false)}
-        onSelect={({ zipCode, address }) => {
-          setForm((prev) => ({
-            ...prev,
-            zipCode,
-            address,
-          }));
-        }}
+        onSelect={({ zipCode, address }) =>
+          setForm((prev) => ({ ...prev, zipCode, address }))
+        }
       />
-
       <BankAccountVerifyModal
         open={bankVerifyOpen}
         bankName={form.bankName}
@@ -1860,14 +1813,12 @@ export default function EmployeeManagementPage({ initialData }: Props) {
         }}
         onChangeAccount={() => setBankVerified(false)}
       />
-
       <EmploymentHistoryModal
         open={historyModalOpen}
         employeeLabel={`${selected?.name ?? ""} · ${selected?.department ?? ""} ${selected?.position ?? ""} · ${selected?.employeeNo ?? ""}`}
         onClose={() => setHistoryModalOpen(false)}
         onSave={onSaveHistory}
       />
-
       <LicenseModal
         open={licenseModal.open}
         mode={licenseModal.mode}
@@ -1909,7 +1860,6 @@ export default function EmployeeManagementPage({ initialData }: Props) {
             : undefined
         }
       />
-
       <EducationModal
         open={eduModal.open}
         mode={eduModal.mode}
@@ -1939,8 +1889,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
             : undefined
         }
       />
-
-            <HealthCheckModal
+      <HealthCheckModal
         open={healthModalOpen}
         employeeLabel={`${selected?.name ?? ""} · ${selected?.department ?? ""} ${selected?.position ?? ""} · ${selected?.employeeNo ?? ""}`}
         onClose={() => setHealthModalOpen(false)}
@@ -1950,7 +1899,6 @@ export default function EmployeeManagementPage({ initialData }: Props) {
           setSelectedHealthId(id);
         }}
       />
-
       <HealthScheduleModal
         open={scheduleModal.open}
         mode={scheduleModal.mode}
@@ -1969,7 +1917,5 @@ export default function EmployeeManagementPage({ initialData }: Props) {
         }
       />
     </>
-
-    
   );
 }

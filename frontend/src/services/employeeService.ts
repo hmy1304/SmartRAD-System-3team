@@ -1,7 +1,7 @@
 import type {
   EmployeeSummaryResponse,
   Page,
-  EmployeeUpdateRequest,
+  // EmployeeUpdateRequest,
   AccountStatusUpdateRequest,
   AppointmentResponse,
   AppointmentCreateRequest,
@@ -21,10 +21,10 @@ const isServer = typeof window === "undefined";
  * 클라이언트: Next rewrite 프록시 /api-system
  */
 function getBaseUrl() {
-  if (isServer) {
+  if (typeof window === "undefined") {
     return (
       process.env.BACKEND_INTERNAL_URL ||
-      process.env.NEXT_PUBLIC_BACKEND_API_URL ||
+      process.env.BACKEND_URL ||
       "http://backend:8080"
     ).replace(/\/$/, "");
   }
@@ -248,6 +248,7 @@ export async function createEmployeeDetailed(
   return response.json();
 }
 
+/** 직원 상세 */
 export async function getEmployeeById(id: number | string) {
   const base = getBaseUrl();
   const response = await fetch(`${base}/employees/${id}`, {
@@ -255,12 +256,39 @@ export async function getEmployeeById(id: number | string) {
     headers: getHeaders(),
     cache: "no-store",
   });
-
   if (!response.ok) {
     throw new Error(`직원 조회 실패: ${response.status}`);
   }
   return response.json();
 }
+
+/** 직원 부분 수정 (PATCH) — null 필드는 서버에서 무시 */
+export type EmployeeUpdateRequest = {
+  name?: string;
+  email?: string;
+  phone?: string;
+  gender?: string;
+  birthDate?: string; // YYYY-MM-DD
+  address?: string;
+  internalPhone?: string;
+  emergencyContact?: string;
+  emergencyRelation?: string;
+  departmentId?: number;
+  positionCode?: string;
+  jobCategoryCode?: string;
+  employmentTypeCode?: string;
+  hireRouteCode?: string;
+  workTypeCode?: string;
+  workWard?: string;
+  payStep?: number;
+  payrollTypeCode?: string;
+  payrollDate?: number;
+  bankAccount?: string;
+  bankName?: string;
+  taxTypeCode?: string;
+  roleGroupId?: number;
+  isShiftWorker?: boolean;
+};
 
 export async function updateEmployee(
   id: number | string,
@@ -272,7 +300,6 @@ export async function updateEmployee(
     headers: getHeaders(),
     body: JSON.stringify(payload),
   });
-
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`직원 수정 실패 (${response.status}): ${text}`);
