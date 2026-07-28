@@ -69,11 +69,11 @@ const initialForm = {
 };
 
 const TYPE_CODE_MAP: Record<string, string> = {
-  재직: "APPOINT_JOIN",
+  재직: "APPOINT_PROMOTE",       
   승진: "APPOINT_PROMOTE",
   "부서 이동": "APPOINT_TRANSFER",
-  인사발령: "APPOINT_HR",
-  "표창/수상": "APPOINT_AWARD",
+  인사발령: "APPOINT_TRANSFER",
+  "표창/수상": "APPOINT_PROMOTE",
 };
 
 const DEPT_ID_MAP: Record<string, number> = {
@@ -82,6 +82,15 @@ const DEPT_ID_MAP: Record<string, number> = {
   중환자실: 2,
   원무과: 5,
   원장실: 1,
+};
+
+const POSITION_CODE_MAP: Record<string, string> = {
+  수석: "POS_01",
+  수간호사: "POS_02",
+  과장: "POS_03",
+  대리: "POS_04",
+  부장: "POS_05",
+  주임: "POS_04",
 };
 
 export default function EmployeeManagementPage({ initialData }: Props) {
@@ -359,19 +368,20 @@ export default function EmployeeManagementPage({ initialData }: Props) {
     const empId = Number(selectedId);
     if (Number.isNaN(empId)) throw new Error("유효한 직원 ID가 아닙니다.");
     await createAppointment({
-      employeeId: empId,
-      appointmentTypeCode: TYPE_CODE_MAP[data.type] ?? "APPOINT_HR",
-      afterDepartmentId: DEPT_ID_MAP[data.department],
-      afterPositionCode: data.position || undefined,
-      applyDate: data.startDate,
-      note: [
-        data.endDate ? `종료: ${data.endDate}` : "종료: 현재",
-        data.employmentType ? `고용형태: ${data.employmentType}` : "",
-        data.handler ? `처리자: ${data.handler}` : "",
-      ]
-        .filter(Boolean)
-        .join(" | "),
-    });
+    employeeId: empId,
+    appointmentTypeCode: TYPE_CODE_MAP[data.type] ?? "APPOINT_HR",
+    afterDepartmentId: DEPT_ID_MAP[data.department],
+    afterPositionCode:
+      POSITION_CODE_MAP[data.position] ?? data.position ?? undefined,
+    applyDate: data.startDate,
+    note: [
+      data.endDate ? `종료: ${data.endDate}` : "종료: 현재",
+      data.employmentType ? `고용형태: ${data.employmentType}` : "",
+      data.handler ? `처리자: ${data.handler}` : "",
+    ]
+      .filter(Boolean)
+      .join(" | "),
+  });
     setHistories(await getAppointmentHistory(empId));
     setHistoryModalOpen(false);
     alert("이력이 저장되었습니다.");
@@ -391,7 +401,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
     try {
       await createAppointment({
         employeeId: empId,
-        appointmentTypeCode: "APPOINT_LEAVE",
+        appointmentTypeCode: "APPOINT_PROMOTE",
         applyDate: leaveStart,
         note: [
           `휴직유형: ${leaveType}`,
@@ -432,7 +442,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
     try {
       await createAppointment({
         employeeId: empId,
-        appointmentTypeCode: "APPOINT_RETIRE",
+        appointmentTypeCode: "APPOINT_TRANSFER",
         applyDate: retireDate,
         note: [
           `퇴직사유: ${retireReason}`,
