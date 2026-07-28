@@ -19,6 +19,13 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import com.tphr.hr.payroll.repository.AllowanceItemRepository;
+import com.tphr.hr.payroll.repository.BaseSalaryRepository;
+import com.tphr.hr.payroll.repository.DeductionItemRepository;
+import com.tphr.hr.payroll.entity.AllowanceItem;
+import com.tphr.hr.payroll.entity.DeductionItem;
+import com.tphr.hr.payroll.entity.BaseSalary;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -27,6 +34,9 @@ public class PayrollService {
     private final PayrollRecordRepository payrollRecordRepository;
     private final PayrollDetailRepository payrollDetailRepository;
     private final EmployeeRepository employeeRepository;
+    private final BaseSalaryRepository baseSalaryRepository;
+    private final AllowanceItemRepository allowanceItemRepository;
+    private final DeductionItemRepository deductionItemRepository;
 
     // 가상의 공제율 (실무에서는 DB 관리)
     private static final BigDecimal NATIONAL_PENSION_RATE = new BigDecimal("0.045"); // 국민연금 4.5%
@@ -41,21 +51,78 @@ public class PayrollService {
         List<Employee> activeEmployees = employeeRepository.findByAccountStatus("ACTIVE");
         List<PayrollRecord> calculatedRecords = new ArrayList<>();
 
+        List<BaseSalary> baseSalaries = baseSalaryRepository.findAll();
+        List<AllowanceItem> activeAllowances = allowanceItemRepository.findAll().stream()
+                .filter(a -> Boolean.TRUE.equals(a.getIsActive()))
+                .collect(Collectors.toList());
+        List<DeductionItem> activeDeductions = deductionItemRepository.findAll().stream()
+                .filter(d -> Boolean.TRUE.equals(d.getIsActive()))
+                .collect(Collectors.toList());
+
         for (Employee employee : activeEmployees) {
-            // 1. 기본급 (실무에서는 직급/호봉 테이블 연동)
-            BigDecimal baseSalary = new BigDecimal("3000000"); // 임의의 기본급 300만원
+            // 1. 기본급 계산
+            BigDecimal baseSalaryAmt = new BigDecimal("3000000"); // 기본값 300만원
+            String employeeJobTitle = employee.getPosition() != null ? employee.getPosition().getName() : null;
+            if (employeeJobTitle != null) {
+                Optional<BaseSalary> matchedBs = baseSalaries.stream()
+                        .filter(bs -> employeeJobTitle.equals(bs.getJobTitle()))
+                        .findFirst();
+                if (matchedBs.isPresent() && matchedBs.get().getActualAmount() != null) {
+                    baseSalaryAmt = BigDecimal.valueOf(matchedBs.get().getActualAmount());
+                }
+            }
 
-            // 2. 수당 계산 (야간/휴일 등)
-            BigDecimal nightAllowance = new BigDecimal("150000");
-            BigDecimal totalAllowance = nightAllowance;
+            // 2. 수당 계산
+            BigDecimal totalAllowance = BigDecimal.ZERO;
+            List<PayrollDetail> details = new ArrayList<>();
+            for (AllowanceItem allowance : activeAllowances) {
+                BigDecimal amt = BigDecimal.ZERO;
+                if ("정액".equals(allowance.getAmountType())) {
+                    try {
+                        amt = new BigDecimal(allowance.getAmountOrRate().replaceAll("[^0-9.]", ""));
+                    } catch (Exception e) {
+                        amt = new BigDecimal("100000"); // 파싱 실패시 임의 기본값
+                    }
+                } else if ("비율".equals(allowance.getAmountType())) {
+                    try {
+                        BigDecimal rate = new BigDecimal(allowance.getAmountOrRate().replaceAll("[^0-9.]", "")).divide(new BigDecimal("100"));
+                        amt = baseSalaryAmt.multiply(rate).setScale(0, RoundingMode.HALF_UP);
+                    } catch (Exception e) {
+                        amt = BigDecimal.ZERO;
+                    }
+                }
+                totalAllowance = totalAllowance.add(amt);
+                if (amt.compareTo(BigDecimal.ZERO) > 0) {
+                    details.add(PayrollDetail.builder().itemType("ALLOWANCE").itemName(allowance.getName()).amount(amt).build());
+                }
+            }
 
-            // 3. 공제 계산 (4대보험)
-            BigDecimal grossSalary = baseSalary.add(totalAllowance);
-            BigDecimal nationalPension = grossSalary.multiply(NATIONAL_PENSION_RATE).setScale(0, RoundingMode.HALF_UP);
-            BigDecimal healthInsurance = grossSalary.multiply(HEALTH_INSURANCE_RATE).setScale(0, RoundingMode.HALF_UP);
-            BigDecimal totalDeduction = nationalPension.add(healthInsurance);
+            // 3. 공제 계산
+            BigDecimal grossSalary = baseSalaryAmt.add(totalAllowance);
+            BigDecimal totalDeduction = BigDecimal.ZERO;
+            for (DeductionItem deduction : activeDeductions) {
+                BigDecimal amt = BigDecimal.ZERO;
+                if ("정액".equals(deduction.getDeductionType())) {
+                    try {
+                        amt = new BigDecimal(deduction.getRateOrAmount().replaceAll("[^0-9.]", ""));
+                    } catch (Exception e) {
+                        amt = new BigDecimal("30000");
+                    }
+                } else if ("비율".equals(deduction.getDeductionType())) {
+                    try {
+                        BigDecimal rate = new BigDecimal(deduction.getRateOrAmount().replaceAll("[^0-9.]", "")).divide(new BigDecimal("100"));
+                        amt = baseSalaryAmt.multiply(rate).setScale(0, RoundingMode.HALF_UP);
+                    } catch (Exception e) {
+                        amt = BigDecimal.ZERO;
+                    }
+                }
+                totalDeduction = totalDeduction.add(amt);
+                if (amt.compareTo(BigDecimal.ZERO) > 0) {
+                    details.add(PayrollDetail.builder().itemType("DEDUCTION").itemName(deduction.getName()).amount(amt).build());
+                }
+            }
 
-            // 4. 실지급액
+            // 4. 실수령액
             BigDecimal netPay = grossSalary.subtract(totalDeduction);
 
             PayrollRecord savedRecord;
@@ -68,20 +135,17 @@ public class PayrollService {
                     calculatedRecords.add(existingRecord);
                     continue;
                 }
-                // 기존 내역 업데이트 (ID 유지)
-                existingRecord.updateCalculation(baseSalary, totalAllowance, totalDeduction, netPay);
+                existingRecord.updateCalculation(baseSalaryAmt, totalAllowance, totalDeduction, netPay);
                 savedRecord = payrollRecordRepository.save(existingRecord);
                 
-                // 상세 내역 초기화
                 payrollDetailRepository.deleteByPayrollRecordId(savedRecord.getId());
-                payrollDetailRepository.flush(); // 즉시 삭제 반영
+                payrollDetailRepository.flush();
             } else {
-                // 신규 생성
                 PayrollRecord record = PayrollRecord.builder()
                         .employee(employee)
                         .payrollYear(year)
                         .payrollMonth(month)
-                        .baseSalary(baseSalary)
+                        .baseSalary(baseSalaryAmt)
                         .totalAllowance(totalAllowance)
                         .totalDeduction(totalDeduction)
                         .netPay(netPay)
@@ -92,13 +156,16 @@ public class PayrollService {
 
             calculatedRecords.add(savedRecord);
 
-            // 6. 상세(Detail) 저장
-            List<PayrollDetail> details = List.of(
-                    PayrollDetail.builder().payrollRecord(savedRecord).itemType("ALLOWANCE").itemName("야간수당").amount(nightAllowance).build(),
-                    PayrollDetail.builder().payrollRecord(savedRecord).itemType("DEDUCTION").itemName("국민연금").amount(nationalPension).build(),
-                    PayrollDetail.builder().payrollRecord(savedRecord).itemType("DEDUCTION").itemName("건강보험").amount(healthInsurance).build()
-            );
-            payrollDetailRepository.saveAll(details);
+            List<PayrollDetail> finalDetails = new ArrayList<>();
+            for (PayrollDetail tempDetail : details) {
+                finalDetails.add(PayrollDetail.builder()
+                        .payrollRecord(savedRecord)
+                        .itemType(tempDetail.getItemType())
+                        .itemName(tempDetail.getItemName())
+                        .amount(tempDetail.getAmount())
+                        .build());
+            }
+            payrollDetailRepository.saveAll(finalDetails);
         }
 
         return calculatedRecords.stream().map(this::mapToResponse).collect(Collectors.toList());

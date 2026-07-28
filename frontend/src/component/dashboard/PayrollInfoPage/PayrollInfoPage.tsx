@@ -67,6 +67,38 @@ export default function PayrollInfoPage() {
     }
   }, [totalDeductionPages, deductionPage]);
 
+  const handleToggleAllowance = async (id: number, currentActive: boolean) => {
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+      const res = await fetch(`${backendUrl}/payroll-settings/allowances/${id}/toggle-active`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !currentActive })
+      });
+      if (res.ok) {
+        fetchData();
+      }
+    } catch (e) {
+      console.error("Failed to toggle allowance", e);
+    }
+  };
+
+  const handleToggleDeduction = async (id: number, currentActive: boolean) => {
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+      const res = await fetch(`${backendUrl}/payroll-settings/deductions/${id}/toggle-active`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: !currentActive })
+      });
+      if (res.ok) {
+        fetchData();
+      }
+    } catch (e) {
+      console.error("Failed to toggle deduction", e);
+    }
+  };
+
   const currentDeductions = deductions.slice(
     (deductionPage - 1) * DEDUCTIONS_PER_PAGE,
     deductionPage * DEDUCTIONS_PER_PAGE
@@ -267,10 +299,14 @@ export default function PayrollInfoPage() {
                             </span>
                           </td>
                           <td>
-                            <label className={styles.toggleSwitch}>
-                              <input type="checkbox" defaultChecked={true} />
-                              <span className={styles.slider}></span>
-                            </label>
+                              <label className={styles.toggleSwitch}>
+                                <input 
+                                  type="checkbox" 
+                                  checked={item.isActive !== false} 
+                                  onChange={() => handleToggleDeduction(item.id, item.isActive !== false)} 
+                                />
+                                <span className={styles.slider}></span>
+                              </label>
                           </td>
                           <td><button className={styles.editBtn} onClick={() => setEditingDeduction(item)}><EditIcon /></button></td>
                         </tr>
@@ -346,13 +382,17 @@ export default function PayrollInfoPage() {
                         <div className={styles.itemRate}>
                           {item.amountOrRate}
                         </div>
-                        <div className={styles.itemActions}>
-                          <label className={styles.toggleSwitch}>
-                            <input type="checkbox" defaultChecked={true} />
-                            <span className={styles.slider}></span>
-                          </label>
-                          <button className={styles.editBtn} onClick={() => setEditingAllowance(item)}><EditIcon /></button>
-                        </div>
+                          <div className={styles.itemActions}>
+                            <label className={styles.toggleSwitch}>
+                              <input 
+                                type="checkbox" 
+                                checked={item.isActive !== false} 
+                                onChange={() => handleToggleAllowance(item.id, item.isActive !== false)} 
+                              />
+                              <span className={styles.slider}></span>
+                            </label>
+                            <button className={styles.editBtn} onClick={() => setEditingAllowance(item)}><EditIcon /></button>
+                          </div>
                       </div>
                     </div>
                   ))}

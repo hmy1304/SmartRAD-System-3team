@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PatchMapping;
 
 import java.util.List;
 
@@ -72,6 +73,12 @@ public class PayrollSettingsController {
         return ResponseEntity.ok().build();
     }
 
+    @PatchMapping("/allowances/{id}/toggle-active")
+    public ResponseEntity<Void> toggleAllowanceActive(@PathVariable Long id, @RequestBody java.util.Map<String, Boolean> body) {
+        payrollSettingsService.toggleAllowanceActive(id, body.get("isActive"));
+        return ResponseEntity.ok().build();
+    }
+
     @PostMapping("/deductions")
     public ResponseEntity<DeductionItemDto> createDeduction(@RequestBody DeductionItemDto dto) {
         return ResponseEntity.ok(payrollSettingsService.createDeductionItem(dto));
@@ -85,6 +92,12 @@ public class PayrollSettingsController {
     @DeleteMapping("/deductions/{id}")
     public ResponseEntity<Void> deleteDeduction(@PathVariable Long id) {
         payrollSettingsService.deleteDeductionItem(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PatchMapping("/deductions/{id}/toggle-active")
+    public ResponseEntity<Void> toggleDeductionActive(@PathVariable Long id, @RequestBody java.util.Map<String, Boolean> body) {
+        payrollSettingsService.toggleDeductionActive(id, body.get("isActive"));
         return ResponseEntity.ok().build();
     }
 }

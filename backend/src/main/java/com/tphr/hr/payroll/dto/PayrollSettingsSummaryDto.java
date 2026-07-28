@@ -14,4 +14,9 @@ public class PayrollSettingsSummaryDto {
     private List<AllowanceItemDto> allowanceItems;
     private List<DeductionItemDto> deductionItems;
     private MinimumWageDto minimumWage;
+    
+    private Long averageBaseSalary;
+    private Integer allowanceCount;
+    private Integer deductionCount;
+    private String applicableMonth;
 }

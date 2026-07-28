@@ -16,4 +16,5 @@ public class AllowanceItemDto {
     private String amountType;
     private String amountOrRate;
     private String calculationBasis;
+    private Boolean isActive;
 }

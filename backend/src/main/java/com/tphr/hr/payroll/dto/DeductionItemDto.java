@@ -15,4 +15,5 @@ public class DeductionItemDto {
     private String category;
     private String deductionType;
     private String rateOrAmount;
+    private Boolean isActive;
 }

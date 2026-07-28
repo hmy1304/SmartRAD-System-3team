@@ -1,0 +1,2 @@
+ALTER TABLE allowance_item ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
+ALTER TABLE deduction_item ADD COLUMN is_active BOOLEAN DEFAULT TRUE;
