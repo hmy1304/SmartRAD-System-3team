@@ -1279,3 +1279,152 @@
   }
 }
 
+/* 👤 접속 권한(사용자) 뷰어 선택기 (테스트 및 실제 사용자 모드 전환) */
+.viewerSelector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+
+  .viewerSelect {
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 800;
+    color: #2563eb;
+    cursor: pointer;
+    outline: none;
+  }
+}
+
+/* 체크박스 비활성화 스타일 (특별승인 대상 건) */
+.checkboxDisabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  accent-color: #cbd5e1;
+}
+
+/* 테이블 우측 조치(Action) 버튼 그룹 */
+.actionGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cancelBtn {
+  height: 30px;
+  padding: 0 10px;
+  background: #f8fafc;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+
+  &:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+    border-color: #94a3b8;
+  }
+}
+
+.specialApproveBtn {
+  height: 30px;
+  padding: 0 12px;
+  background: #fff7ed;
+  color: #c2410c;
+  border: 1px solid #fed7aa;
+  border-radius: 6px;
+  font-size: 12.5px;
+  font-weight: 800;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+
+  &:hover {
+    background: #ffedd5;
+    color: #9a3412;
+    border-color: #fb923c;
+  }
+}
+
+/* 첨부파일 바로보기 모달 */
+.fileModalContainer {
+  background: #ffffff;
+  width: 90%;
+  max-width: 800px;
+  height: 80vh;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  border: 1px solid #e2e8f0;
+}
+
+.fileModalBody {
+  flex: 1;
+  background: #334155;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: auto;
+  padding: 0;
+
+  iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+  }
+
+  img {
+    max-width: 95%;
+    max-height: 95%;
+    object-fit: contain;
+    border-radius: 4px;
+  }
+}
+
+.fileFallback {
+  color: #ffffff;
+  text-align: center;
+  padding: 40px;
+  font-size: 15px;
+
+  p {
+    margin-bottom: 16px;
+    color: #cbd5e1;
+  }
+}
+
+.clipBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #e0f2fe;
+  color: #0369a1;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: 6px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #bae6fd;
+  }
+}
