@@ -1,6 +1,6 @@
 "use client";
 
-
+import { useState, useMemo } from "react";
 import styles from "./AttendancePage.module.scss";
 
 type Status = "정상" | "지각" | "결근" | "조기퇴근";
@@ -17,9 +17,10 @@ interface AttendanceRow {
   workTime: string | null;
   status: Status;
   note: string;
+  isCorrected?: boolean;
 }
 
-const MOCK: AttendanceRow[] = [
+const INITIAL_MOCK: AttendanceRow[] = [
   {
     id: "1",
     name: "박서준",
@@ -28,10 +29,10 @@ const MOCK: AttendanceRow[] = [
     department: "영상의학과",
     tone: "blue",
     checkIn: "08:52",
-    checkOut: "퇴근 전",
-    workTime: "7h 13m",
+    checkOut: "18:01",
+    workTime: "9h 09m",
     status: "정상",
-    note: "-",
+    note: "정상 퇴근",
   },
   {
     id: "2",
@@ -44,7 +45,7 @@ const MOCK: AttendanceRow[] = [
     checkOut: "퇴근 전",
     workTime: "6h 42m",
     status: "지각",
-    note: "23분 지각 · 사유 확인",
+    note: "23분 지각 · 사유 확인 필요",
   },
   {
     id: "3",
@@ -57,7 +58,7 @@ const MOCK: AttendanceRow[] = [
     checkOut: null,
     workTime: null,
     status: "결근",
-    note: "확인 필요",
+    note: "무단 결근 · 사유서 대기",
   },
   {
     id: "4",
@@ -70,7 +71,7 @@ const MOCK: AttendanceRow[] = [
     checkOut: "15:12",
     workTime: "8h 11m",
     status: "정상",
-    note: "야간 근무 종료",
+    note: "D-Shift (Day 07~15) 정상 종료",
   },
   {
     id: "5",
@@ -83,179 +84,587 @@ const MOCK: AttendanceRow[] = [
     checkOut: "15:30",
     workTime: "6h 31m",
     status: "조기퇴근",
-    note: "1.5h 조기 퇴근 · 승인 대기",
+    note: "1.5h 조기 퇴근 · 응급실장 결재 승인",
+  },
+  {
+    id: "6",
+    name: "김수진",
+    initial: "김",
+    position: "수간호사",
+    department: "중환자실",
+    tone: "blue",
+    checkIn: "06:45",
+    checkOut: "15:20",
+    workTime: "8h 35m",
+    status: "정상",
+    note: "D-Shift (Day) 완료",
+  },
+  {
+    id: "7",
+    name: "강재현",
+    initial: "강",
+    position: "전임의",
+    department: "응급의학과",
+    tone: "green",
+    checkIn: "09:15",
+    checkOut: "퇴근 전",
+    workTime: "5h 15m",
+    status: "지각",
+    note: "15분 지각 (아침 응급콜 투입 소약)",
   },
 ];
 
 export default function AttendancePage() {
+  const [records, setRecords] = useState<AttendanceRow[]>(INITIAL_MOCK);
+  
+  // Filter States
+  const [activeTab, setActiveTab] = useState<"all" | "anomalies" | "normal">("all");
+  const [selectedDept, setSelectedDept] = useState<string>("전체 부서");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Modal States
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingRow, setEditingRow] = useState<AttendanceRow | null>(null);
+
+  // Add Form State
+  const [addForm, setAddForm] = useState({
+    name: "",
+    position: "간호사",
+    department: "간호부",
+    checkIn: "08:50",
+    checkOut: "18:00",
+    status: "정상" as Status,
+    reason: "카드 단말기 불인식 누락 등록",
+  });
+
+  // Edit Form State
+  const [editForm, setEditForm] = useState({
+    checkIn: "",
+    checkOut: "",
+    status: "정상" as Status,
+    reason: "",
+  });
+
+  // Filter Logic
+  const filteredRecords = useMemo(() => {
+    return records.filter((r) => {
+      if (activeTab === "anomalies" && r.status === "정상") return false;
+      if (activeTab === "normal" && r.status !== "정상") return false;
+      if (selectedDept !== "전체 부서" && r.department !== selectedDept) return false;
+      if (searchQuery.trim() !== "") {
+        const q = searchQuery.toLowerCase();
+        const matchesName = r.name.toLowerCase().includes(q);
+        const matchesDept = r.department.toLowerCase().includes(q);
+        const matchesNote = r.note.toLowerCase().includes(q);
+        if (!matchesName && !matchesDept && !matchesNote) return false;
+      }
+      return true;
+    });
+  }, [records, activeTab, selectedDept, searchQuery]);
+
+  // Statistics
+  const totalCount = records.length;
+  const normalCount = records.filter((r) => r.status === "정상").length;
+  const lateCount = records.filter((r) => r.status === "지각").length;
+  const absentCount = records.filter((r) => r.status === "결근").length;
+  const earlyCount = records.filter((r) => r.status === "조기퇴근").length;
+  const normalRate = totalCount > 0 ? ((normalCount / totalCount) * 100).toFixed(1) : "0.0";
+
+  // Actions
+  const handleAddSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!addForm.name) {
+      alert("직원 이름을 입력해 주세요.");
+      return;
+    }
+    const newId = Date.now().toString();
+    const initial = addForm.name.slice(0, 1) || "신";
+    const newRow: AttendanceRow = {
+      id: newId,
+      name: addForm.name,
+      initial,
+      position: addForm.position,
+      department: addForm.department,
+      tone: "blue",
+      checkIn: addForm.checkIn || null,
+      checkOut: addForm.checkOut || null,
+      workTime: addForm.checkIn && addForm.checkOut ? "8h 00m (수동계산)" : null,
+      status: addForm.status,
+      note: `[수동등록] ${addForm.reason}`,
+      isCorrected: true,
+    };
+    setRecords([newRow, ...records]);
+    setIsAddModalOpen(false);
+    alert(`${addForm.name} 직원의 출퇴근 기록이 성공적으로 수동 등록되었습니다.`);
+  };
+
+  const openEditModal = (row: AttendanceRow) => {
+    setEditingRow(row);
+    setEditForm({
+      checkIn: row.checkIn || "",
+      checkOut: row.checkOut === "퇴근 전" ? "" : row.checkOut || "",
+      status: row.status,
+      reason: "",
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingRow) return;
+    if (!editForm.reason.trim()) {
+      alert("감사(Audit) 대비를 위해 정정 사유를 반드시 입력해야 합니다.");
+      return;
+    }
+
+    const updated = records.map((r) => {
+      if (r.id === editingRow.id) {
+        const checkOutVal = editForm.checkOut || (editForm.checkIn ? "퇴근 전" : null);
+        return {
+          ...r,
+          checkIn: editForm.checkIn || null,
+          checkOut: checkOutVal,
+          workTime: editForm.checkIn && editForm.checkOut ? "정정됨" : r.workTime,
+          status: editForm.status,
+          note: `[관리자정정] ${editForm.reason}`,
+          isCorrected: true,
+        };
+      }
+      return r;
+    });
+
+    setRecords(updated);
+    setIsEditModalOpen(false);
+    setEditingRow(null);
+    alert(`[${editingRow.name}] 사원의 근태 시각 및 상태 정정이 완료되었습니다.`);
+  };
+
+  const handleDelete = (row: AttendanceRow) => {
+    if (confirm(`[${row.name}] 직원의 출퇴근 기록을 삭제하시겠습니까?\n이 작업은 중복 태깅이나 잘못된 출입 인식에 한해 진행해야 합니다.`)) {
+      setRecords(records.filter((r) => r.id !== row.id));
+    }
+  };
+
+  const handleExportCSV = () => {
+    const headers = ["직원명,직급,부서,출근시각,퇴근시각,근무시간,상태,비고"];
+    const rows = filteredRecords.map(r => 
+      `"${r.name}","${r.position}","${r.department}","${r.checkIn ?? '미출근'}","${r.checkOut ?? '-'}","${r.workTime ?? '-'}","${r.status}","${r.note}"`
+    );
+    const csvContent = "\uFEFF" + [...headers, ...rows].join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `근태관리대장_20260711.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <main className={styles.main}>
-          {/* 페이지 헤더 */}
-          <div className={styles.pageHeader}>
-            <div>
-              <h1>출퇴근 관리</h1>
-              <p>직원별 출퇴근 기록을 조회하고 이상 내역을 관리합니다.</p>
-            </div>
-            <div className={styles.pageActions}>
-              <div className={styles.dateSelect}>
-                <span>📅</span>
-                <span>2026.07.11 (금)</span>
-              </div>
-              <select className={styles.deptSelect} defaultValue="전체 부서">
-                <option>전체 부서</option>
-                <option>영상의학과</option>
-                <option>간호부</option>
-                <option>인사총무팀</option>
-              </select>
-              <button type="button" className={styles.outlineBtn}>
-                내보내기
-              </button>
-            </div>
+      {/* 페이지 헤더 & 액션 */}
+      <div className={styles.pageHeader}>
+        <div>
+          <h1>출퇴근 관제 및 정정 (관리자 전용)</h1>
+          <p>전사 직원의 일일 출퇴근 로그를 실시간 관제하고, 이상 태깅(지각·조퇴·누락)을 수동 보정합니다.</p>
+        </div>
+        <div className={styles.pageActions}>
+          <div className={styles.dateSelect}>
+            <span>📅</span>
+            <span>2026.07.11 (금)</span>
           </div>
+          <button type="button" className={styles.primaryBtn} onClick={() => setIsAddModalOpen(true)}>
+            <span>➕</span>
+            <span>수동 근태 등록</span>
+          </button>
+          <button type="button" className={styles.exportBtn} onClick={handleExportCSV}>
+            <span>📥</span>
+            <span>엑셀(CSV) 추출</span>
+          </button>
+        </div>
+      </div>
 
-          {/* 요약 카드 */}
-          <div className={styles.summaryRow}>
-            <div className={styles.summaryCard}>
-              <div className={styles.summaryTop}>
-                <label>전체 직원</label>
-                <span className={styles.iconBlue}>👥</span>
-              </div>
-              <p className={styles.summaryValue}>
-                2,184<span>명</span>
-              </p>
-              <span className={styles.summarySub}>● 오늘 출근 대상</span>
-            </div>
-
-            <div className={styles.summaryCard}>
-              <div className={styles.summaryTop}>
-                <label>정상 출근</label>
-                <span className={styles.iconGreen}>✓</span>
-              </div>
-              <p className={styles.summaryValue}>
-                1,967<span>명</span>
-              </p>
-              <div className={styles.progressBar}>
-                <div
-                  className={styles.progressFill}
-                  style={{ width: "90.1%" }}
-                />
-              </div>
-              <span className={styles.summarySub}>90.1%</span>
-            </div>
-
-            <div className={styles.summaryCard}>
-              <div className={styles.summaryTop}>
-                <label>지각</label>
-                <span className={styles.iconOrange}>⏱</span>
-              </div>
-              <p className={`${styles.summaryValue} ${styles.textOrange}`}>
-                47<span>명</span>
-              </p>
-              <span className={styles.summarySubWarn}>전일 대비 +5명</span>
-            </div>
-
-            <div className={styles.summaryCard}>
-              <div className={styles.summaryTop}>
-                <label>미출근 / 결근</label>
-                <span className={styles.iconRed}>○</span>
-              </div>
-              <p className={`${styles.summaryValue} ${styles.textRed}`}>
-                12<span>명</span>
-              </p>
-              <span className={styles.summarySubDanger}>확인 필요</span>
-            </div>
-
-            <div className={styles.summaryCard}>
-              <div className={styles.summaryTop}>
-                <label>조기 퇴근</label>
-                <span className={styles.iconPurple}>↩</span>
-              </div>
-              <p className={`${styles.summaryValue} ${styles.textPurple}`}>
-                8<span>명</span>
-              </p>
-              <span className={styles.summarySub}>승인 대기 3건</span>
-            </div>
+      {/* 요약 카드 */}
+      <div className={styles.summaryRow}>
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryTop}>
+            <label>전체 출근 대상</label>
+            <span className={styles.iconBlue}>👥</span>
           </div>
+          <p className={styles.summaryValue}>
+            {totalCount}<span>명</span>
+          </p>
+          <span className={styles.summarySub}>● 3교대 & 일반 행정 포함</span>
+        </div>
 
-          {/* 테이블 */}
-          <section className={styles.tableCard}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>직원</th>
-                  <th>부서</th>
-                  <th>출근 시각</th>
-                  <th>퇴근 시각</th>
-                  <th>근무 시간</th>
-                  <th>상태</th>
-                  <th>비고</th>
-                </tr>
-              </thead>
-              <tbody>
-                {MOCK.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      <div className={styles.person}>
-                        <span
-                          className={`${styles.avatar} ${styles[row.tone]}`}
-                        >
-                          {row.initial}
-                        </span>
-                        <div>
-                          <strong>{row.name}</strong>
-                          <small>{row.position}</small>
-                        </div>
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryTop}>
+            <label>정상 근무</label>
+            <span className={styles.iconGreen}>✓</span>
+          </div>
+          <p className={styles.summaryValue}>
+            {normalCount}<span>명</span>
+          </p>
+          <div className={styles.progressBar}>
+            <div
+              className={styles.progressFill}
+              style={{ width: `${Math.min(100, parseFloat(normalRate))}%` }}
+            />
+          </div>
+          <span className={styles.summarySub}>{normalRate}% 정상 출근율</span>
+        </div>
+
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryTop}>
+            <label>지각</label>
+            <span className={styles.iconOrange}>⏱</span>
+          </div>
+          <p className={`${styles.summaryValue} ${styles.textOrange}`}>
+            {lateCount}<span>명</span>
+          </p>
+          <span className={styles.summarySubWarn}>사유 및 정정 검토 필요</span>
+        </div>
+
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryTop}>
+            <label>미출근 / 결근</label>
+            <span className={styles.iconRed}>○</span>
+          </div>
+          <p className={`${styles.summaryValue} ${styles.textRed}`}>
+            {absentCount}<span>명</span>
+          </p>
+          <span className={styles.summarySubDanger}>무단 결근 / 사유서 체크</span>
+        </div>
+
+        <div className={styles.summaryCard}>
+          <div className={styles.summaryTop}>
+            <label>조기 퇴근</label>
+            <span className={styles.iconPurple}>↩</span>
+          </div>
+          <p className={`${styles.summaryValue} ${styles.textPurple}`}>
+            {earlyCount}<span>명</span>
+          </p>
+          <span className={styles.summarySub}>결재 문서 대조 진행</span>
+        </div>
+      </div>
+
+      {/* 탭 및 필터 컨트롤 바 */}
+      <div className={styles.filterBar}>
+        <div className={styles.tabs}>
+          <button
+            type="button"
+            className={`${styles.tabBtn} ${activeTab === "all" ? styles.activeTab : ""}`}
+            onClick={() => setActiveTab("all")}
+          >
+            📋 전체 기록 ({totalCount})
+          </button>
+          <button
+            type="button"
+            className={`${styles.tabBtn} ${activeTab === "anomalies" ? styles.activeTab : ""}`}
+            onClick={() => setActiveTab("anomalies")}
+            style={{ color: activeTab === "anomalies" ? "#dc2626" : "#e14d55" }}
+          >
+            🚨 근태 이상자 모아보기 ({lateCount + absentCount + earlyCount})
+          </button>
+          <button
+            type="button"
+            className={`${styles.tabBtn} ${activeTab === "normal" ? styles.activeTab : ""}`}
+            onClick={() => setActiveTab("normal")}
+          >
+            ✅ 정상 출퇴근 ({normalCount})
+          </button>
+        </div>
+
+        <div className={styles.filterControls}>
+          <select
+            className={styles.deptSelect}
+            value={selectedDept}
+            onChange={(e) => setSelectedDept(e.target.value)}
+          >
+            <option value="전체 부서">전체 부서</option>
+            <option value="영상의학과">영상의학과</option>
+            <option value="간호부">간호부</option>
+            <option value="중환자실">중환자실</option>
+            <option value="응급의학과">응급의학과</option>
+            <option value="인사총무팀">인사총무팀</option>
+            <option value="관리팀">관리팀</option>
+          </select>
+
+          <div className={styles.searchInput}>
+            <span>🔍</span>
+            <input
+              type="text"
+              placeholder="이름, 부서, 비고 검색..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* 테이블 */}
+      <section className={styles.tableCard}>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>직원</th>
+              <th>부서</th>
+              <th>출근 시각</th>
+              <th>퇴근 시각</th>
+              <th>근무 시간</th>
+              <th>근태 상태</th>
+              <th>비고 및 정정이력</th>
+              <th style={{ width: "130px" }}>관리 액션</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredRecords.length === 0 ? (
+              <tr>
+                <td colSpan={8} style={{ textAlign: "center", padding: "40px", color: "#8a97ad" }}>
+                  조건에 일치하는 출퇴근 기록이 없습니다.
+                </td>
+              </tr>
+            ) : (
+              filteredRecords.map((row) => (
+                <tr key={row.id}>
+                  <td>
+                    <div className={styles.person}>
+                      <span className={`${styles.avatar} ${styles[row.tone]}`}>
+                        {row.initial}
+                      </span>
+                      <div>
+                        <strong>{row.name}</strong>
+                        <small>{row.position}</small>
                       </div>
-                    </td>
-                    <td>{row.department}</td>
-                    <td>
-                      {row.checkIn ? (
-                        <span className={styles.timeIn}>→ {row.checkIn}</span>
-                      ) : (
-                        <span className={styles.timeNone}>× 미출근</span>
-                      )}
-                    </td>
-                    <td>
-                      {row.checkOut === "퇴근 전" ? (
-                        <span className={styles.timePending}>퇴근 전</span>
-                      ) : row.checkOut ? (
-                        <span className={styles.timeOut}>← {row.checkOut}</span>
-                      ) : (
-                        <span className={styles.timeDash}>—</span>
-                      )}
-                    </td>
-                    <td>{row.workTime ?? "—"}</td>
-                    <td>
-                      <span
-                        className={`${styles.statusBadge} ${
-                          row.status === "정상"
-                            ? styles.statusNormal
-                            : row.status === "지각"
-                              ? styles.statusLate
-                              : row.status === "결근"
-                                ? styles.statusAbsent
-                                : styles.statusEarly
-                        }`}
-                      >
-                        {row.status}
-                      </span>
-                    </td>
-                    <td>
-                      <span
-                        className={
-                          row.note.includes("확인") || row.note.includes("대기")
-                            ? styles.noteWarn
-                            : styles.noteNormal
-                        }
-                      >
-                        {row.note}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </section>
-        </main>
+                    </div>
+                  </td>
+                  <td>{row.department}</td>
+                  <td>
+                    {row.checkIn ? (
+                      <span className={styles.timeIn}>→ {row.checkIn}</span>
+                    ) : (
+                      <span className={styles.timeNone}>× 미출근</span>
+                    )}
+                  </td>
+                  <td>
+                    {row.checkOut === "퇴근 전" ? (
+                      <span className={styles.timePending}>⏳ 퇴근 전</span>
+                    ) : row.checkOut ? (
+                      <span className={styles.timeOut}>← {row.checkOut}</span>
+                    ) : (
+                      <span className={styles.timeDash}>—</span>
+                    )}
+                  </td>
+                  <td>{row.workTime ?? "—"}</td>
+                  <td>
+                    <span
+                      className={`${styles.statusBadge} ${
+                        row.status === "정상"
+                          ? styles.statusNormal
+                          : row.status === "지각"
+                            ? styles.statusLate
+                            : row.status === "결근"
+                              ? styles.statusAbsent
+                              : styles.statusEarly
+                      }`}
+                    >
+                      {row.status}
+                    </span>
+                    {row.isCorrected && <span className={styles.correctedTag}>정정됨</span>}
+                  </td>
+                  <td>
+                    <span
+                      className={
+                        row.note.includes("확인") || row.note.includes("대기") || row.note.includes("결근")
+                          ? styles.noteWarn
+                          : styles.noteNormal
+                      }
+                    >
+                      {row.note}
+                    </span>
+                  </td>
+                  <td>
+                    <div className={styles.rowActions}>
+                      <button type="button" className={styles.editBtn} onClick={() => openEditModal(row)}>
+                        🛠️ 정정
+                      </button>
+                      <button type="button" className={styles.deleteBtn} onClick={() => handleDelete(row)}>
+                        ❌ 삭제
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </section>
+
+      {/* 모달 1: 수동 근태 기록 등록 모달 */}
+      {isAddModalOpen && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2>➕ 수동 출퇴근 기록 등록 (누락 처리)</h2>
+              <button type="button" className={styles.closeBtn} onClick={() => setIsAddModalOpen(false)}>×</button>
+            </div>
+            <form onSubmit={handleAddSubmit}>
+              <div className={styles.modalBody}>
+                <div className={styles.formGroup}>
+                  <label>대상 사원 이름 <span>*</span></label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="예: 김민우"
+                    value={addForm.name}
+                    onChange={(e) => setAddForm({ ...addForm, name: e.target.value })}
+                  />
+                </div>
+                <div className={styles.timeRow}>
+                  <div className={styles.formGroup}>
+                    <label>소속 부서</label>
+                    <select
+                      value={addForm.department}
+                      onChange={(e) => setAddForm({ ...addForm, department: e.target.value })}
+                    >
+                      <option value="간호부">간호부</option>
+                      <option value="영상의학과">영상의학과</option>
+                      <option value="중환자실">중환자실</option>
+                      <option value="응급의학과">응급의학과</option>
+                      <option value="인사총무팀">인사총무팀</option>
+                      <option value="관리팀">관리팀</option>
+                    </select>
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>직위/직급</label>
+                    <input
+                      type="text"
+                      value={addForm.position}
+                      onChange={(e) => setAddForm({ ...addForm, position: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className={styles.timeRow}>
+                  <div className={styles.formGroup}>
+                    <label>출근 시각 (HH:mm)</label>
+                    <input
+                      type="text"
+                      placeholder="08:50 (없을 시 빈칸)"
+                      value={addForm.checkIn}
+                      onChange={(e) => setAddForm({ ...addForm, checkIn: e.target.value })}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>퇴근 시각 (HH:mm)</label>
+                    <input
+                      type="text"
+                      placeholder="18:00 (없을 시 빈칸)"
+                      value={addForm.checkOut}
+                      onChange={(e) => setAddForm({ ...addForm, checkOut: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className={styles.formGroup}>
+                  <label>근태 판정 상태</label>
+                  <select
+                    value={addForm.status}
+                    onChange={(e) => setAddForm({ ...addForm, status: e.target.value as Status })}
+                  >
+                    <option value="정상">정상</option>
+                    <option value="지각">지각</option>
+                    <option value="조기퇴근">조기퇴근</option>
+                    <option value="결근">결근</option>
+                  </select>
+                </div>
+                <div className={styles.formGroup}>
+                  <label>수동 등록 사유 (감사 대비) <span>*</span></label>
+                  <textarea
+                    required
+                    placeholder="예: 카드 단말기 통신 오류로 인한 08시 출입 기록 미연동 분 소급 기입"
+                    value={addForm.reason}
+                    onChange={(e) => setAddForm({ ...addForm, reason: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className={styles.modalFooter}>
+                <button type="button" className={styles.cancelBtn} onClick={() => setIsAddModalOpen(false)}>
+                  취소
+                </button>
+                <button type="submit" className={styles.saveBtn}>
+                  출퇴근 등록
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 모달 2: 근태 시각 및 상태 정정 모달 */}
+      {isEditModalOpen && editingRow && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modalContent}>
+            <div className={styles.modalHeader}>
+              <h2>🛠️ 근태 기록 정정 — {editingRow.name} ({editingRow.department})</h2>
+              <button type="button" className={styles.closeBtn} onClick={() => setIsEditModalOpen(false)}>×</button>
+            </div>
+            <form onSubmit={handleEditSubmit}>
+              <div className={styles.modalBody}>
+                <div className={styles.timeRow}>
+                  <div className={styles.formGroup}>
+                    <label>출근 시각 수정 (원시각: {editingRow.checkIn ?? "미출근"})</label>
+                    <input
+                      type="text"
+                      placeholder="예: 08:55 (미입력 시 Null)"
+                      value={editForm.checkIn}
+                      onChange={(e) => setEditForm({ ...editForm, checkIn: e.target.value })}
+                    />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>퇴근 시각 수정 (원시각: {editingRow.checkOut ?? "—"})</label>
+                    <input
+                      type="text"
+                      placeholder="예: 18:00 ('퇴근 전'으로 두려면 비움)"
+                      value={editForm.checkOut}
+                      onChange={(e) => setEditForm({ ...editForm, checkOut: e.target.value })}
+                    />
+                  </div>
+                </div>
+                <div className={styles.formGroup}>
+                  <label>근태 상태 변경 (정상 / 지각 / 조기퇴근 감면)</label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value as Status })}
+                  >
+                    <option value="정상">정상</option>
+                    <option value="지각">지각</option>
+                    <option value="조기퇴근">조기퇴근</option>
+                    <option value="결근">결근</option>
+                  </select>
+                </div>
+                <div className={styles.formGroup}>
+                  <label>정정 사유 기입 (감사 및 노무 대조용 필수) <span>*</span></label>
+                  <textarea
+                    required
+                    placeholder="예: 응급 환자 CPR 투입으로 23분 늦은 태깅 확인 ➔ 수간호사 확인 받아 정상 출근 및 시간 감면 처리"
+                    value={editForm.reason}
+                    onChange={(e) => setEditForm({ ...editForm, reason: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className={styles.modalFooter}>
+                <button type="button" className={styles.cancelBtn} onClick={() => setIsEditModalOpen(false)}>
+                  취소
+                </button>
+                <button type="submit" className={styles.saveBtn}>
+                  정정 저장
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </main>
   );
 }

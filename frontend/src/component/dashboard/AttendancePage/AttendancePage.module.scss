@@ -408,3 +408,312 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ===== 탭 & 필터 바 ===== */
+.filterBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.tabs {
+  display: flex;
+  background: #e4eaf3;
+  padding: 4px;
+  border-radius: 12px;
+  gap: 4px;
+}
+
+.tabBtn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    color: #111c33;
+  }
+
+  &.activeTab {
+    background: #ffffff;
+    color: #2155d9;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  }
+}
+
+.filterControls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.searchInput {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e4eaf3;
+  border-radius: 10px;
+  padding: 0 14px;
+  height: 38px;
+
+  input {
+    border: none;
+    outline: none;
+    font-size: 13px;
+    color: #111c33;
+    background: transparent;
+    width: 160px;
+    &::placeholder {
+      color: #9aa8bc;
+    }
+  }
+}
+
+/* ===== 상단 액션 버튼 ===== */
+.primaryBtn {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: none;
+  background: linear-gradient(135deg, #3a7bff, #2155d9);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(33, 85, 217, 0.25);
+  transition: all 0.2s;
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(33, 85, 217, 0.35);
+  }
+}
+
+.exportBtn {
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid #10b981;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  &:hover {
+    background: #d1fae5;
+  }
+}
+
+/* ===== 테이블 로우 액션 ===== */
+.rowActions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.editBtn {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid #dbeafe;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  &:hover {
+    background: #dbeafe;
+    color: #1d4ed8;
+  }
+}
+
+.deleteBtn {
+  padding: 5px 10px;
+  border-radius: 8px;
+  border: 1px solid #fee2e2;
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  &:hover {
+    background: #fee2e2;
+    color: #b91c1c;
+  }
+}
+
+.correctedTag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #eef2ff;
+  color: #4338ca;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* ===== 모달 스타일 ===== */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 28, 51, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.modalContent {
+  width: 100%;
+  max-width: 520px;
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: slideUp 0.2s ease-out;
+}
+
+.modalHeader {
+  padding: 20px 24px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  h2 {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+  }
+
+  .closeBtn {
+    border: none;
+    background: transparent;
+    font-size: 20px;
+    color: #64748b;
+    cursor: pointer;
+    &:hover {
+      color: #0f172a;
+    }
+  }
+}
+
+.modalBody {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #334155;
+    span {
+      color: #ef4444;
+    }
+  }
+
+  input, select, textarea {
+    padding: 10px 14px;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    font-size: 14px;
+    color: #0f172a;
+    outline: none;
+    transition: border-color 0.2s;
+    background: #ffffff;
+    &:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    }
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+}
+
+.timeRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.modalFooter {
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.cancelBtn {
+  padding: 9px 18px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  &:hover {
+    background: #f1f5f9;
+  }
+}
+
+.saveBtn {
+  padding: 9px 20px;
+  border-radius: 10px;
+  border: none;
+  background: #2563eb;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  &:hover {
+    background: #1d4ed8;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
