@@ -7,7 +7,6 @@ import {
   AlertTriangle,
   FileText,
   PieChart,
-  Info,
   X,
   ChevronDown,
   Download,
@@ -44,6 +43,7 @@ interface EmpOption {
   tone: "blue" | "cyan" | "green" | "purple" | "red" | "orange" | "amber";
 }
 
+// 오프라인/최초 로드 시 서버가 내려주지 않을 때만 대비한 폴백 데이터
 const MOCK_EMPLOYEES: EmpOption[] = [
   { id: 1, name: "박시준", dept: "영상의학과", pos: "부장", initial: "박", tone: "blue" },
   { id: 2, name: "이다영", dept: "간호부", pos: "수간호사", initial: "이", tone: "cyan" },
@@ -233,7 +233,7 @@ export default function LeavePage() {
   const [startDate, setStartDate] = useState("2026-07-14");
   const [endDate, setEndDate] = useState("2026-07-15");
   const [proxyName, setProxyName] = useState("오하늘 과장");
-  const [approverName, setApproverName] = useState("김관리 (인사팀)");
+  const [approverName, setApproverName] = useState("김관리 (인사총무팀 · 수석)");
   const [note, setNote] = useState("");
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const [quotaInfo, setQuotaInfo] = useState({ totalDays: 15.0, usedDays: 2.0, remainingDays: 13.0 });
@@ -245,22 +245,40 @@ export default function LeavePage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // API 데이터 초기 로드 (장애 시 MOCK 풀 가동)
+  // DB 실데이터 기반 부서 리스트 및 승인권자 목록 동적 생성 (하드코딩 제거)
+  const availableDepts = useMemo(() => {
+    const depts = new Set<string>(["전체 부서"]);
+    empList.forEach((e) => { if (e.dept && e.dept !== "부서없음") depts.add(e.dept); });
+    applications.forEach((a) => { if (a.department && a.department !== "부서없음") depts.add(a.department); });
+    return Array.from(depts);
+  }, [empList, applications]);
+
+  const availableApprovers = useMemo(() => {
+    const mgrs = empList.filter((e) => 
+      e.pos.includes("부장") || e.pos.includes("수석") || e.pos.includes("과장") || e.pos.includes("수간호사") || e.pos.includes("1급")
+    );
+    return mgrs.length > 0 ? mgrs : empList.slice(0, 4);
+  }, [empList]);
+
+  // API 데이터 실시간 로드 (0건이 되어도 확실하게 반영되도록 보정)
   const loadData = useCallback(async () => {
     try {
       const summaryData = await fetchLeaveSummary();
-      if (summaryData) setSummary(summaryData);
+      if (summaryData) {
+        setSummary(summaryData);
+      }
 
       const apps = await fetchLeaveApplications(
         filter === "전체" ? undefined : filter,
         typeFilter === "≡ 유형 전체" ? undefined : typeFilter,
         keyword || undefined,
       );
-      if (apps && apps.length > 0) {
+      // null이나 undefined가 아닐 경우 0건([])이 와도 state에 정확히 셋업!
+      if (apps) {
         setApplications(apps);
       }
     } catch (err) {
-      // Offline fallback: 메모리 상태 렌더링 유지
+      // Offline 시 백엔드 연결 불가능한 환경을 위한 폴백 방어주행
     }
   }, [filter, typeFilter, keyword]);
 
@@ -268,15 +286,15 @@ export default function LeavePage() {
     loadData();
   }, [loadData]);
 
-  // 사원 정보 로드
+  // 사원 정보 로드 (실데이터가 있을 시 MOCK 사원 중복을 배제하고 실데이터만 채택)
   useEffect(() => {
-    getEmployees(30)
+    getEmployees(50)
       .then((res) => {
         if (res && res.content && res.content.length > 0) {
+          const tones: ("blue" | "cyan" | "green" | "purple" | "red" | "orange" | "amber")[] = [
+            "blue", "cyan", "green", "purple", "red", "orange", "amber"
+          ];
           const mapped: EmpOption[] = res.content.map((e, idx) => {
-            const tones: ("blue" | "cyan" | "green" | "purple" | "red" | "orange" | "amber")[] = [
-              "blue", "cyan", "green", "purple", "red", "orange", "amber"
-            ];
             return {
               id: Number(e.id) || idx + 10,
               name: e.name || "사원",
@@ -286,29 +304,31 @@ export default function LeavePage() {
               tone: tones[idx % tones.length],
             };
           });
-          setEmpList([...MOCK_EMPLOYEES, ...mapped]);
+          setEmpList(mapped);
+          if (mapped.length > 0 && !selectedEmp.id) {
+            setSelectedEmp(mapped[0]);
+          }
         }
       })
       .catch(() => {
-        // Fallback: MOCK_EMPLOYEES 유지
+        // 백엔드 미동작 시 기본 옵션 유지
       });
   }, []);
 
-  // 선택 사원의 연차 할당 대장 재조회
+  // 선택 사원의 연차 할당 대장 실시간 재조회 (0일일 때 nullish coalescing ?? 적용)
   useEffect(() => {
     if (!selectedEmp) return;
     fetchEmployeeQuota(selectedEmp.id, 2026)
       .then((q) => {
         if (q) {
           setQuotaInfo({
-            totalDays: q.totalDays || 15.0,
-            usedDays: q.usedDays || 2.0,
-            remainingDays: q.remainingDays || 13.0,
+            totalDays: q.totalDays ?? 15.0,
+            usedDays: q.usedDays ?? 0.0,
+            remainingDays: q.remainingDays ?? 15.0,
           });
         }
       })
       .catch(() => {
-        // Fallback
         const isLow = selectedEmp.name === "최지은" ? 1.0 : selectedEmp.name === "배준혁" ? 2.0 : 13.0;
         setQuotaInfo({ totalDays: 15.0, usedDays: 15.0 - isLow, remainingDays: isLow });
       });
@@ -325,7 +345,7 @@ export default function LeavePage() {
     const cur = new Date(s);
     while (cur <= e) {
       const day = cur.getDay();
-      if (day !== 0 && day !== 6) { // 일(0), 토(6) 제외
+      if (day !== 0 && day !== 6) {
         workDays++;
       }
       cur.setDate(cur.getDate() + 1);
@@ -385,13 +405,17 @@ export default function LeavePage() {
       setSelected([]);
       loadData();
     } catch (err) {
-      // 프론트엔드 오프라인 시뮬레이션 작동
       setApplications((prev) =>
         prev.map((item) =>
           selected.includes(item.id) ? { ...item, status: "승인완료" as const } : item,
         ),
       );
-      alert(`${selected.length}건의 휴가를 승인했습니다. (프론트 시뮬레이션 및 잔여 연차 반영)`);
+      setSummary((prev) => ({
+        ...prev,
+        pendingApplications: Math.max(0, (prev.pendingApplications ?? 0) - selected.length),
+        totalUsedDays: (prev.totalUsedDays ?? 0) + selected.length * 1.0,
+      }));
+      alert(`${selected.length}건의 휴가를 승인했습니다. (오프라인 환경 보정 반영)`);
       setSelected([]);
     }
   };
@@ -452,7 +476,7 @@ export default function LeavePage() {
     formData.append("endDate", endDate.replaceAll(".", "-"));
     formData.append("days", calculatedDays.toString());
     formData.append("proxyEmployeeName", proxyName);
-    formData.append("approverName", approverName);
+    formData.append("approverName", approverName.split(" (")[0]);
     if (note) formData.append("note", note);
     if (attachedFile) formData.append("file", attachedFile);
 
@@ -464,7 +488,6 @@ export default function LeavePage() {
       setAttachedFile(null);
       loadData();
     } catch (err) {
-      // 프론트엔드 오프라인 즉각 반응 시뮬레이션
       const remainTxt =
         modalLeaveType === "병가"
           ? "진단서 첨부"
@@ -488,13 +511,18 @@ export default function LeavePage() {
         remainText: remainTxt,
         remainType: modalLeaveType === "병가" ? "doc" : afterRemainDays < 0 ? "danger" : "normal",
         proxy: proxyName || "—",
-        approver: approverName || "김관리",
+        approver: approverName.split(" (")[0] || "김관리",
         status: "승인대기",
         note: note || "",
         attachmentName: attachedFile ? attachedFile.name : undefined,
         hasAttachment: !!attachedFile,
       };
       setApplications((prev) => [simApp, ...prev]);
+      setSummary((prev) => ({
+        ...prev,
+        pendingApplications: (prev.pendingApplications ?? 0) + 1,
+        thisMonthApplications: (prev.thisMonthApplications ?? 0) + 1,
+      }));
       alert("신규 휴가가 성공적으로 등록되었습니다!");
       setIsModalOpen(false);
       setAttachedFile(null);
@@ -534,13 +562,9 @@ export default function LeavePage() {
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
             >
-              <option value="전체 부서">전체 부서</option>
-              <option value="영상의학과">영상의학과</option>
-              <option value="간호부">간호부</option>
-              <option value="진단검사의학과">진단검사의학과</option>
-              <option value="인사총무팀">인사총무팀</option>
-              <option value="응급의학과">응급의학과</option>
-              <option value="원무과">원무과</option>
+              {availableDepts.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
             </select>
             <ChevronDown size={14} className={styles.arrowIcon} />
           </div>
@@ -570,7 +594,7 @@ export default function LeavePage() {
             </span>
           </div>
           <p className={styles.kpiValue}>
-            {summary.totalAllocatedDays.toLocaleString()}<span>일</span>
+            {(summary.totalAllocatedDays ?? 0).toLocaleString()}<span>일</span>
           </p>
           <small className={styles.tagGreen}>● 1인 평균 15일</small>
         </div>
@@ -583,16 +607,16 @@ export default function LeavePage() {
             </span>
           </div>
           <p className={styles.kpiValue}>
-            {summary.totalUsedDays.toLocaleString()}<span>일</span>
+            {(summary.totalUsedDays ?? 0).toLocaleString()}<span>일</span>
           </p>
           <div className={styles.progressRow}>
             <div className={styles.progressBar}>
               <div
                 className={styles.progressFill}
-                style={{ width: `${Math.min(100, summary.usedPercentage)}%` }}
+                style={{ width: `${Math.min(100, summary.usedPercentage ?? 0)}%` }}
               />
             </div>
-            <span className={styles.progressText}>{summary.usedPercentage}%</span>
+            <span className={styles.progressText}>{summary.usedPercentage ?? 0}%</span>
           </div>
         </div>
 
@@ -604,7 +628,7 @@ export default function LeavePage() {
             </span>
           </div>
           <p className={styles.kpiValue}>
-            {summary.totalRemainingDays.toLocaleString()}<span>일</span>
+            {(summary.totalRemainingDays ?? 0).toLocaleString()}<span>일</span>
           </p>
           <small className={styles.tagGreen}>● 1인 평균 10일 잔여</small>
         </div>
@@ -617,10 +641,10 @@ export default function LeavePage() {
             </span>
           </div>
           <p className={styles.kpiValue}>
-            {summary.thisMonthApplications.toLocaleString()}<span>건</span>
+            {(summary.thisMonthApplications ?? 0).toLocaleString()}<span>건</span>
           </p>
           <small className={styles.tagOrange}>
-            ● 승인대기 {summary.pendingApplications}건
+            ● 승인대기 {summary.pendingApplications ?? 0}건
           </small>
         </div>
 
@@ -632,7 +656,7 @@ export default function LeavePage() {
             </span>
           </div>
           <p className={`${styles.kpiValue} ${styles.textRed}`}>
-            {summary.riskEmployeeCount}<span>명</span>
+            {summary.riskEmployeeCount ?? 0}<span>명</span>
           </p>
           <small className={styles.tagRed}>● 잔여 2일 이하</small>
         </div>
@@ -655,7 +679,7 @@ export default function LeavePage() {
                   >
                     {f}
                     {f === "승인대기" && (
-                      <span className={styles.countBadge}>{summary.pendingApplications || 12}</span>
+                      <span className={styles.countBadge}>{summary.pendingApplications ?? 0}</span>
                     )}
                   </button>
                 );
@@ -771,7 +795,9 @@ export default function LeavePage() {
                       <td>
                         {row.approver !== "—" ? (
                           <div className={styles.approverCell}>
-                            <span className={`${styles.avatarSmall} ${styles.blue}`}>김</span>
+                            <span className={`${styles.avatarSmall} ${styles.blue}`}>
+                              {row.approver.substring(0, 1)}
+                            </span>
                             <span>{row.approver}</span>
                           </div>
                         ) : (
@@ -797,7 +823,7 @@ export default function LeavePage() {
               <h3>유형별 신청 현황</h3>
             </div>
             <div className={styles.typeStatList}>
-              {summary.typeStats.map((stat) => {
+              {(summary.typeStats || []).map((stat) => {
                 let dotStyle = styles.dotAnnual;
                 let fillStyle = styles.statFillAnnual;
                 let textStyle = styles.statPercentGreen;
@@ -819,13 +845,13 @@ export default function LeavePage() {
                     <div className={styles.statInfo}>
                       <span className={`${styles.statDot} ${dotStyle}`} />
                       <span className={styles.statLabel}>{stat.type}</span>
-                      <strong className={styles.statCount}>{stat.count}건</strong>
+                      <strong className={styles.statCount}>{stat.count ?? 0}건</strong>
                     </div>
                     <div className={styles.statBarWrapper}>
                       <div className={styles.statBar}>
-                        <div className={fillStyle} style={{ width: `${stat.percentage}%` }} />
+                        <div className={fillStyle} style={{ width: `${stat.percentage ?? 0}%` }} />
                       </div>
-                      <span className={textStyle}>{stat.percentage.toFixed(1)}%</span>
+                      <span className={textStyle}>{(stat.percentage ?? 0).toFixed(1)}%</span>
                     </div>
                   </div>
                 );
@@ -842,7 +868,7 @@ export default function LeavePage() {
                 </span>
                 <h3>연차 소진 위험</h3>
               </div>
-              <span className={styles.riskCountBadge}>{summary.riskEmployeeCount}명</span>
+              <span className={styles.riskCountBadge}>{summary.riskEmployeeCount ?? 0}명</span>
             </div>
 
             <div className={styles.alertBanner}>
@@ -851,7 +877,7 @@ export default function LeavePage() {
             </div>
 
             <div className={styles.riskList}>
-              {summary.riskEmployees.map((emp) => (
+              {(summary.riskEmployees || []).map((emp) => (
                 <div key={emp.employeeId} className={styles.riskItem}>
                   <div className={styles.riskUser}>
                     <span className={`${styles.avatarBadge} ${styles[emp.tone || "orange"]}`}>
@@ -863,7 +889,7 @@ export default function LeavePage() {
                     </div>
                   </div>
                   <span className={`${styles.riskDaysTag} ${styles[emp.tagStyle || "riskTwo"]}`}>
-                    잔여 {emp.remainingDays}일
+                    잔여 {emp.remainingDays ?? 0}일
                   </span>
                 </div>
               ))}
@@ -872,7 +898,7 @@ export default function LeavePage() {
         </aside>
       </div>
 
-      {/* 휴가 등록 모달 오버레이 (이미지 1 완벽 기능 구현) */}
+      {/* 휴가 등록 모달 오버레이 */}
       {isModalOpen && (
         <div className={styles.modalOverlay}>
           <div className={styles.modalContainer}>
@@ -913,7 +939,7 @@ export default function LeavePage() {
                     }}
                   >
                     <div className={styles.selectedEmp}>
-                      <span className={`${styles.avatarBadge} ${styles[selectedEmp.tone]}`}>
+                      <span className={`${styles.avatarBadge} ${styles[selectedEmp.tone || "blue"]}`}>
                         {selectedEmp.initial}
                       </span>
                       <strong>
@@ -934,7 +960,7 @@ export default function LeavePage() {
                             setIsEmpSelectOpen(false);
                           }}
                         >
-                          <span className={`${styles.avatarSmall} ${styles[e.tone]}`}>
+                          <span className={`${styles.avatarSmall} ${styles[e.tone || "blue"]}`}>
                             {e.initial}
                           </span>
                           <span>
@@ -1062,7 +1088,7 @@ export default function LeavePage() {
                               key={e.id}
                               className={styles.dropdownItem}
                               onClick={() => {
-                                setProxyName(`${e.name} ${e.pos}`);
+                                setProxyName(`${e.name} (${e.pos})`);
                                 setIsProxySelectOpen(false);
                               }}
                             >
@@ -1093,7 +1119,9 @@ export default function LeavePage() {
                       }}
                     >
                       <div className={styles.selectedEmp}>
-                        <span className={`${styles.avatarBadge} ${styles.blue}`}>김</span>
+                        <span className={`${styles.avatarBadge} ${styles.blue}`}>
+                          {approverName.substring(0, 1)}
+                        </span>
                         <strong>{approverName}</strong>
                       </div>
                       <ChevronDown size={16} color="#6b7280" />
@@ -1101,33 +1129,28 @@ export default function LeavePage() {
 
                     {isApproverSelectOpen && (
                       <div className={styles.dropdownMenu}>
-                        <div
-                          className={styles.dropdownItem}
-                          onClick={() => {
-                            setApproverName("김관리 (인사팀)");
-                            setIsApproverSelectOpen(false);
-                          }}
-                        >
-                          <span className={`${styles.avatarSmall} ${styles.blue}`}>김</span>
-                          <span>김관리 (인사팀 · 수석)</span>
-                        </div>
-                        <div
-                          className={styles.dropdownItem}
-                          onClick={() => {
-                            setApproverName("박서준 (영상의학과 부장)");
-                            setIsApproverSelectOpen(false);
-                          }}
-                        >
-                          <span className={`${styles.avatarSmall} ${styles.blue}`}>박</span>
-                          <span>박서준 (영상의학과 · 부장)</span>
-                        </div>
+                        {availableApprovers.map((mgr) => (
+                          <div
+                            key={mgr.id}
+                            className={styles.dropdownItem}
+                            onClick={() => {
+                              setApproverName(`${mgr.name} (${mgr.dept} · ${mgr.pos})`);
+                              setIsApproverSelectOpen(false);
+                            }}
+                          >
+                            <span className={`${styles.avatarSmall} ${styles[mgr.tone]}`}>
+                              {mgr.initial}
+                            </span>
+                            <span>{mgr.name} ({mgr.dept} · {mgr.pos})</span>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              {/* 섹션 5: 첨부파일 (실제 로컬 컴퓨터 input file 연계) */}
+              {/* 섹션 5: 첨부파일 */}
               <div className={styles.formSection}>
                 <h4 className={styles.sectionTitle}>
                   <span className={styles.barAccent}>▍</span> 첨부파일{" "}
