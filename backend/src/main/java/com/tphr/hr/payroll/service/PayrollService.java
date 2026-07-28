@@ -62,14 +62,21 @@ public class PayrollService {
         for (Employee employee : activeEmployees) {
             // 1. 기본급 계산
             BigDecimal baseSalaryAmt = new BigDecimal("3000000"); // 기본값 300만원
-            String employeeJobTitle = employee.getPosition() != null ? employee.getPosition().getName() : null;
-            if (employeeJobTitle != null) {
-                Optional<BaseSalary> matchedBs = baseSalaries.stream()
-                        .filter(bs -> employeeJobTitle.equals(bs.getJobTitle()))
-                        .findFirst();
-                if (matchedBs.isPresent() && matchedBs.get().getActualAmount() != null) {
-                    baseSalaryAmt = BigDecimal.valueOf(matchedBs.get().getActualAmount());
-                }
+            String empPosition = employee.getPosition() != null ? employee.getPosition().getName() : "";
+            String empJobCategory = employee.getJobCategory() != null ? employee.getJobCategory().getName() : "";
+            
+            Optional<BaseSalary> matchedBs = baseSalaries.stream()
+                    .filter(bs -> {
+                        String title = bs.getJobTitle();
+                        return title.equals(empPosition) || 
+                               title.equals(empJobCategory) ||
+                               (title.contains("간호") && empPosition.contains("간호")) ||
+                               (title.contains("의사") && empJobCategory.contains("전문"));
+                    })
+                    .findFirst();
+                    
+            if (matchedBs.isPresent() && matchedBs.get().getActualAmount() != null) {
+                baseSalaryAmt = BigDecimal.valueOf(matchedBs.get().getActualAmount());
             }
 
             // 2. 수당 계산
@@ -108,6 +115,26 @@ public class PayrollService {
                     } catch (Exception e) {
                         amt = new BigDecimal("30000");
                     }
+                } else if ("기본급*요율".equals(deduction.getDeductionType())) {
+                    try {
+                        BigDecimal rate = new BigDecimal(deduction.getRateOrAmount().replaceAll("[^0-9.]", "")).divide(new BigDecimal("100"));
+                        amt = baseSalaryAmt.multiply(rate).setScale(0, RoundingMode.HALF_UP);
+                    } catch (Exception e) {
+                        amt = BigDecimal.ZERO;
+                    }
+                } else if ("건강보험료*요율".equals(deduction.getDeductionType())) {
+                    try {
+                        // 대략 건강보험료(3.545%)의 요율이라고 가정
+                        BigDecimal baseRate = new BigDecimal("0.03545");
+                        BigDecimal healthIns = baseSalaryAmt.multiply(baseRate).setScale(0, RoundingMode.HALF_UP);
+                        BigDecimal rate = new BigDecimal(deduction.getRateOrAmount().replaceAll("[^0-9.]", "")).divide(new BigDecimal("100"));
+                        amt = healthIns.multiply(rate).setScale(0, RoundingMode.HALF_UP);
+                    } catch (Exception e) {
+                        amt = BigDecimal.ZERO;
+                    }
+                } else if ("간이세액표".equals(deduction.getDeductionType())) {
+                    // 임의로 기본급의 5%를 소득세로 계산
+                    amt = baseSalaryAmt.multiply(new BigDecimal("0.05")).setScale(0, RoundingMode.HALF_UP);
                 } else if ("비율".equals(deduction.getDeductionType())) {
                     try {
                         BigDecimal rate = new BigDecimal(deduction.getRateOrAmount().replaceAll("[^0-9.]", "")).divide(new BigDecimal("100"));

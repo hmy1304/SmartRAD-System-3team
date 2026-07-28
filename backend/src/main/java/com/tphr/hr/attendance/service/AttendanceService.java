@@ -13,7 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.stream.Collectors;
+import java.time.YearMonth;
+import com.tphr.hr.attendance.dto.AttendanceSummaryDto;
 
 @Service
 @RequiredArgsConstructor
@@ -92,5 +96,72 @@ public class AttendanceService {
                 .status(attendance.getStatus())
                 .note(attendance.getNote())
                 .build();
+    }
+
+    @Transactional(readOnly = true)
+    public List<AttendanceSummaryDto> getMonthlySummary(int year, int month, Long departmentId) {
+        YearMonth yearMonth = YearMonth.of(year, month);
+        LocalDate startDate = yearMonth.atDay(1);
+        LocalDate endDate = yearMonth.atEndOfMonth();
+        
+        List<Employee> employees;
+        if (departmentId != null) {
+            employees = employeeRepository.findAll().stream()
+                    .filter(e -> e.getDepartment() != null && e.getDepartment().getId().equals(departmentId))
+                    .collect(Collectors.toList());
+        } else {
+            employees = employeeRepository.findAll();
+        }
+
+        List<AttendanceSummaryDto> summaryList = new ArrayList<>();
+        String[] tones = {"blue", "light_blue", "green", "purple", "orange", "red"};
+
+        for (int i = 0; i < employees.size(); i++) {
+            Employee emp = employees.get(i);
+            String tone = tones[i % tones.length];
+            String initial = emp.getName() != null && emp.getName().length() > 0 ? emp.getName().substring(0, 1) : "";
+            String deptName = emp.getDepartment() != null ? emp.getDepartment().getName() : "-";
+            
+            List<String> days = new ArrayList<>(Collections.nCopies(endDate.getDayOfMonth(), "empty"));
+            
+            int attend = 0, late = 0, absent = 0, leave = 0;
+
+            List<Attendance> attendances = attendanceRepository.findByEmployeeIdAndWorkDateBetween(emp.getId(), startDate, endDate);
+            for (Attendance att : attendances) {
+                int dayIndex = att.getWorkDate().getDayOfMonth() - 1;
+                String status = att.getStatus();
+                if ("NORMAL".equalsIgnoreCase(status)) {
+                    days.set(dayIndex, "normal");
+                    attend++;
+                } else if ("LATE".equalsIgnoreCase(status)) {
+                    days.set(dayIndex, "late");
+                    late++;
+                } else if ("ABSENT".equalsIgnoreCase(status)) {
+                    days.set(dayIndex, "absent");
+                    absent++;
+                } else if ("LEAVE".equalsIgnoreCase(status)) {
+                    days.set(dayIndex, "leave");
+                    leave++;
+                }
+            }
+
+            // TODO: DutyScheduleEntry 조회하여 남은 empty 일자에 대해 OFF 처리 등 추가 가능
+
+            summaryList.add(AttendanceSummaryDto.builder()
+                    .id(String.valueOf(emp.getId()))
+                    .name(emp.getName())
+                    .initial(initial)
+                    .empNo(emp.getEmpNo())
+                    .department(deptName)
+                    .tone(tone)
+                    .days(days)
+                    .attend(attend)
+                    .late(late)
+                    .absent(absent)
+                    .leave(leave)
+                    .build());
+        }
+
+        return summaryList;
     }
 }
