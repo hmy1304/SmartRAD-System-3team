@@ -554,7 +554,7 @@ export default function LeavePage() {
                 onClick={handleBulkApprove}
               >
                 <Check size={16} />
-                선택 일괄 승인
+                선택 승인
               </button>
               <button
                 type="button"
@@ -562,7 +562,7 @@ export default function LeavePage() {
                 onClick={handleBulkReject}
               >
                 <X size={16} strokeWidth={2.5} />
-                선택 일괄 반려
+                선택 반려
               </button>
             </div>
           </div>
