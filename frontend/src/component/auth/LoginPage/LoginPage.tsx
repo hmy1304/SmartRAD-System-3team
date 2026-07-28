@@ -1,45 +1,67 @@
 "use client";
 
-import React, { useState } from 'react';
-import styles from './LoginPage.module.scss';
-import BrandLogo from '@/component/common/BrandLogo/BrandLogo';
-import { useRouter } from 'next/navigation';
+import React, { useState } from "react";
+import styles from "./LoginPage.module.scss";
+import BrandLogo from "@/component/common/BrandLogo/BrandLogo";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
-  const [empNo, setEmpNo] = useState('');
-  const [password, setPassword] = useState('');
+  const [empNo, setEmpNo] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
+  const [errorMsg, setErrorMsg] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg('');
+    setErrorMsg("");
+    setLoading(true);
 
     try {
-      const response = await fetch('/api-system/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api-system/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
         body: JSON.stringify({ empNo, password }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || '로그인에 실패했습니다. 다시 시도해주세요.');
+        throw new Error(
+          errorData.message ||
+            errorData.error ||
+            "로그인에 실패했습니다. 사번과 비밀번호를 확인해주세요.",
+        );
       }
 
       const data = await response.json();
-      
-      // 토큰과 사용자 정보를 브라우저 로컬 스토리지에 저장합니다.
+
       if (data.accessToken) {
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('userProfile', JSON.stringify(data));
+        localStorage.setItem("accessToken", data.accessToken);
+        localStorage.setItem(
+          "userProfile",
+          JSON.stringify({
+            employeeId: data.employeeId,
+            empNo: data.empNo,
+            name: data.name,
+            departmentName: data.departmentName,
+            positionName: data.positionName,
+            roleGroupName: data.roleGroupName,
+            permissions: data.permissions,
+          }),
+        );
       }
 
-      // 대시보드로 이동
-      router.push('/dashboard');
-    } catch (err: any) {
-      setErrorMsg(err.message);
+      router.push("/dashboard");
+    } catch (err: unknown) {
+      setErrorMsg(
+        err instanceof Error ? err.message : "로그인에 실패했습니다.",
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -51,7 +73,9 @@ export default function LoginPage() {
         </div>
         <div className={styles.headerRight}>
           <span>아직 계정이 없으신가요?</span>
-          <button className={styles.signupBtn}>회원가입</button>
+          <button type="button" className={styles.signupBtn}>
+            회원가입
+          </button>
         </div>
       </header>
 
@@ -61,13 +85,16 @@ export default function LoginPage() {
             <div className={styles.badge}>
               <span className={styles.dot}>●</span> 병원 인사팀을 위한 통합 ERP
             </div>
-            
+
             <h1 className={styles.title}>
-              다시 만나서<br />반갑습니다
+              다시 만나서
+              <br />
+              반갑습니다
             </h1>
-            
+
             <p className={styles.description}>
-              SmartRAD HR에 로그인하여 병원 인사·근태·급여 업무를 한<br />
+              SmartRAD HR에 로그인하여 병원 인사·근태·급여 업무를 한
+              <br />
               화면에서 관리하세요.
             </p>
 
@@ -79,7 +106,7 @@ export default function LoginPage() {
                   <p>의사부터 경비·청소직까지 하나로</p>
                 </div>
               </div>
-              
+
               <div className={styles.feature}>
                 <div className={styles.iconBox}>📅</div>
                 <div className={styles.text}>
@@ -87,7 +114,7 @@ export default function LoginPage() {
                   <p>3교대·야간 근무 자동 배정</p>
                 </div>
               </div>
-              
+
               <div className={styles.feature}>
                 <div className={styles.iconBox}>💸</div>
                 <div className={styles.text}>
@@ -117,13 +144,14 @@ export default function LoginPage() {
 
             <form onSubmit={handleLogin}>
               <div className={styles.formGroup}>
-                <label>아이디 (이메일)</label>
+                <label>사번</label>
                 <div className={styles.inputWrapper}>
                   <input
                     type="text"
-                    placeholder="hospital@example.com"
+                    placeholder="예: ADMIN-001"
                     value={empNo}
                     onChange={(e) => setEmpNo(e.target.value)}
+                    autoComplete="username"
                     required
                   />
                 </div>
@@ -133,10 +161,11 @@ export default function LoginPage() {
                 <label>비밀번호</label>
                 <div className={styles.inputWrapper}>
                   <input
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     placeholder="••••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
                     required
                   />
                   <button
@@ -145,23 +174,32 @@ export default function LoginPage() {
                     onClick={() => setShowPassword(!showPassword)}
                     tabIndex={-1}
                   >
-                    {showPassword ? '👁️' : '👁️‍🗨️'}
+                    {showPassword ? "👁️" : "👁️‍🗨️"}
                   </button>
                 </div>
               </div>
 
-              {errorMsg && <div className={styles.errorMessage}>{errorMsg}</div>}
+              {errorMsg && (
+                <div className={styles.errorMessage}>{errorMsg}</div>
+              )}
 
               <div className={styles.formOptions}>
                 <label className={styles.checkboxLabel}>
                   <input type="checkbox" />
                   <span>로그인 상태 유지</span>
                 </label>
-                <a href="#" className={styles.forgotPassword}>비밀번호 찾기</a>
+                <a href="#" className={styles.forgotPassword}>
+                  비밀번호 찾기
+                </a>
               </div>
 
-              <button type="submit" className={styles.loginBtn}>
-                로그인 <span className={styles.arrow}>→</span>
+              <button
+                type="submit"
+                className={styles.loginBtn}
+                disabled={loading}
+              >
+                {loading ? "로그인 중..." : "로그인"}
+                {!loading && <span className={styles.arrow}>→</span>}
               </button>
 
               <div className={styles.mobileSignup}>

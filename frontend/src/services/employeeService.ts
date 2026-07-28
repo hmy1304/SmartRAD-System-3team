@@ -3,47 +3,194 @@ import type {
   Page,
   EmployeeUpdateRequest,
   AccountStatusUpdateRequest,
-  EmployeeCreateRequest,
+  AppointmentResponse,
+  AppointmentCreateRequest,
+  EmployeeManagementData,
 } from "@/types/employee";
 import { employeeMockData } from "@/data/dashboard/employeeMockData";
-import type { EmployeeManagementData } from "@/types/employee";
 
 export interface AccountIssueResponse {
   empNo: string;
-  temporaryPassword?: string; // Optional depending on how the backend sends it
+  temporaryPassword?: string;
 }
 
-const backendApiUrl = "/api-system";
+const isServer = typeof window === "undefined";
 
-function getHeaders() {
+/**
+ * 서버(RSC): Docker 내부 backend 또는 localhost
+ * 클라이언트: Next rewrite 프록시 /api-system
+ */
+function getBaseUrl() {
+  if (isServer) {
+    return (
+      process.env.BACKEND_INTERNAL_URL ||
+      process.env.NEXT_PUBLIC_BACKEND_API_URL ||
+      "http://backend:8080"
+    ).replace(/\/$/, "");
+  }
+  return "/api-system";
+}
+
+/** mock은 명시적으로 true일 때만 */
+const useMockData =
+  process.env.NEXT_PUBLIC_USE_EMPLOYEE_MOCK_DATA === "true";
+
+function getHeaders(): HeadersInit {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     Accept: "application/json",
   };
-  
-  if (typeof window !== "undefined") {
+
+  if (!isServer) {
     const token = localStorage.getItem("accessToken");
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
     }
   }
+
   return headers;
 }
+
+function mapStatus(accountStatus?: string): {
+  status: "active" | "leave" | "retire";
+  statusLabel: string;
+} {
+  switch (accountStatus) {
+    case "ACTIVE":
+      return { status: "active", statusLabel: "재직" };
+    case "LEAVE":
+      return { status: "leave", statusLabel: "휴직" };
+    case "RETIRED":
+    case "LOCKED":
+      return { status: "retire", statusLabel: "퇴직" };
+    default:
+      return { status: "active", statusLabel: accountStatus ?? "재직" };
+  }
+}
+
+const AVATAR_TONES = [
+  "blue",
+  "orange",
+  "purple",
+  "green",
+  "red",
+  "light_blue",
+] as const;
+
+function mapRowsToManagementData(data: any): EmployeeManagementData {
+  const rows: any[] = Array.isArray(data) ? data : (data.content ?? []);
+  const totalCount =
+    typeof data.totalElements === "number" ? data.totalElements : rows.length;
+
+  const employees = rows.map((item: any, index: number) => {
+    const { status, statusLabel } = mapStatus(item.accountStatus);
+    return {
+      id: String(item.id),
+      name: item.name ?? "",
+      initial: (item.name ?? "?").charAt(0),
+      department: item.departmentName ?? "",
+      position: item.positionName ?? "",
+      employeeNo: item.empNo ?? "",
+      status,
+      statusLabel,
+      employmentType: (item.jobCategoryName as any) ?? "정규직",
+      avatarTone: AVATAR_TONES[index % AVATAR_TONES.length],
+    };
+  });
+
+  const first = employees[0];
+  const selectedEmployee = first
+    ? {
+        ...first,
+        birthDate: "",
+        gender: "",
+        phone: "",
+        email: "",
+        address: "",
+        emergencyContact: "",
+        licenseType: "",
+        licenseNo: "",
+        specialty: "",
+        acquiredDate: "",
+        departmentFull: first.department,
+        jobTitle: first.position,
+        rank: "",
+        hireDate: "",
+        employeeNoFull: first.employeeNo,
+        workType: String(first.employmentType ?? ""),
+        duty: "",
+        currentRank: first.position,
+        currentPayGrade: "",
+        promotionDate: "",
+        nextPromotion: "",
+        bankName: "",
+        accountNo: "",
+        salaryDay: "",
+        rankHistory: [],
+      }
+    : null;
+
+  return {
+    totalCount,
+    employees,
+    selectedEmployee,
+  };
+}
+
+// ---------- 목록 (관리 페이지용) ----------
+
+/** 목록 조회 **/
+export async function getEmployeeManagementData(): Promise<EmployeeManagementData> {
+  // 디버그: mock 완전 차단
+  // if (useMockData) return employeeMockData;
+
+  try {
+    const base = getBaseUrl();
+    console.log("[getEmployeeManagementData] base =", base);
+
+    const response = await fetch(`${base}/employees?size=50`, {
+      method: "GET",
+      headers: getHeaders(),
+      cache: "no-store",
+    });
+
+    console.log("[getEmployeeManagementData] status =", response.status);
+
+    if (!response.ok) {
+      // mock 대신 빈 목록 → 화면에서 바로 구분 가능
+      return { totalCount: 0, employees: [], selectedEmployee: null };
+    }
+
+    const data = await response.json();
+    console.log(
+      "[getEmployeeManagementData] rows =",
+      Array.isArray(data) ? data.length : data.content?.length,
+    );
+    return mapRowsToManagementData(data);
+  } catch (err) {
+    console.error("[getEmployeeManagementData] error:", err);
+    return { totalCount: 0, employees: [], selectedEmployee: null };
+  }
+}
+
+// ---------- 목록 (원본 Page) ----------
 
 export async function getEmployees(
   size = 50,
   keyword?: string,
   departmentId?: string,
-  roleGroupId?: string
+  roleGroupId?: string,
 ): Promise<Page<EmployeeSummaryResponse>> {
-  let url = `${backendApiUrl}/employees?size=${size}`;
+  const base = getBaseUrl();
+  let url = `${base}/employees?size=${size}`;
   if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
   if (departmentId) url += `&departmentId=${encodeURIComponent(departmentId)}`;
   if (roleGroupId) url += `&roleGroupId=${encodeURIComponent(roleGroupId)}`;
-  
+
   const response = await fetch(url, {
     method: "GET",
     headers: getHeaders(),
+    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -52,100 +199,8 @@ export async function getEmployees(
   return response.json();
 }
 
-export async function updateEmployeeRole(
-  id: number,
-  roleGroupId: number
-): Promise<void> {
-  const request: EmployeeUpdateRequest = { roleGroupId };
-  const response = await fetch(`${backendApiUrl}/employees/${id}`, {
-    method: "PATCH",
-    headers: getHeaders(),
-    body: JSON.stringify(request),
-  });
+// ---------- 등록 / 상세 / 수정 ----------
 
-  if (!response.ok) {
-    throw new Error("Failed to update employee role");
-  }
-}
-
-export async function updateAccountStatus(
-  id: number,
-  accountStatus: "ACTIVE" | "LOCKED"
-): Promise<void> {
-  const request: AccountStatusUpdateRequest = { accountStatus };
-  const response = await fetch(`${backendApiUrl}/employees/${id}/account-status`, {
-    method: "PATCH",
-    headers: getHeaders(),
-    body: JSON.stringify(request),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to update account status");
-  }
-}
-
-export async function issueAccount(id: number): Promise<any> {
-  const response = await fetch(`${backendApiUrl}/employees/${id}/issue-account`, {
-    method: "POST",
-    headers: getHeaders(),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to issue account");
-  }
-  return response.json();
-}
-
-export async function deleteEmployees(ids: number[]): Promise<void> {
-  const response = await fetch(`${backendApiUrl}/employees?ids=${ids.join(',')}`, {
-    method: "DELETE",
-    headers: getHeaders(),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to delete employees");
-  }
-}
-
-
-export async function createEmployee(request: EmployeeCreateRequest): Promise<void> {
-  const response = await fetch(`${backendApiUrl}/employees`, {
-    method: "POST",
-    headers: getHeaders(),
-    body: JSON.stringify(request),
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to create employee");
-  }
-}
-
-const useMockData = process.env.USE_EMPLOYEE_MOCK_DATA !== "false";
-const employeeApiPath = process.env.EMPLOYEE_API_PATH ?? "/api/v1/employees";
-
-/** 목록 조회 */
-export async function getEmployeeManagementData(): Promise<EmployeeManagementData> {
-  if (useMockData) {
-    return employeeMockData;
-  }
-
-  const response = await fetch(
-    employeeApiPath,
-    {
-      method: "GET",
-      headers: { Accept: "application/json" },
-      cache: "no-store",
-    },
-  );
-
-  if (!response.ok) {
-    throw new Error(`직원 목록 조회 실패: ${response.status}`);
-  }
-
-  return response.json();
-}
-
-/** 직원 등록 요청 타입 */
 export interface CreateEmployeeRequest {
   empNo: string;
   name: string;
@@ -174,31 +229,149 @@ export interface CreateEmployeeRequest {
   roleGroupId?: number;
 }
 
-/** 직원 등록 (상세) */
 export async function createEmployeeDetailed(
   payload: CreateEmployeeRequest,
 ): Promise<{ id: number; empNo?: string }> {
-  if (!backendApiUrl) {
-    throw new Error("BACKEND_API_URL 환경변수가 설정되지 않았습니다.");
-  }
-
-  const response = await fetch(
-    new URL("/employees", backendApiUrl).toString(),
-    {
-      method: "POST",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(payload),
-      cache: "no-store",
-    },
-  );
+  const base = getBaseUrl();
+  const response = await fetch(`${base}/employees`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
 
   if (!response.ok) {
     const text = await response.text();
     throw new Error(`직원 등록 실패 (${response.status}): ${text}`);
   }
 
+  return response.json();
+}
+
+export async function getEmployeeById(id: number | string) {
+  const base = getBaseUrl();
+  const response = await fetch(`${base}/employees/${id}`, {
+    method: "GET",
+    headers: getHeaders(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`직원 조회 실패: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function updateEmployee(
+  id: number | string,
+  payload: EmployeeUpdateRequest,
+): Promise<void> {
+  const base = getBaseUrl();
+  const response = await fetch(`${base}/employees/${id}`, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`직원 수정 실패 (${response.status}): ${text}`);
+  }
+}
+
+export async function updateEmployeeRole(
+  id: number,
+  roleGroupId: number,
+): Promise<void> {
+  const base = getBaseUrl();
+  const request: EmployeeUpdateRequest = { roleGroupId };
+  const response = await fetch(`${base}/employees/${id}`, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update employee role");
+  }
+}
+
+export async function updateAccountStatus(
+  id: number,
+  accountStatus: "ACTIVE" | "LOCKED",
+): Promise<void> {
+  const base = getBaseUrl();
+  const request: AccountStatusUpdateRequest = { accountStatus };
+  const response = await fetch(`${base}/employees/${id}/account-status`, {
+    method: "PATCH",
+    headers: getHeaders(),
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to update account status");
+  }
+}
+
+export async function issueAccount(id: number): Promise<AccountIssueResponse> {
+  const base = getBaseUrl();
+  const response = await fetch(`${base}/employees/${id}/issue-account`, {
+    method: "POST",
+    headers: getHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to issue account");
+  }
+  return response.json();
+}
+
+export async function deleteEmployees(ids: number[]): Promise<void> {
+  const base = getBaseUrl();
+  const response = await fetch(`${base}/employees?ids=${ids.join(",")}`, {
+    method: "DELETE",
+    headers: getHeaders(),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to delete employees");
+  }
+}
+
+// ---------- 발령 ----------
+
+export async function getAppointmentHistory(
+  employeeId: number | string,
+): Promise<AppointmentResponse[]> {
+  const base = getBaseUrl();
+  const response = await fetch(
+    `${base}/appointments/history/${employeeId}`,
+    {
+      method: "GET",
+      headers: getHeaders(),
+      cache: "no-store",
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(`발령 이력 조회 실패: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function createAppointment(
+  payload: AppointmentCreateRequest,
+): Promise<AppointmentResponse> {
+  const base = getBaseUrl();
+  const response = await fetch(`${base}/appointments`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`이력 등록 실패 (${response.status}): ${text}`);
+  }
   return response.json();
 }
