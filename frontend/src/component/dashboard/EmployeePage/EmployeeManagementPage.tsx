@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   useMemo,
@@ -81,7 +81,7 @@ const DEPT_ID_MAP: Record<string, number> = {
   간호부: 4,
   중환자실: 2,
   원무과: 5,
-  원장실: 1,
+  관리팀: 1,
 };
 
 export default function EmployeeManagementPage({ initialData }: Props) {
@@ -602,7 +602,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                       onChange={onFormChange}
                     >
                       <option value="">부서 선택</option>
-                      <option value="1">원장실</option>
+                      <option value="1">관리팀</option>
                       <option value="2">중환자실</option>
                       <option value="3">영상의학과</option>
                       <option value="4">간호부</option>

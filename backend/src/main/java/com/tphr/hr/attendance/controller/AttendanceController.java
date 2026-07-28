@@ -1,8 +1,6 @@
-package com.tphr.hr.attendance.controller;
+﻿package com.tphr.hr.attendance.controller;
 
-import com.tphr.hr.attendance.dto.AttendanceCheckInRequest;
-import com.tphr.hr.attendance.dto.AttendanceCheckOutRequest;
-import com.tphr.hr.attendance.dto.AttendanceResponse;
+import com.tphr.hr.attendance.dto.*;
 import com.tphr.hr.attendance.service.AttendanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -51,5 +49,32 @@ public class AttendanceController {
             @RequestParam int month,
             @RequestParam(required = false) Long departmentId) {
         return ResponseEntity.ok(attendanceService.getMonthlySummary(year, month, departmentId));
+    // ===== 愿由ъ옄 ?꾩슜 洹쇳깭 ?뺤젙 諛??섎룞 蹂댁젙 API =====
+
+    @GetMapping("/admin")
+    public ResponseEntity<List<AttendanceResponse>> getAdminAttendances(
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(attendanceService.getAdminAttendances(departmentId, startDate, endDate));
+    }
+
+    @PostMapping("/admin")
+    public ResponseEntity<AttendanceResponse> createAttendanceByAdmin(@RequestBody AttendanceAdminCreateRequest request) {
+        return ResponseEntity.ok(attendanceService.createAttendanceByAdmin(request));
+    }
+
+    @PutMapping("/admin/{id}")
+    public ResponseEntity<AttendanceResponse> updateAttendanceByAdmin(
+            @PathVariable Long id,
+            @RequestBody AttendanceAdminUpdateRequest request) {
+        return ResponseEntity.ok(attendanceService.updateAttendanceByAdmin(id, request));
+    }
+
+    @DeleteMapping("/admin/{id}")
+    public ResponseEntity<Void> deleteAttendanceByAdmin(@PathVariable Long id) {
+        attendanceService.deleteAttendanceByAdmin(id);
+        return ResponseEntity.noContent().build();
     }
 }
+

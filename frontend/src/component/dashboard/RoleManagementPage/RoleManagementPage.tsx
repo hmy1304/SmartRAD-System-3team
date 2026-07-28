@@ -16,6 +16,7 @@ import {
   updateRolePermission,
   getDepartments,
   deleteRoleGroup,
+  createRoleGroup,
 } from "@/services/systemService";
 import type { DepartmentResponse } from "@/types/system";
 import {
@@ -63,10 +64,11 @@ const getIconForRole = (roleName: string) => {
 
 const getMenuIcon = (menuName: string) => {
   if (menuName.includes("듀티표")) return <Calendar size={18} />;
-  if (menuName.includes("전자결재")) return <FileText size={18} />;
-  if (menuName.includes("시스템")) return <Settings size={18} />;
-  if (menuName.includes("인사")) return <Users size={18} />;
-  if (menuName.includes("휴가")) return <Umbrella size={18} />;
+  if (menuName.includes("결재") || menuName.includes("기안")) return <FileText size={18} />;
+  if (menuName.includes("권한") || menuName.includes("공통") || menuName.includes("시스템")) return <Settings size={18} />;
+  if (menuName.includes("직원") || menuName.includes("조직") || menuName.includes("인사")) return <Users size={18} />;
+  if (menuName.includes("휴가") || menuName.includes("근태") || menuName.includes("출퇴근")) return <Umbrella size={18} />;
+  if (menuName.includes("급여") || menuName.includes("법정") || menuName.includes("마감")) return <Shield size={18} />;
   return <FileText size={18} />;
 };
 
@@ -94,15 +96,18 @@ export default function RoleManagementPage() {
           setLoggedInUserId(user.employeeId);
         }
 
-        if (user.permissions) {
-          const sysPerm = user.permissions.find((p: any) => p.menuCode === 'SYSTEM_ADMIN');
+        // 📌 마스터 권한은 오직 ADMIN-001(최고관리자)에 한정. ADMIN-002 등 시스템 관리자는 일반 DB 체크박스 통제 적용.
+        const isAdminRole = user.empNo === 'ADMIN-001' || user.roleGroupName === '최고관리자';
+
+        if (isAdminRole) {
+          hasAccess = true;
+          setCanEdit(true);
+        } else if (user.permissions && Array.isArray(user.permissions)) {
+          const sysPerm = user.permissions.find((p: any) => p.menuCode === 'SYSTEM_ROLES' || p.menuCode === 'SYSTEM_ADMIN');
           if (sysPerm && sysPerm.canRead) {
             hasAccess = true;
-            setCanEdit(sysPerm.canWrite);
+            setCanEdit(!!sysPerm.canWrite);
           }
-        } else if (user.roleGroupName === '시스템 관리자') {
-          hasAccess = true; // Fallback
-          setCanEdit(true);
         }
 
         if (!hasAccess) {
@@ -260,6 +265,37 @@ export default function RoleManagementPage() {
       alert("저장되었습니다.");
     } catch (e) {
       console.error(e);
+    }
+  };
+
+  const handleResetPermissions = async () => {
+    if (!selectedRoleGroupId) return;
+    if (!confirm("현재 변경된 권한 설정들을 저장된 원본 상태로 초기화하시겠습니까?")) return;
+    try {
+      const perms = await getRolePermissions(selectedRoleGroupId);
+      setPermissions(perms);
+      alert("권한 설정이 원래대로 초기화되었습니다.");
+    } catch (e) {
+      console.error(e);
+      alert("초기화 실패");
+    }
+  };
+
+  const handleCreateRoleGroup = async () => {
+    if (!canEdit) {
+      alert("수정 권한이 없습니다.");
+      return;
+    }
+    const name = prompt("새로운 권한 그룹의 이름을 입력하세요 (예: 수석 전공의, 안전관리팀):");
+    if (!name || !name.trim()) return;
+    const description = prompt("해당 권한 그룹에 대한 간단한 설명을 입력하세요:") || "신규 권한 그룹";
+    try {
+      await createRoleGroup({ name: name.trim(), description: description.trim() });
+      alert("새 권한 그룹이 성공적으로 신설되었습니다.");
+      await fetchRoleGroups();
+    } catch (e) {
+      console.error(e);
+      alert("권한 그룹 생성에 실패했습니다.");
     }
   };
 
@@ -533,7 +569,7 @@ export default function RoleManagementPage() {
                     </div>
                     <h2>권한 그룹 및 메뉴 권한 설정</h2>
                   </div>
-                  <button className={styles.primaryBtn}>+ 새 권한 그룹 만들기</button>
+                  <button className={styles.primaryBtn} onClick={handleCreateRoleGroup}>+ 새 권한 그룹 만들기</button>
                 </div>
                 
                 <div className={styles.splitLayout}>
@@ -601,7 +637,7 @@ export default function RoleManagementPage() {
                         <p>아래 체크박스를 통해 각 메뉴별 접근 권한을 세밀하게 설정하세요.</p>
                       </div>
                       <div className={styles.rightActionBtns}>
-                        <button className={styles.outlineBtn} disabled={!canEdit}><RotateCcw size={16} /> 초기화</button>
+                        <button className={styles.outlineBtn} disabled={!canEdit} onClick={handleResetPermissions}><RotateCcw size={16} /> 초기화</button>
                         <button className={styles.outlineBtn} disabled={!canEdit}><MonitorPlay size={16} /> 미리보기</button>
                       </div>
                     </div>
@@ -638,7 +674,9 @@ export default function RoleManagementPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {permissions.map((p) => (
+                          {permissions.map((p) => {
+                            const isRootRole = roleGroups.find((rg) => rg.id === selectedRoleGroupId)?.name === '최고관리자';
+                            return (
                             <tr key={p.id}>
                               <td>
                                 <div className={styles.menuName}>
@@ -651,16 +689,17 @@ export default function RoleManagementPage() {
                                     {getMenuIcon(p.menuName)}
                                   </div>
                                   <div className={styles.menuText}>
-                                    <p className={styles.title}>{p.menuName}</p>
+                                    <p className={styles.title}>{p.menuName} {isRootRole && <span style={{fontSize: "11px", color: "#ef4444"}}>(고정)</span>}</p>
                                     <p className={styles.desc}>{p.menuCode}</p>
                                   </div>
                                 </div>
                               </td>
                               <td>
-                                <label className={styles.customCheckbox}>
+                                <label className={styles.customCheckbox} style={{opacity: isRootRole ? 0.6 : 1, cursor: isRootRole ? "not-allowed" : "pointer"}}>
                                   <input
                                     type="checkbox"
-                                    checked={p.canRead}
+                                    checked={p.canRead || isRootRole}
+                                    disabled={isRootRole || !canEdit}
                                     onChange={(e) =>
                                       handlePermissionChange(p.menuId, "canRead", e.target.checked)
                                     }
@@ -669,10 +708,11 @@ export default function RoleManagementPage() {
                                 </label>
                               </td>
                               <td>
-                                <label className={styles.customCheckbox}>
+                                <label className={styles.customCheckbox} style={{opacity: isRootRole ? 0.6 : 1, cursor: isRootRole ? "not-allowed" : "pointer"}}>
                                   <input
                                     type="checkbox"
-                                    checked={p.canWrite}
+                                    checked={p.canWrite || isRootRole}
+                                    disabled={isRootRole || !canEdit}
                                     onChange={(e) =>
                                       handlePermissionChange(p.menuId, "canWrite", e.target.checked)
                                     }
@@ -681,10 +721,11 @@ export default function RoleManagementPage() {
                                 </label>
                               </td>
                               <td>
-                                <label className={styles.customCheckbox}>
+                                <label className={styles.customCheckbox} style={{opacity: isRootRole ? 0.6 : 1, cursor: isRootRole ? "not-allowed" : "pointer"}}>
                                   <input
                                     type="checkbox"
-                                    checked={p.canDelete}
+                                    checked={p.canDelete || isRootRole}
+                                    disabled={isRootRole || !canEdit}
                                     onChange={(e) =>
                                       handlePermissionChange(p.menuId, "canDelete", e.target.checked)
                                     }
@@ -693,10 +734,11 @@ export default function RoleManagementPage() {
                                 </label>
                               </td>
                               <td>
-                                <label className={styles.customCheckbox}>
+                                <label className={styles.customCheckbox} style={{opacity: isRootRole ? 0.6 : 1, cursor: isRootRole ? "not-allowed" : "pointer"}}>
                                   <input
                                     type="checkbox"
-                                    checked={p.canApprove}
+                                    checked={p.canApprove || isRootRole}
+                                    disabled={isRootRole || !canEdit}
                                     onChange={(e) =>
                                       handlePermissionChange(p.menuId, "canApprove", e.target.checked)
                                     }
@@ -705,7 +747,8 @@ export default function RoleManagementPage() {
                                 </label>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                       
