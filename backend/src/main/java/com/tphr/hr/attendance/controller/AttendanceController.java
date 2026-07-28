@@ -1,4 +1,4 @@
-﻿package com.tphr.hr.attendance.controller;
+package com.tphr.hr.attendance.controller;
 
 import com.tphr.hr.attendance.dto.*;
 import com.tphr.hr.attendance.service.AttendanceService;
@@ -49,7 +49,9 @@ public class AttendanceController {
             @RequestParam int month,
             @RequestParam(required = false) Long departmentId) {
         return ResponseEntity.ok(attendanceService.getMonthlySummary(year, month, departmentId));
-    // ===== 愿由ъ옄 ?꾩슜 洹쇳깭 ?뺤젙 諛??섎룞 蹂댁젙 API =====
+    }
+
+    // ===== 관리자 전용 근태 정정 및 수동 보정 API =====
 
     @GetMapping("/admin")
     public ResponseEntity<List<AttendanceResponse>> getAdminAttendances(
@@ -77,4 +79,3 @@ public class AttendanceController {
         return ResponseEntity.noContent().build();
     }
 }
-
