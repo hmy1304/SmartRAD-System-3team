@@ -1,26 +1,24 @@
 package com.tphr.hr.attendance.dto;
 
-import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 
 @Getter
-@Builder
-public class AttendanceResponse {
-    private Long id;
+@NoArgsConstructor
+public class AttendanceAdminCreateRequest {
     private Long employeeId;
-    private String empNo;
-    private String employeeName;
-    private String departmentName;
-    private String positionName;
+    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE)
     private LocalDate workDate;
+    @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime checkInTime;
+    @DateTimeFormat(iso = DateTimeFormat.ISO.TIME)
     private LocalTime checkOutTime;
     private String status;
     private String note;
-    private Boolean isCorrected;
     private String correctionReason;
     private String correctedBy;
 }
