@@ -1,8 +1,14 @@
 "use client";
 
 import { useState } from "react";
-
 import styles from "./OrganizationPage.module.scss";
+import DepartmentModal, {
+  type DepartmentForm,
+} from "./DepartmentModal";
+import {
+  createDepartment,
+  updateDepartment,
+} from "@/services/departmentService";
 
 const DEPARTMENTS = [
   { id: "1", name: "진료부문", count: 142, parent: true },
@@ -62,292 +68,355 @@ export default function OrganizationPage() {
   const [selectedDept, setSelectedDept] = useState("2");
   const [deptKeyword, setDeptKeyword] = useState("");
 
-  const filteredDepts = DEPARTMENTS.filter((d) => d.name.includes(deptKeyword));
+  const [deptModal, setDeptModal] = useState<{
+    open: boolean;
+    mode: "create" | "edit";
+  }>({ open: false, mode: "create" });
+
+  const [editInitial, setEditInitial] =
+    useState<Partial<DepartmentForm> | null>(null);
+
+  const filteredDepts = DEPARTMENTS.filter((d) =>
+    d.name.includes(deptKeyword),
+  );
+
+  const parentOptions = DEPARTMENTS.filter((d) => d.parent).map((d) => ({
+    id: String(d.id),
+    name: d.name,
+  }));
+
+  const currentDept =
+    DEPARTMENTS.find((d) => d.id === selectedDept) ?? DEPARTMENTS[1];
 
   return (
-    <main className={styles.main}>
-          {/* 페이지 헤더 */}
-          <div className={styles.pageHeader}>
+    <>
+      <main className={styles.main}>
+        {/* 페이지 헤더 */}
+        <div className={styles.pageHeader}>
+          <div>
+            <h1>조직관리</h1>
+            <p>병원의 조직 구조와 부서별 정보를 조회하고 관리합니다.</p>
+          </div>
+          <div className={styles.pageActions}>
+            <button type="button" className={styles.outlineBtn}>
+              조직도 인쇄
+            </button>
+            <button
+              type="button"
+              className={styles.primaryBtn}
+              onClick={() => {
+                setEditInitial(null);
+                setDeptModal({ open: true, mode: "create" });
+              }}
+            >
+              + 부서 등록
+            </button>
+          </div>
+        </div>
+
+        {/* 요약 카드 */}
+        <div className={styles.summaryRow}>
+          <div className={styles.summaryCard}>
+            <div className={styles.summaryIconBlue}>🏢</div>
             <div>
-              <h1>조직관리</h1>
-              <p>병원의 조직 구조와 부서별 정보를 조회하고 관리합니다.</p>
+              <label>전체 부서 수</label>
+              <p>
+                18<span>개</span>
+              </p>
             </div>
-            <div className={styles.pageActions}>
-              <button type="button" className={styles.outlineBtn}>
-                조직도 인쇄
-              </button>
-              <button type="button" className={styles.primaryBtn}>
-                + 부서 등록
-              </button>
+          </div>
+          <div className={styles.summaryCard}>
+            <div className={styles.summaryIconGreen}>👥</div>
+            <div>
+              <label>전체 소속 인원</label>
+              <p>
+                2,184<span>명</span>
+              </p>
+            </div>
+          </div>
+          <div className={styles.summaryCard}>
+            <div className={styles.summaryIconOrange}>🏛</div>
+            <div>
+              <label>상위 부문 수</label>
+              <p>
+                3<span>개</span>
+              </p>
+            </div>
+          </div>
+          <div className={styles.summaryCard}>
+            <div className={styles.summaryIconPurple}>⚠</div>
+            <div>
+              <label>미배정 조직 번호</label>
+              <p>
+                3<span>건</span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 전체 조직도 */}
+        <section className={styles.orgChartSection}>
+          <div className={styles.sectionHeader}>
+            <div>
+              <h2>전체 조직도</h2>
+              <p>병원의 조직 계층 구조, 18개 부서로 구성되어 있습니다.</p>
+            </div>
+            <div className={styles.legend}>
+              <span>
+                <i className={styles.dotBlue} /> 경영진
+              </span>
+              <span>
+                <i className={styles.dotGreen} /> 부문
+              </span>
+              <span>
+                <i className={styles.dotGray} /> 부서
+              </span>
             </div>
           </div>
 
-          {/* 요약 카드 */}
-          <div className={styles.summaryRow}>
-            <div className={styles.summaryCard}>
-              <div className={styles.summaryIconBlue}>🏢</div>
-              <div>
-                <label>전체 부서 수</label>
-                <p>
-                  18<span>개</span>
-                </p>
+          <div className={styles.orgChart}>
+            <div className={styles.orgRoot}>
+              <div className={styles.orgNodeRoot}>
+                병원<span>전체 2,184명</span>
               </div>
             </div>
-            <div className={styles.summaryCard}>
-              <div className={styles.summaryIconGreen}>👥</div>
-              <div>
-                <label>전체 소속 인원</label>
-                <p>
-                  2,184<span>명</span>
-                </p>
+            <div className={styles.orgConnector} />
+            <div className={styles.orgLevel}>
+              <div className={styles.orgNodeDept}>
+                진료부문<span>142명</span>
+              </div>
+              <div className={styles.orgNodeDept}>
+                간호부문<span>64명</span>
+              </div>
+              <div className={styles.orgNodeDept}>
+                행정지원부문<span>42명</span>
               </div>
             </div>
-            <div className={styles.summaryCard}>
-              <div className={styles.summaryIconOrange}>🏛</div>
-              <div>
-                <label>상위 부문 수</label>
-                <p>
-                  3<span>개</span>
-                </p>
+            <div className={styles.orgSubLevel}>
+              <div className={styles.orgSubGroup}>
+                <div className={styles.orgNode}>
+                  영상의학과<span>42명</span>
+                </div>
+                <div className={styles.orgNode}>
+                  진단검사의학과<span>28명</span>
+                </div>
+                <div className={styles.orgNode}>
+                  응급의학과<span>20명</span>
+                </div>
+                <div className={styles.orgNode}>
+                  약제부<span>18명</span>
+                </div>
               </div>
-            </div>
-            <div className={styles.summaryCard}>
-              <div className={styles.summaryIconPurple}>⚠</div>
-              <div>
-                <label>미배정 조직 번호</label>
-                <p>
-                  3<span>건</span>
-                </p>
+              <div className={styles.orgSubGroup}>
+                <div className={styles.orgNode}>
+                  간호부<span>89명</span>
+                </div>
+                <div className={styles.orgNode}>
+                  감염관리실<span>8명</span>
+                </div>
+              </div>
+              <div className={styles.orgSubGroup}>
+                <div className={styles.orgNode}>
+                  원무과<span>24명</span>
+                </div>
+                <div className={styles.orgNode}>
+                  인사총무팀<span>12명</span>
+                </div>
+                <div className={styles.orgNode}>
+                  시설관리팀<span>9명</span>
+                </div>
               </div>
             </div>
           </div>
+        </section>
 
-          {/* 전체 조직도 */}
-          <section className={styles.orgChartSection}>
-            <div className={styles.sectionHeader}>
-              <div>
-                <h2>전체 조직도</h2>
-                <p>병원의 조직 계층 구조, 18개 부서로 구성되어 있습니다.</p>
-              </div>
-              <div className={styles.legend}>
-                <span>
-                  <i className={styles.dotBlue} /> 경영진
-                </span>
-                <span>
-                  <i className={styles.dotGreen} /> 부문
-                </span>
-                <span>
-                  <i className={styles.dotGray} /> 부서
-                </span>
+        {/* 하단: 부서 목록 + 상세 */}
+        <div className={styles.bottomLayout}>
+          <section className={styles.deptListBox}>
+            <div className={styles.deptListHeader}>
+              <h3>부서 목록</h3>
+              <div className={styles.deptSearch}>
+                <input
+                  value={deptKeyword}
+                  onChange={(e) => setDeptKeyword(e.target.value)}
+                  placeholder="부서명으로 검색"
+                />
               </div>
             </div>
 
-            <div className={styles.orgChart}>
-              {/* 최상위 */}
-              <div className={styles.orgRoot}>
-                <div className={styles.orgNodeRoot}>
-                  병원<span>전체 2,184명</span>
-                </div>
-              </div>
-
-              {/* 1depth 연결선 */}
-              <div className={styles.orgConnector} />
-
-              {/* 부문 3개 */}
-              <div className={styles.orgLevel}>
-                <div className={styles.orgNodeDept}>
-                  진료부문<span>142명</span>
-                </div>
-                <div className={styles.orgNodeDept}>
-                  간호부문<span>64명</span>
-                </div>
-                <div className={styles.orgNodeDept}>
-                  행정지원부문<span>42명</span>
-                </div>
-              </div>
-
-              {/* 2depth 부서들 */}
-              <div className={styles.orgSubLevel}>
-                <div className={styles.orgSubGroup}>
-                  <div className={styles.orgNode}>
-                    영상의학과<span>42명</span>
-                  </div>
-                  <div className={styles.orgNode}>
-                    진단검사의학과<span>28명</span>
-                  </div>
-                  <div className={styles.orgNode}>
-                    응급의학과<span>20명</span>
-                  </div>
-                  <div className={styles.orgNode}>
-                    약제부<span>18명</span>
-                  </div>
-                </div>
-                <div className={styles.orgSubGroup}>
-                  <div className={styles.orgNode}>
-                    간호부<span>89명</span>
-                  </div>
-                  <div className={styles.orgNode}>
-                    감염관리실<span>8명</span>
-                  </div>
-                </div>
-                <div className={styles.orgSubGroup}>
-                  <div className={styles.orgNode}>
-                    원무과<span>24명</span>
-                  </div>
-                  <div className={styles.orgNode}>
-                    인사총무팀<span>12명</span>
-                  </div>
-                  <div className={styles.orgNode}>
-                    시설관리팀<span>9명</span>
-                  </div>
-                </div>
-              </div>
+            <div className={styles.deptList}>
+              {filteredDepts.map((dept) => (
+                <button
+                  key={dept.id}
+                  type="button"
+                  className={`${styles.deptItem} ${
+                    selectedDept === dept.id ? styles.deptItemActive : ""
+                  } ${dept.parent ? styles.deptParent : ""}`}
+                  onClick={() => setSelectedDept(dept.id)}
+                >
+                  <span className={styles.deptName}>{dept.name}</span>
+                  <span className={styles.deptCount}>{dept.count}명</span>
+                </button>
+              ))}
             </div>
           </section>
 
-          {/* 하단: 부서 목록 + 상세 */}
-          <div className={styles.bottomLayout}>
-            {/* 부서 목록 */}
-            <section className={styles.deptListBox}>
-              <div className={styles.deptListHeader}>
-                <h3>부서 목록</h3>
-                <div className={styles.deptSearch}>
-                  <input
-                    value={deptKeyword}
-                    onChange={(e) => setDeptKeyword(e.target.value)}
-                    placeholder="부서명으로 검색"
-                  />
+          <section className={styles.deptDetailBox}>
+            <div className={styles.deptDetailHeader}>
+              <div className={styles.deptDetailTitle}>
+                <span className={styles.deptIcon}>🏥</span>
+                <div>
+                  <h3>{currentDept.name}</h3>
+                  <p>
+                    DEPT-{currentDept.id} ·{" "}
+                    {currentDept.parent ? "상위 부문" : "부서"}
+                  </p>
                 </div>
               </div>
+              <button
+                type="button"
+                className={styles.outlineBtn}
+                onClick={() => {
+                  setEditInitial({
+                    id: currentDept.id,
+                    nameKo: currentDept.name,
+                    nameEn: "",
+                    code: `DEPT-${currentDept.id}`,
+                    parentId: parentOptions[0]?.id ?? "",
+                    manager: "",
+                    location: "",
+                    phone: "",
+                    establishedAt: "",
+                    description: "",
+                  });
+                  setDeptModal({ open: true, mode: "edit" });
+                }}
+              >
+                정보 수정
+              </button>
+            </div>
 
-              <div className={styles.deptList}>
-                {filteredDepts.map((dept) => (
-                  <button
-                    key={dept.id}
-                    type="button"
-                    className={`${styles.deptItem} ${
-                      selectedDept === dept.id ? styles.deptItemActive : ""
-                    } ${dept.parent ? styles.deptParent : ""}`}
-                    onClick={() => setSelectedDept(dept.id)}
-                  >
-                    <span className={styles.deptName}>{dept.name}</span>
-                    <span className={styles.deptCount}>{dept.count}명</span>
-                  </button>
-                ))}
+            <div className={styles.deptInfoGrid}>
+              <div>
+                <label>상위 부서</label>
+                <p>진료부문</p>
               </div>
-            </section>
+              <div>
+                <label>부서장</label>
+                <p>박서준 부장</p>
+              </div>
+              <div>
+                <label>소속 인원</label>
+                <p>{currentDept.count}명</p>
+              </div>
+              <div>
+                <label>설립일</label>
+                <p>2008.04.01</p>
+              </div>
+              <div>
+                <label>위치</label>
+                <p>본관 3층</p>
+              </div>
+              <div>
+                <label>내선 번호</label>
+                <p>02-1234-3300</p>
+              </div>
+            </div>
 
-            {/* 부서 상세 */}
-            <section className={styles.deptDetailBox}>
-              <div className={styles.deptDetailHeader}>
-                <div className={styles.deptDetailTitle}>
-                  <span className={styles.deptIcon}>🏥</span>
-                  <div>
-                    <h3>영상의학과</h3>
-                    <p>DEPT-1002 · 진료부문 소속</p>
-                  </div>
-                </div>
-                <button type="button" className={styles.outlineBtn}>
-                  정보 수정
+            <div className={styles.deptDesc}>
+              <label>부서 설명</label>
+              <p>
+                X-ray, CT, MRI 등 영상 진단 및 판독 업무를 담당하며,
+                응급의학과·진료부문 산하 검사 협진을 지원합니다.
+              </p>
+            </div>
+
+            <div className={styles.deptChild}>
+              <label>하위 조직 (2)</label>
+              <div className={styles.childTags}>
+                <span>영상 간호</span>
+                <span>방사선안전관리팀</span>
+              </div>
+            </div>
+
+            <div className={styles.memberSection}>
+              <div className={styles.memberHeader}>
+                <h4>소속 직원</h4>
+                <button type="button" className={styles.linkBtn}>
+                  직원 관리에서 전체 보기 →
                 </button>
               </div>
 
-              <div className={styles.deptInfoGrid}>
-                <div>
-                  <label>상위 부서</label>
-                  <p>진료부문</p>
-                </div>
-                <div>
-                  <label>부서장</label>
-                  <p>박서준 부장</p>
-                </div>
-                <div>
-                  <label>소속 인원</label>
-                  <p>42명</p>
-                </div>
-                <div>
-                  <label>설립일</label>
-                  <p>2008.04.01</p>
-                </div>
-                <div>
-                  <label>위치</label>
-                  <p>본관 3층</p>
-                </div>
-                <div>
-                  <label>내선 번호</label>
-                  <p>02-1234-3300</p>
-                </div>
-              </div>
-
-              <div className={styles.deptDesc}>
-                <label>부서 설명</label>
-                <p>
-                  X-ray, CT, MRI 등 영상 진단 및 판독 업무를 담당하며,
-                  응급의학과·진료부문 산하 검사 협진을 지원합니다.
-                </p>
-              </div>
-
-              <div className={styles.deptChild}>
-                <label>하위 조직 (2)</label>
-                <div className={styles.childTags}>
-                  <span>영상 간호</span>
-                  <span>방사선안전관리팀</span>
-                </div>
-              </div>
-
-              {/* 소속 직원 */}
-              <div className={styles.memberSection}>
-                <div className={styles.memberHeader}>
-                  <h4>소속 직원</h4>
-                  <button type="button" className={styles.linkBtn}>
-                    직원 관리에서 전체 보기 →
-                  </button>
-                </div>
-
-                <table className={styles.memberTable}>
-                  <thead>
-                    <tr>
-                      <th>사번</th>
-                      <th>이름</th>
-                      <th>직급</th>
-                      <th>직책 · 호봉</th>
-                      <th>재직상태</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {MEMBERS.map((m) => (
-                      <tr key={m.no}>
-                        <td>{m.no}</td>
-                        <td>
-                          <div className={styles.memberName}>
-                            <span
-                              className={`${styles.memberAvatar} ${styles[m.tone]}`}
-                            >
-                              {m.initial}
-                            </span>
-                            {m.name}
-                          </div>
-                        </td>
-                        <td>{m.rank}</td>
-                        <td>{m.position}</td>
-                        <td>
+              <table className={styles.memberTable}>
+                <thead>
+                  <tr>
+                    <th>사번</th>
+                    <th>이름</th>
+                    <th>직급</th>
+                    <th>직책 · 호봉</th>
+                    <th>재직상태</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {MEMBERS.map((m) => (
+                    <tr key={m.no}>
+                      <td>{m.no}</td>
+                      <td>
+                        <div className={styles.memberName}>
                           <span
-                            className={`${styles.statusBadge} ${
-                              m.status === "부서장"
-                                ? styles.statusLeader
-                                : styles.active
-                            }`}
+                            className={`${styles.memberAvatar} ${styles[m.tone]}`}
                           >
-                            {m.status}
+                            {m.initial}
                           </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </section>
-          </div>
-        </main>
+                          {m.name}
+                        </div>
+                      </td>
+                      <td>{m.rank}</td>
+                      <td>{m.position}</td>
+                      <td>
+                        <span
+                          className={`${styles.statusBadge} ${
+                            m.status === "부서장"
+                              ? styles.statusLeader
+                              : styles.active
+                          }`}
+                        >
+                          {m.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      {/* ===== 모달은 여기 (main 밖, Fragment 안) ===== */}
+      <DepartmentModal
+        open={deptModal.open}
+        mode={deptModal.mode}
+        initial={editInitial}
+        parentOptions={parentOptions}
+        onClose={() => setDeptModal((p) => ({ ...p, open: false }))}
+        onSubmit={async (data) => {
+          if (deptModal.mode === "create") {
+            await createDepartment({
+              name: data.nameKo.trim(),
+              parentId: data.parentId ? Number(data.parentId) : undefined,
+            });
+            alert("부서가 등록되었습니다.");
+          } else {
+            if (!data.id) throw new Error("부서 ID가 없습니다.");
+            await updateDepartment(data.id, {
+              name: data.nameKo.trim(),
+              parentId: data.parentId ? Number(data.parentId) : undefined,
+            });
+            alert("부서가 수정되었습니다.");
+          }
+        }}
+      />
+    </>
   );
 }
