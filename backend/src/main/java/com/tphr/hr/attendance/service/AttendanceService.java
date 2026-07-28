@@ -1,8 +1,6 @@
 package com.tphr.hr.attendance.service;
 
-import com.tphr.hr.attendance.dto.AttendanceCheckInRequest;
-import com.tphr.hr.attendance.dto.AttendanceCheckOutRequest;
-import com.tphr.hr.attendance.dto.AttendanceResponse;
+import com.tphr.hr.attendance.dto.*;
 import com.tphr.hr.attendance.entity.Attendance;
 import com.tphr.hr.attendance.repository.AttendanceRepository;
 import com.tphr.hr.employee.entity.Employee;
@@ -27,18 +25,17 @@ public class AttendanceService {
         Employee employee = employeeRepository.findById(request.getEmployeeId())
                 .orElseThrow(() -> new IllegalArgumentException("직원을 찾을 수 없습니다."));
 
-        // 이미 오늘 출근 기록이 있는지 확인
         if (attendanceRepository.findByEmployeeIdAndWorkDate(employee.getId(), request.getWorkDate()).isPresent()) {
             throw new IllegalStateException("이미 출근 기록이 존재합니다.");
         }
 
-        // 출근 기록 생성
         Attendance attendance = Attendance.builder()
                 .employee(employee)
                 .workDate(request.getWorkDate())
                 .checkInTime(request.getCheckInTime())
-                .status("NORMAL") // TODO: 교대 근무표를 조회하여 지각(LATE) 여부 판별 로직 추가 가능
+                .status("NORMAL")
                 .note(request.getNote())
+                .isCorrected(false)
                 .build();
 
         Attendance saved = attendanceRepository.save(attendance);
@@ -50,11 +47,10 @@ public class AttendanceService {
         Attendance attendance = attendanceRepository.findByEmployeeIdAndWorkDate(request.getEmployeeId(), request.getWorkDate())
                 .orElseThrow(() -> new IllegalArgumentException("해당 날짜의 출근 기록이 없습니다. 먼저 출근을 기록하세요."));
 
-        if (attendance.getCheckOutTime() != null) {
+        if (attendance.getCheckOutTime() != null && !Boolean.TRUE.equals(attendance.getIsCorrected())) {
             throw new IllegalStateException("이미 퇴근 기록이 존재합니다.");
         }
 
-        // JPA Dirty Checking을 이용한 업데이트 대신 새 엔티티 복사 후 저장 (간단히 하기 위해)
         Attendance updatedAttendance = Attendance.builder()
                 .id(attendance.getId())
                 .employee(attendance.getEmployee())
@@ -63,6 +59,9 @@ public class AttendanceService {
                 .checkOutTime(request.getCheckOutTime())
                 .status(attendance.getStatus())
                 .note(request.getNote() != null ? request.getNote() : attendance.getNote())
+                .isCorrected(attendance.getIsCorrected())
+                .correctionReason(attendance.getCorrectionReason())
+                .correctedBy(attendance.getCorrectedBy())
                 .build();
         
         Attendance saved = attendanceRepository.save(updatedAttendance);
@@ -81,16 +80,85 @@ public class AttendanceService {
                 .stream().map(this::mapToResponse).collect(Collectors.toList());
     }
 
+    // ===== 관리자 전용 근태 정정 및 수동 등록 API =====
+
+    @Transactional
+    public AttendanceResponse createAttendanceByAdmin(AttendanceAdminCreateRequest request) {
+        Employee employee = employeeRepository.findById(request.getEmployeeId())
+                .orElseThrow(() -> new IllegalArgumentException("직원 정보를 찾을 수 없습니다."));
+
+        Attendance attendance = Attendance.builder()
+                .employee(employee)
+                .workDate(request.getWorkDate())
+                .checkInTime(request.getCheckInTime())
+                .checkOutTime(request.getCheckOutTime())
+                .status(request.getStatus() != null ? request.getStatus() : "NORMAL")
+                .note(request.getNote() != null ? request.getNote() : "[관리자수동등록] " + request.getCorrectionReason())
+                .isCorrected(true)
+                .correctionReason(request.getCorrectionReason())
+                .correctedBy(request.getCorrectedBy())
+                .build();
+
+        return mapToResponse(attendanceRepository.save(attendance));
+    }
+
+    @Transactional
+    public AttendanceResponse updateAttendanceByAdmin(Long id, AttendanceAdminUpdateRequest request) {
+        Attendance attendance = attendanceRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("해당 근태 기록을 찾을 수 없습니다."));
+
+        String reason = request.getCorrectionReason();
+        if (reason == null || reason.trim().isEmpty()) {
+            throw new IllegalArgumentException("감사 대비를 위해 근태 정정 사유는 필수 입력 항목입니다.");
+        }
+
+        attendance.updateByAdmin(
+                request.getCheckInTime(),
+                request.getCheckOutTime(),
+                request.getStatus(),
+                request.getNote() != null ? request.getNote() : "[관리자정정] " + reason,
+                reason,
+                request.getCorrectedBy()
+        );
+
+        return mapToResponse(attendance);
+    }
+
+    @Transactional
+    public void deleteAttendanceByAdmin(Long id) {
+        Attendance attendance = attendanceRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("해당 근태 기록을 찾을 수 없습니다."));
+        attendanceRepository.delete(attendance);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AttendanceResponse> getAdminAttendances(Long departmentId, LocalDate startDate, LocalDate endDate) {
+        List<Attendance> attendances;
+        if (departmentId == null || departmentId == 0) {
+            attendances = attendanceRepository.findByWorkDateBetweenOrderByWorkDateDesc(startDate, endDate);
+        } else {
+            attendances = attendanceRepository.findByEmployeeDepartmentIdAndWorkDateBetweenOrderByWorkDateDesc(departmentId, startDate, endDate);
+        }
+        return attendances.stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
     private AttendanceResponse mapToResponse(Attendance attendance) {
+        Employee emp = attendance.getEmployee();
         return AttendanceResponse.builder()
                 .id(attendance.getId())
-                .employeeId(attendance.getEmployee().getId())
-                .employeeName(attendance.getEmployee().getName())
+                .employeeId(emp.getId())
+                .empNo(emp.getEmpNo())
+                .employeeName(emp.getName())
+                .departmentName(emp.getDepartment() != null ? emp.getDepartment().getName() : "미지정")
+                .positionName(emp.getPosition() != null ? emp.getPosition().getName() : "")
                 .workDate(attendance.getWorkDate())
                 .checkInTime(attendance.getCheckInTime())
                 .checkOutTime(attendance.getCheckOutTime())
                 .status(attendance.getStatus())
                 .note(attendance.getNote())
+                .isCorrected(attendance.getIsCorrected())
+                .correctionReason(attendance.getCorrectionReason())
+                .correctedBy(attendance.getCorrectedBy())
                 .build();
     }
 }
