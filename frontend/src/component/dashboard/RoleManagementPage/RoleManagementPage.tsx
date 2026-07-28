@@ -101,13 +101,7 @@ export default function RoleManagementPage() {
           user.roleGroupName === '시스템 관리자' ||
           user.roleGroupName === '시스템관리자' ||
           user.roleGroupName === 'SYSTEM_ADMIN' ||
-          user.roleGroupName?.includes('시스템') ||
-          user.roleGroupName?.includes('관리') ||
-          user.roleName?.includes('관리') ||
-          user.roleName?.includes('시스템') ||
-          user.role?.includes('ADMIN') ||
-          user.empNo === 'ADMIN-001' ||
-          user.name?.includes('관리');
+          user.empNo === 'ADMIN-001';
 
         if (isAdminRole) {
           hasAccess = true;

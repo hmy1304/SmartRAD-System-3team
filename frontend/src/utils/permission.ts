@@ -27,19 +27,13 @@ export function hasPermission(menuCode: MenuCode, action: "canRead" | "canWrite"
     if (!userStr) return false;
     const user = JSON.parse(userStr);
     
-    // 최고관리자, 시스템 관리자 또는 관리 계정인 경우 슈퍼권한(모든 메뉴 열람/수정/결재) 부여
+    // 최고관리자, 시스템 관리자 계정인 경우 슈퍼권한(모든 메뉴 열람/수정/결재) 부여
     const isAdminRole =
       user.roleGroupName === "최고관리자" ||
       user.roleGroupName === "시스템 관리자" ||
       user.roleGroupName === "시스템관리자" ||
       user.roleGroupName === "SYSTEM_ADMIN" ||
-      user.roleGroupName?.includes("시스템") ||
-      user.roleGroupName?.includes("관리") ||
-      user.roleName?.includes("관리") ||
-      user.roleName?.includes("시스템") ||
-      user.role?.includes("ADMIN") ||
-      user.empNo === "ADMIN-001" ||
-      user.name?.includes("관리");
+      user.empNo === "ADMIN-001";
 
     if (isAdminRole) {
       return true;

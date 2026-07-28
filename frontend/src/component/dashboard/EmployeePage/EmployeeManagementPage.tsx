@@ -249,7 +249,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                       <span>부서 <b>필수</b></span>
                       <select name="departmentId" value={form.departmentId} onChange={onFormChange}>
                         <option value="">부서 선택</option>
-                        <option value="1">원장실</option>
+                        <option value="1">관리팀</option>
                         <option value="2">중환자실</option>
                         <option value="3">영상의학과</option>
                         <option value="4">간호부</option>
