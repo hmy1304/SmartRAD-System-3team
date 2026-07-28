@@ -412,6 +412,26 @@
   }
 }
 
+.bulkRejectBtn {
+  height: 38px;
+  padding: 0 16px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #ffffff;
+  background: #e11d48;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #be123c;
+  }
+}
+
 .tableWrapper {
   overflow-x: auto;
   flex: 1;

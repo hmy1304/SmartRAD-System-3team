@@ -257,6 +257,25 @@ export default function LeavePage() {
     }
   };
 
+  // 1-1. 선택 일괄 반려 핸들러
+  const handleBulkReject = async () => {
+    if (selected.length === 0) {
+      alert("일괄 반려할 휴가 신청 건을 체크박스로 고르세요.");
+      return;
+    }
+    const note = window.prompt("반려 사유를 입력하세요 (선택 가능):", "일정 조정 및 인원 편제 사유로 반려");
+    if (note === null) return;
+
+    try {
+      await updateLeaveStatuses(selected, "반려", note);
+      alert(`${selected.length}건의 휴가 신청이 일괄 반려 처리되었습니다. (차감된 연차 자동 복원 완료)`);
+      setSelected([]);
+      loadData();
+    } catch (err) {
+      alert("오프라인 또는 서버 응답 불가 상태입니다.");
+    }
+  };
+
   // 2. 서버 사이드 고급 엑셀 보고서 다운로드 핸들러
   const handleExportCsv = async () => {
     try {
@@ -536,6 +555,14 @@ export default function LeavePage() {
               >
                 <Check size={16} />
                 선택 일괄 승인
+              </button>
+              <button
+                type="button"
+                className={styles.bulkRejectBtn}
+                onClick={handleBulkReject}
+              >
+                <X size={16} strokeWidth={2.5} />
+                선택 일괄 반려
               </button>
             </div>
           </div>
