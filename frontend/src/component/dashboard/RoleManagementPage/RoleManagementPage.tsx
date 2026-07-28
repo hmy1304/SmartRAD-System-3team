@@ -96,12 +96,8 @@ export default function RoleManagementPage() {
           setLoggedInUserId(user.employeeId);
         }
 
-        const isAdminRole =
-          user.roleGroupName === '최고관리자' ||
-          user.roleGroupName === '시스템 관리자' ||
-          user.roleGroupName === '시스템관리자' ||
-          user.roleGroupName === 'SYSTEM_ADMIN' ||
-          user.empNo === 'ADMIN-001';
+        // 📌 마스터 권한은 오직 ADMIN-001(최고관리자)에 한정. ADMIN-002 등 시스템 관리자는 일반 DB 체크박스 통제 적용.
+        const isAdminRole = user.empNo === 'ADMIN-001' || user.roleGroupName === '최고관리자';
 
         if (isAdminRole) {
           hasAccess = true;
@@ -678,7 +674,9 @@ export default function RoleManagementPage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {permissions.map((p) => (
+                          {permissions.map((p) => {
+                            const isRootRole = roleGroups.find((rg) => rg.id === selectedRoleGroupId)?.name === '최고관리자';
+                            return (
                             <tr key={p.id}>
                               <td>
                                 <div className={styles.menuName}>
@@ -691,16 +689,17 @@ export default function RoleManagementPage() {
                                     {getMenuIcon(p.menuName)}
                                   </div>
                                   <div className={styles.menuText}>
-                                    <p className={styles.title}>{p.menuName}</p>
+                                    <p className={styles.title}>{p.menuName} {isRootRole && <span style={{fontSize: "11px", color: "#ef4444"}}>(고정)</span>}</p>
                                     <p className={styles.desc}>{p.menuCode}</p>
                                   </div>
                                 </div>
                               </td>
                               <td>
-                                <label className={styles.customCheckbox}>
+                                <label className={styles.customCheckbox} style={{opacity: isRootRole ? 0.6 : 1, cursor: isRootRole ? "not-allowed" : "pointer"}}>
                                   <input
                                     type="checkbox"
-                                    checked={p.canRead}
+                                    checked={p.canRead || isRootRole}
+                                    disabled={isRootRole || !canEdit}
                                     onChange={(e) =>
                                       handlePermissionChange(p.menuId, "canRead", e.target.checked)
                                     }
@@ -709,10 +708,11 @@ export default function RoleManagementPage() {
                                 </label>
                               </td>
                               <td>
-                                <label className={styles.customCheckbox}>
+                                <label className={styles.customCheckbox} style={{opacity: isRootRole ? 0.6 : 1, cursor: isRootRole ? "not-allowed" : "pointer"}}>
                                   <input
                                     type="checkbox"
-                                    checked={p.canWrite}
+                                    checked={p.canWrite || isRootRole}
+                                    disabled={isRootRole || !canEdit}
                                     onChange={(e) =>
                                       handlePermissionChange(p.menuId, "canWrite", e.target.checked)
                                     }
@@ -721,10 +721,11 @@ export default function RoleManagementPage() {
                                 </label>
                               </td>
                               <td>
-                                <label className={styles.customCheckbox}>
+                                <label className={styles.customCheckbox} style={{opacity: isRootRole ? 0.6 : 1, cursor: isRootRole ? "not-allowed" : "pointer"}}>
                                   <input
                                     type="checkbox"
-                                    checked={p.canDelete}
+                                    checked={p.canDelete || isRootRole}
+                                    disabled={isRootRole || !canEdit}
                                     onChange={(e) =>
                                       handlePermissionChange(p.menuId, "canDelete", e.target.checked)
                                     }
@@ -733,10 +734,11 @@ export default function RoleManagementPage() {
                                 </label>
                               </td>
                               <td>
-                                <label className={styles.customCheckbox}>
+                                <label className={styles.customCheckbox} style={{opacity: isRootRole ? 0.6 : 1, cursor: isRootRole ? "not-allowed" : "pointer"}}>
                                   <input
                                     type="checkbox"
-                                    checked={p.canApprove}
+                                    checked={p.canApprove || isRootRole}
+                                    disabled={isRootRole || !canEdit}
                                     onChange={(e) =>
                                       handlePermissionChange(p.menuId, "canApprove", e.target.checked)
                                     }
@@ -745,7 +747,8 @@ export default function RoleManagementPage() {
                                 </label>
                               </td>
                             </tr>
-                          ))}
+                            );
+                          })}
                         </tbody>
                       </table>
                       

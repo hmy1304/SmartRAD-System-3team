@@ -27,13 +27,8 @@ export function hasPermission(menuCode: MenuCode, action: "canRead" | "canWrite"
     if (!userStr) return false;
     const user = JSON.parse(userStr);
     
-    // 최고관리자, 시스템 관리자 계정인 경우 슈퍼권한(모든 메뉴 열람/수정/결재) 부여
-    const isAdminRole =
-      user.roleGroupName === "최고관리자" ||
-      user.roleGroupName === "시스템 관리자" ||
-      user.roleGroupName === "시스템관리자" ||
-      user.roleGroupName === "SYSTEM_ADMIN" ||
-      user.empNo === "ADMIN-001";
+    // 📌 슈퍼권한(무조건 true 프리패스)은 오직 'ADMIN-001' 및 직위 '최고관리자'에 한정
+    const isAdminRole = user.empNo === "ADMIN-001" || user.roleGroupName === "최고관리자";
 
     if (isAdminRole) {
       return true;

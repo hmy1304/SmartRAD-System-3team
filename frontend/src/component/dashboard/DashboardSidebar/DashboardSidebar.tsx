@@ -92,12 +92,8 @@ export default function DashboardSidebar() {
     try {
       const userStr = localStorage.getItem('userProfile');
       if (userStr) {
-        const isAdminRole = 
-          user.roleGroupName === "최고관리자" || 
-          user.roleGroupName === "시스템 관리자" || 
-          user.roleGroupName === "시스템관리자" || 
-          user.roleGroupName === "SYSTEM_ADMIN" || 
-          user.empNo === "ADMIN-001";
+        // 📌 슈퍼권한(모든 체크박스 제어 무적 프리패스)은 오직 'ADMIN-001'과 직급 '최고관리자'로만 엄격히 제한
+        const isAdminRole = user.empNo === "ADMIN-001" || user.roleGroupName === "최고관리자";
 
         const canRead = (code: string) => {
           if (isAdminRole) return true;
