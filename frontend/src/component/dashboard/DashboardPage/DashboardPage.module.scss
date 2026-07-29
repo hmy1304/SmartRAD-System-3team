@@ -1,111 +1,10 @@
 @use "../../../styles/variables" as *;
 
-.dashboard {
-  min-height: 100svh;
-  display: grid;
-  grid-template-columns: 250px minmax(0, 1fr);
-  background: $color-surface-soft;
-}
-
-.pageArea {
-  min-width: 0;
-}
-
-.topHeader {
-  height: 74px;
+.dashboardHome {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-inline: 28px;
-
-  background: linear-gradient(90deg, #1d4a84, $color-navy-900);
-}
-
-.search {
-  width: min(420px, 50%);
-  height: 46px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding-inline: 16px;
-  border: 1px solid rgba($color-surface, 0.18);
-  border-radius: $radius-sm;
-  background: rgba($color-surface, 0.1);
-
-  > span {
-    color: rgba($color-surface, 0.75);
-    font-size: 1.25rem;
-  }
-
-  input {
-    width: 100%;
-    border: 0;
-    outline: 0;
-    color: $color-surface;
-    background: transparent;
-
-    &::placeholder {
-      color: rgba($color-surface, 0.58);
-    }
-  }
-}
-
-.profile {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  color: $color-surface;
-
-  .profileInfo {
-    display: flex;
-    align-items: center;
-    gap: 11px;
-
-    > span {
-      width: 40px;
-      height: 40px;
-      display: grid;
-      place-items: center;
-      border-radius: $radius-sm;
-
-      background: linear-gradient(135deg, $color-blue-500, $color-cyan-400);
-
-      font-weight: 900;
-    }
-
-    strong,
-    small {
-      display: block;
-    }
-
-    small {
-      margin-top: 3px;
-      color: rgba($color-surface, 0.55);
-      font-size: 0.68rem;
-    }
-  }
-
-  .logoutBtn {
-    padding: 6px 12px;
-    border: 1px solid rgba($color-surface, 0.3);
-    border-radius: $radius-sm;
-    background: transparent;
-    color: rgba($color-surface, 0.9);
-    font-size: 0.8rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &:hover {
-      background: rgba($color-surface, 0.1);
-      border-color: rgba($color-surface, 0.6);
-      color: $color-surface;
-    }
-  }
-}
-
-.main {
-  padding: 24px;
+  flex-direction: column;
+  gap: 0;
+  padding: 20px 24px;
 }
 
 .welcome {
@@ -116,9 +15,7 @@
   padding: 20px 24px;
   border-radius: $radius-md;
   color: $color-surface;
-
   background: linear-gradient(120deg, $color-navy-900, $color-blue-700);
-
   box-shadow: $shadow-card;
 
   h1 {
@@ -198,12 +95,27 @@
   em {
     padding: 4px 8px;
     border-radius: 999px;
-    color: #15996e;
-    background: $color-mint-100;
     font-size: 0.62rem;
     font-style: normal;
     font-weight: 800;
   }
+}
+
+.up {
+  color: #15996e;
+  background: $color-mint-100;
+}
+.good {
+  color: #15996e;
+  background: $color-mint-100;
+}
+.normal {
+  color: #d4890a;
+  background: #fff4e5;
+}
+.warn {
+  color: #e14d55;
+  background: #fde8ea;
 }
 
 .summaryIcon {
@@ -214,6 +126,7 @@
   border-radius: 8px;
   color: $color-blue-600;
   background: $color-blue-50;
+  font-size: 14px;
 }
 
 .middleGrid {
@@ -231,17 +144,72 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 
   h2 {
     margin: 0;
     font-size: 0.8rem;
+    color: $color-text;
   }
 
-  a,
-  span {
-    color: $color-blue-600;
-    font-size: 0.65rem;
+  .linkBtn {
+  border: none;
+  background: none;
+  color: $color-blue-600;
+  font-size: 0.65rem;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    text-decoration: underline;
   }
+}
+
+.noticeItemBtn {
+  all: unset;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
+
+  strong {
+    display: block;
+    font-size: 0.78rem;
+    color: $color-text;
+    margin-bottom: 4px;
+    font-weight: 600;
+  }
+
+  time {
+    font-size: 0.68rem;
+    color: $color-muted;
+  }
+}
+
+.emptyNotice {
+  list-style: none;
+  padding: 28px 8px;
+  text-align: center;
+  font-size: 0.78rem;
+  color: #a0aec0; // 흐린 색
+  font-weight: 500;
+}
+}
+
+.legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: $color-muted;
+  font-size: 0.65rem;
+}
+
+.dotBlue {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: $color-blue-500;
+  display: inline-block;
 }
 
 .lineChart {
@@ -255,77 +223,6 @@
 
 .approvalList {
   display: grid;
-  gap: 16px;
-  margin: 20px 0 0;
-  padding: 0;
-  color: $color-muted;
-  font-size: 0.75rem;
-  list-style: none;
-}
-
-@media (max-width: 1000px) {
-  .dashboard {
-    grid-template-columns: 220px minmax(0, 1fr);
-  }
-
-  .summaryGrid {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .middleGrid {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 800px) {
-  .dashboard {
-    grid-template-columns: 200px minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 520px) {
-  .topHeader {
-    padding-inline: 14px;
-  }
-
-  .search {
-    width: calc(100% - 54px);
-  }
-
-  .profile > div {
-    display: none;
-  }
-
-  .main {
-    padding: 14px;
-  }
-
-  .summaryGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .welcome {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .today {
-    text-align: left;
-  }
-}
-
-/* ===== 하단 4개 패널 ===== */
-.bottomGrid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 15px;
-  margin-top: 16px;
-}
-
-/* 결재 대기 리스트 개선 */
-.approvalList {
-  display: grid;
   gap: 14px;
   margin: 18px 0 0;
   padding: 0;
@@ -337,6 +234,11 @@
     gap: 10px;
     font-size: 0.78rem;
     color: $color-text;
+
+    p {
+      flex: 1;
+      margin: 0;
+    }
   }
 }
 
@@ -360,86 +262,49 @@
   }
 }
 
-.approvalText {
-  flex: 1;
-}
-
-.badge {
+.itemBadge {
   padding: 3px 8px;
   border-radius: 999px;
+  background: #f3f6fb;
+  color: $color-muted;
   font-size: 0.62rem;
   font-style: normal;
   font-weight: 700;
-
-  &.red {
-    color: #e14d55;
-    background: #fdecee;
-  }
-  &.yellow {
-    color: #c47d0e;
-    background: #fff6e5;
-  }
-  &.blue {
-    color: #2864ef;
-    background: #e8f0ff;
-  }
-  &.green {
-    color: #15996e;
-    background: #dffaf0;
-  }
 }
 
-/* 요약 카드 상태 색상 */
-.summaryTop em {
-  &.up {
-    color: #15996e;
-    background: $color-mint-100;
-  }
-  &.good {
-    color: #15996e;
-    background: $color-mint-100;
-  }
-  &.normal {
-    color: #c47d0e;
-    background: #fff6e5;
-  }
-  &.warn {
-    color: #e14d55;
-    background: #fdecee;
-  }
-}
-
-/* 오늘의 근무 현황 테이블 */
-.attendanceTable {
-  margin-top: 14px;
-}
-
-.tableHead {
+.bottomGrid {
   display: grid;
-  grid-template-columns: 1.4fr 1.2fr 0.8fr 0.8fr;
-  gap: 8px;
-  padding: 0 4px 10px;
-  color: $color-muted;
-  font-size: 0.68rem;
-  font-weight: 600;
-  border-bottom: 1px solid $color-border;
+  grid-template-columns: 1.35fr 1fr 0.95fr 1.15fr;
+  gap: 15px;
+  margin-top: 16px;
 }
 
-.tableRow {
-  display: grid;
-  grid-template-columns: 1.4fr 1.2fr 0.8fr 0.8fr;
-  gap: 8px;
-  align-items: center;
-  padding: 11px 4px;
+.tableWrap {
+  margin-top: 12px;
+  overflow-x: auto;
+}
+
+.attTable {
+  width: 100%;
+  border-collapse: collapse;
   font-size: 0.75rem;
-  border-bottom: 1px solid #f0f4fa;
 
-  &:last-child {
-    border-bottom: 0;
+  th {
+    text-align: left;
+    color: $color-muted;
+    font-weight: 500;
+    padding: 8px 6px;
+    border-bottom: 1px solid #eef2f8;
+  }
+
+  td {
+    padding: 10px 6px;
+    border-bottom: 1px solid #f3f6fb;
+    color: $color-text;
   }
 }
 
-.nameCell {
+.person {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -449,183 +314,189 @@
 .avatar {
   width: 28px;
   height: 28px;
+  border-radius: 50%;
+  background: $color-blue-50;
+  color: $color-blue-700;
   display: grid;
   place-items: center;
-  border-radius: 50%;
-  background: #e8f0ff;
-  color: $color-blue-600;
   font-size: 0.7rem;
-  font-weight: 800;
-}
-
-/* 상태 배지 공통 */
-.statusBadge {
-  display: inline-block;
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-size: 0.62rem;
-  font-style: normal;
   font-weight: 700;
-  text-align: center;
-
-  &.good {
-    color: #15996e;
-    background: $color-mint-100;
-  }
-  &.working {
-    color: #2864ef;
-    background: #e8f0ff;
-  }
-  &.late {
-    color: #c47d0e;
-    background: #fff6e5;
-  }
-  &.off {
-    color: $color-muted;
-    background: #f0f4fa;
-  }
-  &.wait {
-    color: #c47d0e;
-    background: #fff6e5;
-  }
-  &.approve {
-    color: #15996e;
-    background: $color-mint-100;
-  }
-  &.reject {
-    color: #e14d55;
-    background: #fdecee;
-  }
+  flex-shrink: 0;
 }
 
-/* 공지사항 */
+.status {
+  display: inline-flex;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 600;
+}
+
+.working {
+  background: $color-blue-50;
+  color: $color-blue-700;
+}
+
+.late,
+.wait {
+  background: #fff4e5;
+  color: #d4890a;
+}
+
+.off,
+.reject {
+  background: #f1f3f7;
+  color: $color-muted;
+}
+
+.approve {
+  background: $color-mint-100;
+  color: #15996e;
+}
+
 .noticeList {
-  margin: 16px 0 0;
-  padding: 0;
   list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
 
   li {
     padding: 12px 0;
-    border-bottom: 1px solid #f0f4fa;
-
-    &:last-child {
-      border-bottom: 0;
-    }
+    border-bottom: 1px solid #f3f6fb;
 
     strong {
       display: block;
       font-size: 0.78rem;
-      font-weight: 600;
       color: $color-text;
-      line-height: 1.4;
+      margin-bottom: 4px;
+      font-weight: 600;
     }
 
-    span {
-      display: block;
-      margin-top: 4px;
+    time {
       font-size: 0.68rem;
       color: $color-muted;
     }
   }
 }
 
-/* 빠른 업무 */
 .quickGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-top: 16px;
+  margin-top: 12px;
+}
 
-  button {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    height: 84px;
-    border: 1px solid $color-border;
-    border-radius: $radius-sm;
-    background: $color-surface;
-    color: $color-text;
-    font-size: 0.72rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition:
-      background 0.15s,
-      border-color 0.15s;
+.quickItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 88px;
+  border-radius: 14px;
+  background: #f5f8fc;
+  border: 1px solid #e8eef6;
+  color: $color-text;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: 0.15s ease;
 
-    span {
-      font-size: 1.3rem;
-    }
-
-    &:hover {
-      background: $color-blue-50;
-      border-color: $color-blue-100;
-    }
+  &:hover {
+    background: $color-blue-50;
+    border-color: #c5d6f5;
+    color: $color-blue-700;
   }
 }
 
-/* 나의 결재함 */
-.approvalSummary {
-  display: flex;
-  gap: 12px;
-  margin: 12px 0 14px;
-  font-size: 0.68rem;
-  font-weight: 600;
+.quickIcon {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: #fff;
+  display: grid;
+  place-items: center;
+  color: $color-blue-500;
+  box-shadow: 0 2px 8px rgba(33, 85, 217, 0.08);
+}
 
-  .wait {
-    color: #c47d0e;
-  }
-  .approve {
-    color: #15996e;
-  }
-  .reject {
-    color: #e14d55;
-  }
+.approvalStats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 12px 0 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.statWait {
+  color: #d4890a;
+}
+.statOk {
+  color: #15996e;
+}
+.statNo {
+  color: #e14d55;
 }
 
 .myApprovalList {
+  list-style: none;
   margin: 0;
   padding: 0;
-  list-style: none;
 
   li {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    gap: 10px;
-    padding: 11px 0;
-    border-bottom: 1px solid #f0f4fa;
-
-    &:last-child {
-      border-bottom: 0;
-    }
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid #f3f6fb;
 
     strong {
       display: block;
-      font-size: 0.76rem;
-      font-weight: 600;
+      font-size: 0.78rem;
       color: $color-text;
     }
 
-    span {
-      display: block;
-      margin-top: 3px;
-      font-size: 0.66rem;
+    small {
       color: $color-muted;
+      font-size: 0.65rem;
     }
   }
 }
 
-/* 반응형 */
 @media (max-width: 1200px) {
   .bottomGrid {
     grid-template-columns: 1fr 1fr;
   }
 }
 
+@media (max-width: 1000px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .middleGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 700px) {
   .bottomGrid {
     grid-template-columns: 1fr;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .welcome {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .today {
+    text-align: left;
   }
 }
