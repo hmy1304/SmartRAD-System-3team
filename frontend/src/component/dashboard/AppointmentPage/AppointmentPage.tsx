@@ -4,14 +4,6 @@ import { useMemo, useState } from "react";
 
 import styles from "./AppointmentPage.module.scss";
 
-import AppointmentRegisterModal, {
-  type AppointmentRegisterForm,
-} from "./AppointmentRegisterModal";
-import {
-  createAppointment,
-  APPOINTMENT_TYPE_CODE_MAP,
-} from "@/services/appointmentService";
-
 type AppointmentType = "승진" | "전보" | "보직변경";
 type AppointmentStatus = "완료" | "처리중" | "대기";
 
@@ -115,10 +107,7 @@ export default function AppointmentPage() {
     });
   }, [filter, keyword]);
 
-  const [appointModalOpen, setAppointModalOpen] = useState(false);
-
   return (
-    <>
     <main className={styles.main}>
           {/* 페이지 헤더 */}
           <div className={styles.pageHeader}>
@@ -130,11 +119,7 @@ export default function AppointmentPage() {
               <button type="button" className={styles.outlineBtn}>
                 내보내기
               </button>
-              <button
-                type="button"
-                className={styles.primaryBtn}
-                onClick={() => setAppointModalOpen(true)}
-              >
+              <button type="button" className={styles.primaryBtn}>
                 + 발령 등록
               </button>
             </div>
@@ -332,24 +317,5 @@ export default function AppointmentPage() {
             </table>
           </section>
         </main>
-        <AppointmentRegisterModal
-            open={appointModalOpen}
-            onClose={() => setAppointModalOpen(false)}
-            onSubmit={async (data: AppointmentRegisterForm) => {
-              await createAppointment({
-                employeeId: Number(data.employeeId),
-                appointmentTypeCode:
-                  APPOINTMENT_TYPE_CODE_MAP[data.appointmentType] ?? "APPOINT_HR",
-                afterDepartmentId: data.afterDepartmentId
-                  ? Number(data.afterDepartmentId)
-                  : undefined,
-                afterPositionCode: data.afterPositionCode || undefined,
-                applyDate: data.applyDate,
-                note: data.note || undefined,
-              });
-              alert("발령이 등록되었습니다.");
-            }}
-          />
-        </>
   );
 }

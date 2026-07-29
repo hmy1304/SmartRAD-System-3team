@@ -1,297 +1,492 @@
 "use client";
 
-import { useState } from "react";
-
+import { useState, useEffect, useMemo } from "react";
 import styles from "./DutyPage.module.scss";
 
 type Shift = "D" | "E" | "N" | "OFF" | "AL" | "";
 
+interface DutyScheduleEntryResponse {
+  id: number;
+  employeeId: number;
+  employeeName: string;
+  workDate: string; // YYYY-MM-DD
+  shiftTypeCode: string;
+  shiftTypeName: string;
+}
+
+interface DutyScheduleResponse {
+  id: number;
+  departmentId: number;
+  departmentName: string;
+  scheduleYear: number;
+  scheduleMonth: number;
+  status: string; // DRAFT, CONFIRMED
+  entries: DutyScheduleEntryResponse[];
+  warnings: string[];
+}
+
 interface EmployeeDuty {
-  id: string;
+  id: number;
   name: string;
   initial: string;
   position: string;
   tone: "blue" | "green" | "purple" | "orange";
-  shifts: Shift[]; // 1~31일
-  summary: { d: number; e: number; n: number; off: number };
+  shifts: Shift[]; // 1~31일 (인덱스 0 = 1일)
+  summary: { d: number; e: number; n: number; off: number; al: number };
 }
 
-const DAYS = Array.from({ length: 31 }, (_, i) => i + 1);
-const WEEKDAYS = ["수", "목", "금", "토", "일", "월", "화"]; // 2026년 7월 1일 = 수요일 기준 예시
+interface DeptInfo {
+  id: number;
+  name: string;
+}
 
-const MOCK_EMPLOYEES: EmployeeDuty[] = [
-  {
-    id: "1",
-    name: "박서준",
-    initial: "박",
-    position: "부장",
-    tone: "blue",
-    shifts: [
-      "D",
-      "E",
-      "D",
-      "OFF",
-      "OFF",
-      "D",
-      "N",
-      "N",
-      "D",
-      "E",
-      "OFF",
-      "D",
-      "AL",
-      "D",
-      "E",
-      "D",
-      "OFF",
-      "OFF",
-      "D",
-      "N",
-      "N",
-      "D",
-      "E",
-      "OFF",
-      "OFF",
-      "D",
-      "D",
-      "E",
-      "N",
-      "OFF",
-      "OFF",
-    ],
-    summary: { d: 11, e: 5, n: 5, off: 10 },
-  },
-  {
-    id: "2",
-    name: "오하윤",
-    initial: "오",
-    position: "과장",
-    tone: "green",
-    shifts: [
-      "E",
-      "D",
-      "N",
-      "OFF",
-      "OFF",
-      "E",
-      "D",
-      "D",
-      "N",
-      "OFF",
-      "OFF",
-      "E",
-      "D",
-      "D",
-      "N",
-      "E",
-      "D",
-      "N",
-      "OFF",
-      "OFF",
-      "E",
-      "D",
-      "D",
-      "N",
-      "OFF",
-      "OFF",
-      "E",
-      "D",
-      "N",
-      "OFF",
-      "D",
-    ],
-    summary: { d: 9, e: 6, n: 6, off: 10 },
-  },
-  {
-    id: "3",
-    name: "신유나",
-    initial: "신",
-    position: "대리",
-    tone: "purple",
-    shifts: [
-      "N",
-      "N",
-      "D",
-      "OFF",
-      "OFF",
-      "E",
-      "D",
-      "N",
-      "N",
-      "D",
-      "",
-      "",
-      "E",
-      "D",
-      "D",
-      "N",
-      "E",
-      "OFF",
-      "OFF",
-      "D",
-      "E",
-      "N",
-      "N",
-      "D",
-      "OFF",
-      "OFF",
-      "AL",
-      "D",
-      "E",
-      "N",
-      "OFF",
-    ],
-    summary: { d: 8, e: 5, n: 8, off: 8 },
-  },
-  {
-    id: "4",
-    name: "배준혁",
-    initial: "배",
-    position: "주임",
-    tone: "orange",
-    shifts: [
-      "D",
-      "OFF",
-      "E",
-      "OFF",
-      "OFF",
-      "D",
-      "D",
-      "N",
-      "D",
-      "N",
-      "OFF",
-      "OFF",
-      "E",
-      "D",
-      "E",
-      "D",
-      "OFF",
-      "OFF",
-      "D",
-      "N",
-      "N",
-      "D",
-      "E",
-      "OFF",
-      "OFF",
-      "D",
-      "D",
-      "E",
-      "N",
-      "D",
-      "OFF",
-    ],
-    summary: { d: 12, e: 5, n: 5, off: 9 },
-  },
-];
-
-// 일별 D 근무 인원 수 (하단 요약)
-const DAILY_D_COUNT = [
-  2, 1, 2, 0, 0, 2, 3, 1, 2, 1, 0, 0, 2, 3, 2, 1, 2, 0, 0, 1, 2, 0, 2, 2, 1, 0,
-  1, 2, 3, 0, 1,
+const DEPARTMENTS: DeptInfo[] = [
+  { id: 2, name: "간호부" },
+  { id: 3, name: "영상의학과" },
+  { id: 4, name: "진단검사의학과" },
 ];
 
 export default function DutyPage() {
-  const [month] = useState("2026년 7월");
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
+  const [departmentId, setDepartmentId] = useState(2); // 기본: 간호부
+  
+  const [schedule, setSchedule] = useState<DutyScheduleResponse | null>(null);
+  const [employees, setEmployees] = useState<EmployeeDuty[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const [draftShifts, setDraftShifts] = useState<Record<number, Shift[]>>({});
+  const [hasChanges, setHasChanges] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const daysInMonth = useMemo(() => new Date(currentYear, currentMonth, 0).getDate(), [currentYear, currentMonth]);
+  const DAYS = useMemo(() => Array.from({ length: daysInMonth }, (_, i) => i + 1), [daysInMonth]);
+  
+  const WEEKDAYS = useMemo(() => {
+    const days = ["일", "월", "화", "수", "목", "금", "토"];
+    return DAYS.map(d => {
+      const date = new Date(currentYear, currentMonth - 1, d);
+      return days[date.getDay()];
+    });
+  }, [currentYear, currentMonth, DAYS]);
+
+  // 데이터 로드
+  const fetchSchedule = async () => {
+    setIsLoading(true);
+    setMessage("");
+    try {
+      const token = localStorage.getItem("accessToken") || "";
+      const url = `/api/v1/duty-schedules/department/${departmentId}?year=${currentYear}&month=${currentMonth}`;
+      
+      const res = await fetch(url, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      
+      if (!res.ok) {
+        // 존재하지 않음 (400 or 404)
+        setSchedule(null);
+        setEmployees([]);
+        setDraftShifts({});
+        setHasChanges(false);
+        setIsLoading(false);
+        return;
+      }
+      
+      const data: DutyScheduleResponse = await res.json();
+      setSchedule(data);
+      
+      // entries를 직원별로 그룹화
+      const empMap = new Map<number, EmployeeDuty>();
+      
+      data.entries.forEach(entry => {
+        if (!empMap.has(entry.employeeId)) {
+          empMap.set(entry.employeeId, {
+            id: entry.employeeId,
+            name: entry.employeeName,
+            initial: entry.employeeName.charAt(0),
+            position: "직원", // API에서 직급 정보가 오지 않으면 기본값
+            tone: ["blue", "green", "purple", "orange"][entry.employeeId % 4] as "blue" | "green" | "purple" | "orange",
+            shifts: Array(daysInMonth).fill(""),
+            summary: { d: 0, e: 0, n: 0, off: 0, al: 0 }
+          });
+        }
+        
+        const dayMatch = entry.workDate.match(/-(\d{2})$/);
+        if (dayMatch) {
+          const dayIdx = parseInt(dayMatch[1], 10) - 1;
+          const shift = entry.shiftTypeCode as Shift;
+          empMap.get(entry.employeeId)!.shifts[dayIdx] = shift;
+        }
+      });
+      
+      const empList = Array.from(empMap.values());
+      
+      // 요약 재계산
+      empList.forEach(emp => {
+        emp.summary = { d: 0, e: 0, n: 0, off: 0, al: 0 };
+        emp.shifts.forEach(s => {
+          if (s === "D") emp.summary.d++;
+          if (s === "E") emp.summary.e++;
+          if (s === "N") emp.summary.n++;
+          if (s === "OFF") emp.summary.off++;
+          if (s === "AL") emp.summary.al++;
+        });
+      });
+      
+      setEmployees(empList);
+      
+      // 편집용 draft 상태 초기화
+      const drafts: Record<number, Shift[]> = {};
+      empList.forEach(emp => {
+        drafts[emp.id] = [...emp.shifts];
+      });
+      setDraftShifts(drafts);
+      setHasChanges(false);
+      
+    } catch (err) {
+      console.error(err);
+      setMessage("듀티표를 불러오는 중 오류가 발생했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSchedule();
+  }, [currentYear, currentMonth, departmentId]);
+
+  // 스케줄 생성
+  const handleCreateSchedule = async () => {
+    const token = localStorage.getItem("accessToken") || "";
+    const requesterId = localStorage.getItem("employeeId") || "1";
+    
+    try {
+      setIsLoading(true);
+      const res = await fetch(`/api/v1/duty-schedules`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          departmentId,
+          scheduleYear: currentYear,
+          scheduleMonth: currentMonth,
+          requesterId: parseInt(requesterId, 10)
+        })
+      });
+      
+      if (res.ok) {
+        alert("듀티표가 생성되었습니다. 자동 편성을 진행해주세요.");
+        setMessage("듀티표가 생성되었습니다. 자동 편성을 진행해주세요.");
+        fetchSchedule();
+      } else {
+        const error = await res.text();
+        setMessage(`생성 실패: ${error}`);
+      }
+    } catch (err) {
+      setMessage("서버 오류가 발생했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 자동 편성
+  const handleAutoGenerate = async () => {
+    if (!schedule) return;
+    const token = localStorage.getItem("accessToken") || "";
+    const requesterId = localStorage.getItem("employeeId") || "1";
+    
+    try {
+      setIsLoading(true);
+      const res = await fetch(`/api/v1/duty-schedules/${schedule.id}/auto-generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          requesterId: parseInt(requesterId, 10),
+          requireSenior: true,
+          maxNightPerMonth: 7
+        })
+      });
+      
+      if (res.ok) {
+        alert("자동 편성이 완료되었습니다.");
+        setMessage("자동 편성이 완료되었습니다.");
+        fetchSchedule();
+      } else {
+        const error = await res.text();
+        setMessage(`자동 편성 실패: ${error}`);
+      }
+    } catch (err) {
+      setMessage("서버 오류가 발생했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 임시 저장
+  const handleSaveDraft = async () => {
+    if (!schedule) return;
+    const token = localStorage.getItem("accessToken") || "";
+    const requesterId = localStorage.getItem("employeeId") || "1";
+    
+    const entriesToSave: any[] = [];
+    Object.keys(draftShifts).forEach(empIdStr => {
+      const empId = parseInt(empIdStr, 10);
+      const shifts = draftShifts[empId];
+      shifts.forEach((shift, idx) => {
+        if (!shift) return;
+        const dayStr = String(idx + 1).padStart(2, "0");
+        const monthStr = String(currentMonth).padStart(2, "0");
+        entriesToSave.push({
+          employeeId: empId,
+          workDate: `${currentYear}-${monthStr}-${dayStr}`,
+          shiftTypeCode: shift
+        });
+      });
+    });
+    
+    try {
+      setIsLoading(true);
+      const res = await fetch(`/api/v1/duty-schedules/${schedule.id}/entries?requesterId=${requesterId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(entriesToSave)
+      });
+      
+      if (res.ok) {
+        alert("임시 저장되었습니다.");
+        setMessage("임시 저장되었습니다.");
+        fetchSchedule();
+      } else {
+        const error = await res.text();
+        setMessage(`저장 실패: ${error}`);
+      }
+    } catch (err) {
+      setMessage("서버 오류가 발생했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 확정 (발행)
+  const handleConfirm = async () => {
+    if (!schedule) return;
+    if (hasChanges) {
+      alert("먼저 임시 저장을 해주세요.");
+      return;
+    }
+    const token = localStorage.getItem("accessToken") || "";
+    const requesterId = localStorage.getItem("employeeId") || "1";
+    
+    try {
+      setIsLoading(true);
+      const res = await fetch(`/api/v1/duty-schedules/${schedule.id}/confirm?requesterId=${requesterId}`, {
+        method: "PATCH",
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      
+      if (res.ok) {
+        alert("듀티표가 성공적으로 발행(확정)되었습니다! 더 이상 수정할 수 없습니다.");
+        setMessage("듀티표가 발행(확정)되었습니다.");
+        fetchSchedule();
+      } else {
+        const error = await res.text();
+        setMessage(`발행 실패: ${error}`);
+      }
+    } catch (err) {
+      setMessage("서버 오류가 발생했습니다.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (currentMonth === 12) {
+      setCurrentYear(prev => prev + 1);
+      setCurrentMonth(1);
+    } else {
+      setCurrentMonth(prev => prev + 1);
+    }
+  };
+
+  const handlePrevMonth = () => {
+    if (currentMonth === 1) {
+      setCurrentYear(prev => prev - 1);
+      setCurrentMonth(12);
+    } else {
+      setCurrentMonth(prev => prev - 1);
+    }
+  };
+
+  const handleCellClick = (empId: number, dayIdx: number) => {
+    if (schedule?.status === "CONFIRMED") return;
+    
+    setDraftShifts(prev => {
+      const newShifts = { ...prev };
+      const currentShift = newShifts[empId][dayIdx];
+      
+      const nextMap: Record<string, Shift> = {
+        "": "D",
+        "D": "E",
+        "E": "N",
+        "N": "OFF",
+        "OFF": "AL",
+        "AL": "D"
+      };
+      
+      newShifts[empId][dayIdx] = nextMap[currentShift] || "D";
+      setHasChanges(true);
+      return newShifts;
+    });
+  };
+
+  const isConfirmed = schedule?.status === "CONFIRMED";
+
+  // 하단 일별 D 근무 현황 계산 (실시간 draft 기준)
+  const dailyDCount = DAYS.map((_, i) => {
+    let count = 0;
+    Object.values(draftShifts).forEach(shifts => {
+      if (shifts[i] === "D") count++;
+    });
+    return count;
+  });
 
   return (
     <main className={styles.main}>
-          {/* 페이지 헤더 */}
-          <div className={styles.pageHeader}>
-            <div>
-              <h1>듀티표 편성</h1>
-              <p>부서별 월간 근무 스케줄을 편성하고 관리합니다.</p>
-            </div>
-            <div className={styles.pageActions}>
-              <div className={styles.monthNav}>
-                <button type="button">‹</button>
-                <span>{month}</span>
-                <button type="button">›</button>
-              </div>
-              <select className={styles.deptSelect} defaultValue="영상의학과">
-                <option>영상의학과</option>
-                <option>간호부</option>
-                <option>진단검사의학과</option>
-              </select>
-              <button type="button" className={styles.outlineBtn}>
-                인쇄
+      <div className={styles.pageHeader}>
+        <div>
+          <h1>듀티표 편성</h1>
+          <p>부서별 월간 근무 스케줄을 편성하고 관리합니다.</p>
+          {message && <span style={{color: 'red', marginLeft: '10px'}}>{message}</span>}
+        </div>
+        <div className={styles.pageActions}>
+          <div className={styles.monthNav}>
+            <button type="button" onClick={handlePrevMonth}>‹</button>
+            <span>{currentYear}년 {currentMonth}월</span>
+            <button type="button" onClick={handleNextMonth}>›</button>
+          </div>
+          <select 
+            className={styles.deptSelect} 
+            value={departmentId}
+            onChange={(e) => setDepartmentId(parseInt(e.target.value, 10))}
+          >
+            {DEPARTMENTS.map(d => (
+              <option key={d.id} value={d.id}>{d.name}</option>
+            ))}
+          </select>
+          
+          {!schedule && (
+            <button type="button" className={styles.primaryBtn} onClick={handleCreateSchedule} disabled={isLoading}>
+              스케줄 생성
+            </button>
+          )}
+
+          {schedule && !isConfirmed && (
+            <>
+              <button type="button" className={styles.outlineBtn} onClick={handleAutoGenerate} disabled={isLoading}>
+                자동 편성
               </button>
-              <button type="button" className={styles.primaryBtn}>
+              <button type="button" className={styles.outlineBtn} onClick={handleSaveDraft} disabled={isLoading || !hasChanges}>
+                임시 저장
+              </button>
+              <button type="button" className={styles.primaryBtn} onClick={handleConfirm} disabled={isLoading || hasChanges}>
                 듀티표 발행
               </button>
-            </div>
-          </div>
+            </>
+          )}
 
-          {/* 범례 + 인원 요약 */}
-          <div className={styles.legendBar}>
-            <div className={styles.legend}>
-              <span>
-                <i className={styles.legD} /> D 주간
-              </span>
-              <span>
-                <i className={styles.legE} /> E 오후
-              </span>
-              <span>
-                <i className={styles.legN} /> N 야간
-              </span>
-              <span>
-                <i className={styles.legOff} /> OFF 휴무
-              </span>
-              <span>
-                <i className={styles.legAl} /> AL 연차
-              </span>
-            </div>
-            <div className={styles.headcount}>
-              <span>총 총 12명</span>
-              <span className={styles.remain}>잔여 1명</span>
-            </div>
-          </div>
+          {isConfirmed && (
+            <span style={{ 
+              backgroundColor: '#4CAF50', 
+              color: 'white', 
+              padding: '8px 16px', 
+              borderRadius: '4px', 
+              fontWeight: 'bold', 
+              display: 'inline-block',
+              marginLeft: '10px'
+            }}>
+              ✅ 발행이 완료된 스케줄입니다
+            </span>
+          )}
+        </div>
+      </div>
 
-          {/* 듀티 테이블 */}
-          <div className={styles.tableWrap}>
-            <table className={styles.dutyTable}>
-              <thead>
-                <tr>
-                  <th className={styles.stickyCol}>직원</th>
-                  {DAYS.map((d, i) => (
-                    <th
-                      key={d}
-                      className={
-                        WEEKDAYS[i % 7] === "토" || WEEKDAYS[i % 7] === "일"
-                          ? styles.weekend
-                          : ""
-                      }
-                    >
-                      <span className={styles.dayNum}>{d}</span>
-                      <span className={styles.dayWeek}>{WEEKDAYS[i % 7]}</span>
-                    </th>
-                  ))}
-                  <th className={styles.summaryCol}>D/E/N/OFF</th>
-                </tr>
-              </thead>
-              <tbody>
-                {MOCK_EMPLOYEES.map((emp) => (
+      <div className={styles.legendBar}>
+        <div className={styles.legend}>
+          <span><i className={styles.legD} /> D 주간</span>
+          <span><i className={styles.legE} /> E 오후</span>
+          <span><i className={styles.legN} /> N 야간</span>
+          <span><i className={styles.legOff} /> OFF 휴무</span>
+          <span><i className={styles.legAl} /> AL 연차</span>
+        </div>
+        <div className={styles.headcount}>
+          <span>총 인원 {employees.length}명</span>
+          <span className={styles.remain}>{isConfirmed ? '수정 불가(확정)' : '클릭하여 상태 변경 (D→E→N→OFF→AL)'}</span>
+        </div>
+      </div>
+
+      <div className={styles.tableWrap}>
+        <table className={styles.dutyTable}>
+          <thead>
+            <tr>
+              <th className={styles.stickyCol}>직원</th>
+              {DAYS.map((d, i) => (
+                <th key={d} className={WEEKDAYS[i] === "토" || WEEKDAYS[i] === "일" ? styles.weekend : ""}>
+                  <span className={styles.dayNum}>{d}</span>
+                  <span className={styles.dayWeek}>{WEEKDAYS[i]}</span>
+                </th>
+              ))}
+              <th className={styles.summaryCol}>D/E/N/OFF</th>
+            </tr>
+          </thead>
+          <tbody>
+            {!schedule ? (
+              <tr>
+                <td colSpan={daysInMonth + 2} style={{textAlign: 'center', padding: '50px', color: '#666'}}>
+                  해당 월의 듀티표가 아직 생성되지 않았습니다. [스케줄 생성] 버튼을 눌러 시작해주세요.
+                </td>
+              </tr>
+            ) : employees.length === 0 ? (
+              <tr>
+                <td colSpan={daysInMonth + 2} style={{textAlign: 'center', padding: '50px', color: '#666'}}>
+                  듀티표가 생성되었지만 교대 근무자가 배정되지 않았습니다. [자동 편성]을 진행해주세요.
+                </td>
+              </tr>
+            ) : (
+              employees.map((emp) => {
+                const currentShifts = draftShifts[emp.id] || Array(daysInMonth).fill("");
+                // 실시간 요약 계산
+                const sum = { d: 0, e: 0, n: 0, off: 0, al: 0 };
+                currentShifts.forEach(s => {
+                  if (s === "D") sum.d++;
+                  if (s === "E") sum.e++;
+                  if (s === "N") sum.n++;
+                  if (s === "OFF") sum.off++;
+                  if (s === "AL") sum.al++;
+                });
+
+                return (
                   <tr key={emp.id}>
                     <td className={styles.stickyCol}>
                       <div className={styles.empCell}>
-                        <span
-                          className={`${styles.avatar} ${styles[emp.tone]}`}
-                        >
-                          {emp.initial}
-                        </span>
+                        <span className={`${styles.avatar} ${styles[emp.tone]}`}>{emp.initial}</span>
                         <div>
                           <strong>{emp.name}</strong>
                           <small>{emp.position}</small>
                         </div>
                       </div>
                     </td>
-                    {emp.shifts.map((shift, i) => (
-                      <td key={i}>
+                    {currentShifts.map((shift, i) => (
+                      <td key={i} onClick={() => handleCellClick(emp.id, i)} style={{ cursor: isConfirmed ? 'default' : 'pointer', border: '1px solid #eee' }}>
                         {shift ? (
-                          <span
-                            className={`${styles.shift} ${styles[`shift${shift}`]}`}
-                          >
+                          <span className={`${styles.shift} ${styles[`shift${shift}`]}`}>
                             {shift}
                           </span>
                         ) : (
@@ -301,34 +496,31 @@ export default function DutyPage() {
                     ))}
                     <td className={styles.summaryCol}>
                       <span className={styles.summaryText}>
-                        {emp.summary.d}/{emp.summary.e}/{emp.summary.n}/
-                        {emp.summary.off}
+                        {sum.d}/{sum.e}/{sum.n}/{sum.off + sum.al}
                       </span>
                     </td>
                   </tr>
-                ))}
+                );
+              })
+            )}
 
-                {/* 하단 일별 D 현황 */}
-                <tr className={styles.dailyRow}>
-                  <td className={styles.stickyCol}>
-                    <strong>일별 D 현황</strong>
-                  </td>
-                  {DAILY_D_COUNT.map((count, i) => (
-                    <td key={i}>
-                      <span
-                        className={
-                          count === 0 ? styles.dailyZero : styles.dailyCount
-                        }
-                      >
-                        {count}
-                      </span>
-                    </td>
-                  ))}
-                  <td className={styles.summaryCol} />
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </main>
+            {/* 하단 일별 D 현황 */}
+            <tr className={styles.dailyRow}>
+              <td className={styles.stickyCol}>
+                <strong>일별 D 현황</strong>
+              </td>
+              {dailyDCount.map((count, i) => (
+                <td key={i}>
+                  <span className={count === 0 ? styles.dailyZero : styles.dailyCount}>
+                    {count}
+                  </span>
+                </td>
+              ))}
+              <td className={styles.summaryCol} />
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </main>
   );
 }

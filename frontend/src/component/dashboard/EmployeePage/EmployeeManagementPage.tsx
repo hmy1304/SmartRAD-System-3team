@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   useMemo,
@@ -69,11 +69,11 @@ const initialForm = {
 };
 
 const TYPE_CODE_MAP: Record<string, string> = {
-  재직: "APPOINT_PROMOTE",       
+  재직: "APPOINT_JOIN",
   승진: "APPOINT_PROMOTE",
   "부서 이동": "APPOINT_TRANSFER",
-  인사발령: "APPOINT_TRANSFER",
-  "표창/수상": "APPOINT_PROMOTE",
+  인사발령: "APPOINT_HR",
+  "표창/수상": "APPOINT_AWARD",
 };
 
 const DEPT_ID_MAP: Record<string, number> = {
@@ -81,16 +81,7 @@ const DEPT_ID_MAP: Record<string, number> = {
   간호부: 4,
   중환자실: 2,
   원무과: 5,
-  원장실: 1,
-};
-
-const POSITION_CODE_MAP: Record<string, string> = {
-  수석: "POS_01",
-  수간호사: "POS_02",
-  과장: "POS_03",
-  대리: "POS_04",
-  부장: "POS_05",
-  주임: "POS_04",
+  관리팀: 1,
 };
 
 export default function EmployeeManagementPage({ initialData }: Props) {
@@ -368,20 +359,19 @@ export default function EmployeeManagementPage({ initialData }: Props) {
     const empId = Number(selectedId);
     if (Number.isNaN(empId)) throw new Error("유효한 직원 ID가 아닙니다.");
     await createAppointment({
-    employeeId: empId,
-    appointmentTypeCode: TYPE_CODE_MAP[data.type] ?? "APPOINT_HR",
-    afterDepartmentId: DEPT_ID_MAP[data.department],
-    afterPositionCode:
-      POSITION_CODE_MAP[data.position] ?? data.position ?? undefined,
-    applyDate: data.startDate,
-    note: [
-      data.endDate ? `종료: ${data.endDate}` : "종료: 현재",
-      data.employmentType ? `고용형태: ${data.employmentType}` : "",
-      data.handler ? `처리자: ${data.handler}` : "",
-    ]
-      .filter(Boolean)
-      .join(" | "),
-  });
+      employeeId: empId,
+      appointmentTypeCode: TYPE_CODE_MAP[data.type] ?? "APPOINT_HR",
+      afterDepartmentId: DEPT_ID_MAP[data.department],
+      afterPositionCode: data.position || undefined,
+      applyDate: data.startDate,
+      note: [
+        data.endDate ? `종료: ${data.endDate}` : "종료: 현재",
+        data.employmentType ? `고용형태: ${data.employmentType}` : "",
+        data.handler ? `처리자: ${data.handler}` : "",
+      ]
+        .filter(Boolean)
+        .join(" | "),
+    });
     setHistories(await getAppointmentHistory(empId));
     setHistoryModalOpen(false);
     alert("이력이 저장되었습니다.");
@@ -401,7 +391,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
     try {
       await createAppointment({
         employeeId: empId,
-        appointmentTypeCode: "APPOINT_PROMOTE",
+        appointmentTypeCode: "APPOINT_LEAVE",
         applyDate: leaveStart,
         note: [
           `휴직유형: ${leaveType}`,
@@ -442,7 +432,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
     try {
       await createAppointment({
         employeeId: empId,
-        appointmentTypeCode: "APPOINT_TRANSFER",
+        appointmentTypeCode: "APPOINT_RETIRE",
         applyDate: retireDate,
         note: [
           `퇴직사유: ${retireReason}`,
@@ -612,7 +602,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                       onChange={onFormChange}
                     >
                       <option value="">부서 선택</option>
-                      <option value="1">원장실</option>
+                      <option value="1">관리팀</option>
                       <option value="2">중환자실</option>
                       <option value="3">영상의학과</option>
                       <option value="4">간호부</option>

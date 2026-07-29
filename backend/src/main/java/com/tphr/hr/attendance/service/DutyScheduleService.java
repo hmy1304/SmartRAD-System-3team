@@ -117,15 +117,8 @@ public class DutyScheduleService {
         DutySchedule schedule = dutyScheduleRepository.findById(scheduleId)
                 .orElseThrow(() -> new IllegalArgumentException("듀티표를 찾을 수 없습니다."));
 
-        DutySchedule confirmed = DutySchedule.builder()
-                .id(schedule.getId())
-                .department(schedule.getDepartment())
-                .scheduleYear(schedule.getScheduleYear())
-                .scheduleMonth(schedule.getScheduleMonth())
-                .status("CONFIRMED")
-                .build();
-
-        DutySchedule saved = dutyScheduleRepository.save(confirmed);
+        schedule.setStatus("CONFIRMED");
+        DutySchedule saved = dutyScheduleRepository.save(schedule);
         return mapToResponse(saved, dutyScheduleEntryRepository.findByDutyScheduleId(scheduleId), null);
     }
 

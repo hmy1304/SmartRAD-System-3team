@@ -27,6 +27,7 @@ public class DutySchedule extends BaseEntity {
     @Column(name = "schedule_month", nullable = false)
     private Integer scheduleMonth;
 
+    @Setter
     @Column(nullable = false, length = 20)
     @Builder.Default
     private String status = "DRAFT"; // DRAFT, CONFIRMED

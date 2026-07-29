@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo, Fragment } from "react";
 
 import styles from "./AttendanceLinkPage.module.scss";
 
@@ -20,146 +20,142 @@ interface EmployeeRow {
   leave: number;
 }
 
-const DAYS_IN_MONTH = 31;
-
-const MOCK: EmployeeRow[] = [
-  {
-    id: "1",
-    name: "박서준",
-    initial: "박",
-    empNo: "EMP-20191",
-    department: "영상의학과",
-    tone: "blue",
-    days: Array(31)
-      .fill("normal")
-      .map((v, i) => (i === 12 || i === 13 ? "leave" : v)),
-    attend: 20,
-    late: 0,
-    absent: 0,
-    leave: 2,
-  },
-  {
-    id: "2",
-    name: "오하윤",
-    initial: "오",
-    empNo: "EMP-20733",
-    department: "영상의학과",
-    tone: "green",
-    days: Array(31)
-      .fill("normal")
-      .map((v, i) => (i === 8 ? "late" : v)),
-    attend: 21,
-    late: 1,
-    absent: 0,
-    leave: 0,
-  },
-  {
-    id: "3",
-    name: "신유나",
-    initial: "신",
-    empNo: "EMP-21098",
-    department: "영상의학과",
-    tone: "purple",
-    days: Array(31)
-      .fill("normal")
-      .map((v, i) => {
-        if (i === 15) return "absent";
-        if (i === 20 || i === 21) return "leave";
-        return v;
-      }),
-    attend: 18,
-    late: 0,
-    absent: 1,
-    leave: 2,
-  },
-  {
-    id: "4",
-    name: "배준혁",
-    initial: "배",
-    empNo: "EMP-21455",
-    department: "원무과",
-    tone: "orange",
-    days: Array(31).fill("leave"),
-    attend: 0,
-    late: 0,
-    absent: 0,
-    leave: 22,
-  },
-  {
-    id: "5",
-    name: "최지은",
-    initial: "최",
-    empNo: "EMP-21890",
-    department: "인사총무팀",
-    tone: "red",
-    days: Array(31)
-      .fill("normal")
-      .map((v, i) => (i === 5 ? "late" : v)),
-    attend: 21,
-    late: 1,
-    absent: 0,
-    leave: 0,
-  },
-  {
-    id: "6",
-    name: "이다영",
-    initial: "이",
-    empNo: "EMP-22104",
-    department: "간호부",
-    tone: "light_blue",
-    days: Array(31).fill("normal"),
-    attend: 22,
-    late: 0,
-    absent: 0,
-    leave: 0,
-  },
-  {
-    id: "7",
-    name: "김민서",
-    initial: "김",
-    empNo: "EMP-24512",
-    department: "진단검사의학과",
-    tone: "green",
-    days: Array(31)
-      .fill("normal")
-      .map((v, i) => (i === 18 ? "absent" : v)),
-    attend: 20,
-    late: 0,
-    absent: 1,
-    leave: 0,
-  },
-  {
-    id: "8",
-    name: "정유진",
-    initial: "정",
-    empNo: "EMP-26001",
-    department: "응급의학과",
-    tone: "orange",
-    days: Array(31)
-      .fill("normal")
-      .map((v, i) => (i === 3 || i === 10 ? "late" : v)),
-    attend: 20,
-    late: 2,
-    absent: 0,
-    leave: 0,
-  },
-];
-
 // 캘린더용 7월 시작 요일 (2026-07-01 = 수요일 → 앞에 빈칸 3개)
+const DAYS_IN_MONTH = 31;
 const CAL_START_OFFSET = 3;
 const CAL_DAYS = Array.from({ length: DAYS_IN_MONTH }, (_, i) => i + 1);
 
 export default function AttendanceLinkPage() {
+  const [currentYear, setCurrentYear] = useState(2026);
+  const [currentMonth, setCurrentMonth] = useState(7);
   const [selectedDay, setSelectedDay] = useState(23);
   const [keyword, setKeyword] = useState("");
+  const [selectedDept, setSelectedDept] = useState("부서 전체");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [data, setData] = useState<EmployeeRow[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const filtered = MOCK.filter(
-    (e) =>
-      !keyword ||
-      e.name.includes(keyword) ||
-      e.department.includes(keyword) ||
-      e.empNo.toLowerCase().includes(keyword.toLowerCase()),
+  useEffect(() => {
+    const token = localStorage.getItem("accessToken");
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    setLoading(true);
+    fetch(`/api/v1/attendance/summary?year=${currentYear}&month=${currentMonth}`, { headers })
+      .then((res) => {
+        if (!res.ok) throw new Error("Network response was not ok");
+        return res.json();
+      })
+      .then((resData) => {
+        setData(Array.isArray(resData) ? resData : []);
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error("Failed to fetch attendance summary:", err);
+        setData([]);
+        setLoading(false);
+      });
+  }, [currentYear, currentMonth]);
+
+  const departments = useMemo(() => {
+    const depts = new Set(data.map((d) => d.department));
+    return ["부서 전체", ...Array.from(depts)];
+  }, [data]);
+
+  const filtered = useMemo(() => {
+    return data.filter(
+      (e) =>
+        (!keyword ||
+          e.name.includes(keyword) ||
+          e.department.includes(keyword) ||
+          e.empNo.toLowerCase().includes(keyword.toLowerCase())) &&
+        (selectedDept === "부서 전체" || e.department === selectedDept)
+    );
+  }, [data, keyword, selectedDept]);
+
+  // 요약 수치 계산 로직
+  const totalEmp = data.length;
+  const normalCnt = data.filter(e => e.attend > 0).length; // 출근이력이 1일이라도 있으면
+  const lateCnt = data.filter(e => e.late > 0).length;
+  const absentCnt = data.filter(e => e.absent > 0).length;
+  const leaveCnt = data.filter(e => e.leave > 0).length;
+  const normalPercent = totalEmp > 0 ? ((normalCnt / totalEmp) * 100).toFixed(1) : "0.0";
+
+  // 달력 일별 상세 현황 로직
+  const dailyStats = useMemo(() => {
+    let normal = 0;
+    let late = 0;
+    let absent = 0;
+    let leave = 0;
+    data.forEach(e => {
+      const status = e.days[selectedDay - 1];
+      if (status === "normal") normal++;
+      else if (status === "late") late++;
+      else if (status === "absent") absent++;
+      else if (status === "leave") leave++;
+    });
+    return { normal, late, absent, leave };
+  }, [data, selectedDay]);
+
+  // 페이지네이션
+  const ITEMS_PER_PAGE = 15;
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const currentItems = filtered.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
   );
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
+
+  const handlePrevMonth = () => {
+    if (currentMonth === 1) {
+      setCurrentYear(prev => prev - 1);
+      setCurrentMonth(12);
+    } else {
+      setCurrentMonth(prev => prev - 1);
+    }
+  };
+
+  const handleNextMonth = () => {
+    if (currentMonth === 12) {
+      setCurrentYear(prev => prev + 1);
+      setCurrentMonth(1);
+    } else {
+      setCurrentMonth(prev => prev + 1);
+    }
+  };
+
+  // 탭 활성화 상태 계산 및 네비게이션 상수
+  const now = new Date();
+  const thisYear = now.getFullYear();
+  const thisMonth = now.getMonth() + 1;
+
+  let lastYear = thisYear;
+  let lastMonth = thisMonth - 1;
+  if (lastMonth === 0) {
+    lastMonth = 12;
+    lastYear -= 1;
+  }
+
+  let twoMonthsAgoYear = thisYear;
+  let twoMonthsAgoMonth = thisMonth - 2;
+  if (twoMonthsAgoMonth <= 0) {
+    twoMonthsAgoMonth += 12;
+    twoMonthsAgoYear -= 1;
+  }
+
+  const isThisMonth = currentYear === thisYear && currentMonth === thisMonth;
+  const isLastMonth = currentYear === lastYear && currentMonth === lastMonth;
+  const isCustomMonth = !isThisMonth && !isLastMonth;
 
   return (
     <main className={styles.main}>
@@ -174,9 +170,9 @@ export default function AttendanceLinkPage() {
             </div>
             <div className={styles.pageActions}>
               <div className={styles.monthNav}>
-                <button type="button">‹</button>
-                <span>2026년 7월</span>
-                <button type="button">›</button>
+                <button type="button" onClick={handlePrevMonth}>‹</button>
+                <span>{currentYear}년 {currentMonth}월</span>
+                <button type="button" onClick={handleNextMonth}>›</button>
               </div>
               <button type="button" className={styles.outlineBtn}>
                 엑셀 내보내기
@@ -189,14 +185,35 @@ export default function AttendanceLinkPage() {
 
           {/* 탭 */}
           <div className={styles.topTabs}>
-            <button type="button" className={styles.topTabActive}>
-              이번달 근태 <span>2026년 7월</span>
+            <button 
+              type="button" 
+              className={isThisMonth ? styles.topTabActive : styles.topTab}
+              onClick={() => {
+                setCurrentYear(thisYear);
+                setCurrentMonth(thisMonth);
+              }}
+            >
+              이번달 근태 
             </button>
-            <button type="button" className={styles.topTab}>
+            <button 
+              type="button" 
+              className={isLastMonth ? styles.topTabActive : styles.topTab}
+              onClick={() => {
+                setCurrentYear(lastYear);
+                setCurrentMonth(lastMonth);
+              }}
+            >
               지난달 근태
             </button>
-            <button type="button" className={styles.topTab}>
-              급여 계산용
+            <button 
+              type="button" 
+              className={isCustomMonth ? styles.topTabActive : styles.topTab}
+              onClick={() => {
+                setCurrentYear(twoMonthsAgoYear);
+                setCurrentMonth(twoMonthsAgoMonth);
+              }}
+            >
+              지정 조회
             </button>
           </div>
 
@@ -207,9 +224,9 @@ export default function AttendanceLinkPage() {
               <div>
                 <label>전체 직원</label>
                 <p>
-                  2,184<span>명</span>
+                  {totalEmp.toLocaleString()}<span>명</span>
                 </p>
-                <small>7월 근무 대상 전원</small>
+                <small>{currentMonth}월 근무 대상 전원</small>
               </div>
             </div>
             <div className={styles.summaryCard}>
@@ -217,14 +234,14 @@ export default function AttendanceLinkPage() {
                 ✓
               </div>
               <div>
-                <label>정상 출근</label>
+                <label>정상 출근 이력자</label>
                 <p>
-                  2,089<span>명</span>
+                  {normalCnt.toLocaleString()}<span>명</span>
                 </p>
                 <div className={styles.miniBar}>
-                  <div style={{ width: "95.6%" }} />
+                  <div style={{ width: `${normalPercent}%` }} />
                 </div>
-                <small>전체 대비 95.6%</small>
+                <small>전체 대비 {normalPercent}%</small>
               </div>
             </div>
             <div className={styles.summaryCard}>
@@ -232,11 +249,11 @@ export default function AttendanceLinkPage() {
                 ⚠
               </div>
               <div>
-                <label>결근 / 지각</label>
+                <label>결근 / 지각 이력자</label>
                 <p className={styles.textOrange}>
-                  57<span>확인 필요</span>
+                  {(lateCnt + absentCnt).toLocaleString()}<span>명</span>
                 </p>
-                <small>결근 12명 · 지각 45명</small>
+                <small>결근 {absentCnt}명 · 지각 {lateCnt}명</small>
               </div>
             </div>
             <div className={styles.summaryCard}>
@@ -244,11 +261,11 @@ export default function AttendanceLinkPage() {
                 🏖
               </div>
               <div>
-                <label>휴가 중</label>
+                <label>휴가 이력자</label>
                 <p className={styles.textBlue}>
-                  38<span>명</span>
+                  {leaveCnt.toLocaleString()}<span>명</span>
                 </p>
-                <small>연차 29 · 병가 6 · 기타 3</small>
+                <small>연차 등 사용</small>
               </div>
             </div>
           </div>
@@ -259,7 +276,7 @@ export default function AttendanceLinkPage() {
             <aside className={styles.leftPanel}>
               <div className={styles.calendarCard}>
                 <div className={styles.calHeader}>
-                  <strong>📅 2026년 7월</strong>
+                  <strong>📅 {currentYear}년 {currentMonth}월</strong>
                   <span className={styles.calBadge}>이번달</span>
                 </div>
                 <div className={styles.calWeekdays}>
@@ -279,57 +296,37 @@ export default function AttendanceLinkPage() {
                       onClick={() => setSelectedDay(d)}
                     >
                       {d}
-                      {/* 예시 점 */}
-                      {d === 8 || d === 15 ? (
-                        <i className={styles.dotLate} />
-                      ) : null}
-                      {d === 12 || d === 13 ? (
-                        <i className={styles.dotLeave} />
-                      ) : null}
-                      {d === 23 ? <i className={styles.dotNormal} /> : null}
                     </button>
                   ))}
                 </div>
                 <div className={styles.calLegend}>
-                  <span>
-                    <i className={styles.dotNormal} /> 정상
-                  </span>
-                  <span>
-                    <i className={styles.dotLate} /> 지각
-                  </span>
-                  <span>
-                    <i className={styles.dotAbsent} /> 결근
-                  </span>
-                  <span>
-                    <i className={styles.dotLeave} /> 휴가
-                  </span>
-                  <span>
-                    <i className={styles.dotPlanned} /> 예정
-                  </span>
+                  <p style={{ fontSize: '12px', color: '#666', marginTop: '10px', textAlign: 'center' }}>
+                    ※ 날짜를 클릭하면 해당 일자의 상세 현황을 볼 수 있습니다.
+                  </p>
                 </div>
               </div>
 
               <div className={styles.todayCard}>
                 <div className={styles.todayHeader}>
-                  <strong>오늘 현황</strong>
-                  <span>07월 23일 (수)</span>
+                  <strong>일별 상세 현황</strong>
+                  <span>{currentMonth}월 {selectedDay}일</span>
                 </div>
                 <div className={styles.todayList}>
                   <div>
                     <span className={styles.dotNormal} /> 정상 출근{" "}
-                    <strong>2,089명</strong>
+                    <strong>{dailyStats.normal}명</strong>
                   </div>
                   <div>
                     <span className={styles.dotLate} /> 지각{" "}
-                    <strong>45명</strong>
+                    <strong>{dailyStats.late}명</strong>
                   </div>
                   <div>
                     <span className={styles.dotAbsent} /> 결근{" "}
-                    <strong>12명</strong>
+                    <strong>{dailyStats.absent}명</strong>
                   </div>
                   <div>
                     <span className={styles.dotLeave} /> 휴가{" "}
-                    <strong>38명</strong>
+                    <strong>{dailyStats.leave}명</strong>
                   </div>
                 </div>
               </div>
@@ -340,7 +337,7 @@ export default function AttendanceLinkPage() {
               <div className={styles.tableHeader}>
                 <div>
                   <h3>직원 근태 현황</h3>
-                  <p>2026년 7월 · 전 직원 일별 출근 현황</p>
+                  <p>{currentYear}년 {currentMonth}월 · 전 직원 일별 출근 현황</p>
                 </div>
                 <div className={styles.tableActions}>
                   <input
@@ -351,12 +348,14 @@ export default function AttendanceLinkPage() {
                   />
                   <select
                     className={styles.deptSelect}
-                    defaultValue="부서 전체"
+                    value={selectedDept}
+                    onChange={(e) => setSelectedDept(e.target.value)}
                   >
-                    <option>부서 전체</option>
-                    <option>영상의학과</option>
-                    <option>간호부</option>
-                    <option>원무과</option>
+                    {departments.map((dept) => (
+                      <option key={dept} value={dept}>
+                        {dept}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -377,7 +376,7 @@ export default function AttendanceLinkPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {filtered.map((emp) => (
+                    {currentItems.map((emp) => (
                       <tr key={emp.id}>
                         <td className={styles.colName}>
                           <div className={styles.person}>
@@ -428,22 +427,48 @@ export default function AttendanceLinkPage() {
 
               <div className={styles.tableFooter}>
                 <div className={styles.footerLegend}>
-                  <span>총 2,184명</span>
-                  <span className={styles.dotNormal} /> 출근 2,089명
-                  <span className={styles.dotLate} /> 지각 45명
-                  <span className={styles.dotAbsent} /> 결근 12명
-                  <span className={styles.dotLeave} /> 휴가 38명
+                  <span>총 {totalEmp.toLocaleString()}명</span>
+                  <span className={styles.dotNormal} /> 출근 이력자 {normalCnt}명
+                  <span className={styles.dotLate} /> 지각 이력자 {lateCnt}명
+                  <span className={styles.dotAbsent} /> 결근 이력자 {absentCnt}명
+                  <span className={styles.dotLeave} /> 휴가 이력자 {leaveCnt}명
                 </div>
                 <div className={styles.pagination}>
-                  <button type="button">‹</button>
-                  <button type="button" className={styles.pageActive}>
-                    1
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    ‹
                   </button>
-                  <button type="button">2</button>
-                  <button type="button">3</button>
-                  <span>…</span>
-                  <button type="button">274</button>
-                  <button type="button">›</button>
+                  {Array.from({ length: totalPages }, (_, i) => i + 1)
+                    .filter(
+                      (p) =>
+                        p === 1 ||
+                        p === totalPages ||
+                        Math.abs(currentPage - p) <= 2
+                    )
+                    .map((p, index, arr) => (
+                      <Fragment key={p}>
+                        {index > 0 && arr[index - 1] !== p - 1 && (
+                          <span>…</span>
+                        )}
+                        <button
+                          type="button"
+                          className={currentPage === p ? styles.pageActive : ""}
+                          onClick={() => setCurrentPage(p)}
+                        >
+                          {p}
+                        </button>
+                      </Fragment>
+                    ))}
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    ›
+                  </button>
                 </div>
               </div>
             </section>

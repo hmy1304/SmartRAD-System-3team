@@ -39,4 +39,11 @@ public class DeductionItem {
 
     @Column(name = "updated_at", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
+<<<<<<< HEAD
+=======
+
+    @Column(name = "is_active", nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
+>>>>>>> e4aeb421f7d3e5cae72099ee9ba963ba6ea31d3f
 }

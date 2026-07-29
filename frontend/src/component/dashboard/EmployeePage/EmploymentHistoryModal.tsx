@@ -1,14 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import styles from "./EmploymentHistoryModal.module.scss";
 
-export type HistoryType =
-  | "재직"
-  | "승진"
-  | "부서 이동"
-  | "인사발령"
-  | "표창/수상";
+export type HistoryType = "재직" | "승진" | "부서 이동" | "인사발령" | "표창/수상";
 
 export type EmploymentHistoryForm = {
   type: HistoryType;
@@ -22,28 +17,12 @@ export type EmploymentHistoryForm = {
 
 type Props = {
   open: boolean;
-  employeeLabel: string;
+  employeeLabel: string; // 예: 박서준 · 영상의학과 부장 · EMP-20191
   onClose: () => void;
-  onSave: (data: EmploymentHistoryForm) => void | Promise<void>;
+  onSave: (data: EmploymentHistoryForm) => void;
 };
 
-const TYPES: HistoryType[] = [
-  "재직",
-  "승진",
-  "부서 이동",
-  "인사발령",
-  "표창/수상",
-];
-
-const INITIAL_FORM: EmploymentHistoryForm = {
-  type: "재직",
-  startDate: "",
-  endDate: "",
-  department: "영상의학과",
-  position: "",
-  employmentType: "정규직",
-  handler: "",
-};
+const TYPES: HistoryType[] = ["재직", "승진", "부서 이동", "인사발령", "표창/수상"];
 
 export default function EmploymentHistoryModal({
   open,
@@ -51,20 +30,20 @@ export default function EmploymentHistoryModal({
   onClose,
   onSave,
 }: Props) {
-  const [form, setForm] = useState<EmploymentHistoryForm>(INITIAL_FORM);
+  const [form, setForm] = useState<EmploymentHistoryForm>({
+    type: "재직",
+    startDate: "",
+    endDate: "",
+    department: "영상의학과",
+    position: "",
+    employmentType: "정규직",
+    handler: "",
+  });
   const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    if (!open) return;
-    setForm(INITIAL_FORM);
-    setError("");
-    setSaving(false);
-  }, [open]);
 
   if (!open) return null;
 
-  const submit = async () => {
+  const submit = () => {
     if (!form.startDate) {
       setError("이력 일자를 입력하세요.");
       return;
@@ -81,17 +60,9 @@ export default function EmploymentHistoryModal({
       setError("처리자를 입력하세요.");
       return;
     }
-
     setError("");
-    setSaving(true);
-    try {
-      await Promise.resolve(onSave(form));
-      onClose();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "저장에 실패했습니다.");
-    } finally {
-      setSaving(false);
-    }
+    onSave(form);
+    onClose();
   };
 
   return (
@@ -117,9 +88,7 @@ export default function EmploymentHistoryModal({
                 <button
                   key={t}
                   type="button"
-                  className={
-                    form.type === t ? styles.typeActive : styles.typeBtn
-                  }
+                  className={form.type === t ? styles.typeActive : styles.typeBtn}
                   onClick={() => setForm((p) => ({ ...p, type: t }))}
                 >
                   {t}
@@ -136,9 +105,7 @@ export default function EmploymentHistoryModal({
               <input
                 type="date"
                 value={form.startDate}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, startDate: e.target.value }))
-                }
+                onChange={(e) => setForm((p) => ({ ...p, startDate: e.target.value }))}
               />
             </label>
             <label className={styles.field}>
@@ -146,9 +113,8 @@ export default function EmploymentHistoryModal({
               <input
                 type="date"
                 value={form.endDate}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, endDate: e.target.value }))
-                }
+                onChange={(e) => setForm((p) => ({ ...p, endDate: e.target.value }))}
+                placeholder="YYYY.MM.DD 또는 현재"
               />
             </label>
           </div>
@@ -160,14 +126,11 @@ export default function EmploymentHistoryModal({
               </span>
               <select
                 value={form.department}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, department: e.target.value }))
-                }
+                onChange={(e) => setForm((p) => ({ ...p, department: e.target.value }))}
               >
-                <option value="원장실">원장실</option>
-                <option value="중환자실">중환자실</option>
                 <option value="영상의학과">영상의학과</option>
                 <option value="간호부">간호부</option>
+                <option value="중환자실">중환자실</option>
                 <option value="원무과">원무과</option>
               </select>
             </label>
@@ -177,13 +140,9 @@ export default function EmploymentHistoryModal({
               </span>
               <select
                 value={form.position}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, position: e.target.value }))
-                }
+                onChange={(e) => setForm((p) => ({ ...p, position: e.target.value }))}
               >
                 <option value="">직위 선택</option>
-                <option value="수석">수석</option>
-                <option value="수간호사">수간호사</option>
                 <option value="부장">부장</option>
                 <option value="과장">과장</option>
                 <option value="대리">대리</option>
@@ -197,9 +156,7 @@ export default function EmploymentHistoryModal({
               <span>고용 형태</span>
               <select
                 value={form.employmentType}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, employmentType: e.target.value }))
-                }
+                onChange={(e) => setForm((p) => ({ ...p, employmentType: e.target.value }))}
               >
                 <option value="정규직">정규직</option>
                 <option value="계약직">계약직</option>
@@ -212,9 +169,7 @@ export default function EmploymentHistoryModal({
               </span>
               <input
                 value={form.handler}
-                onChange={(e) =>
-                  setForm((p) => ({ ...p, handler: e.target.value }))
-                }
+                onChange={(e) => setForm((p) => ({ ...p, handler: e.target.value }))}
                 placeholder="담당자 이름 입력"
               />
             </label>
@@ -224,21 +179,11 @@ export default function EmploymentHistoryModal({
         </div>
 
         <div className={styles.footer}>
-          <button
-            type="button"
-            className={styles.cancelBtn}
-            onClick={onClose}
-            disabled={saving}
-          >
+          <button type="button" className={styles.cancelBtn} onClick={onClose}>
             × 취소
           </button>
-          <button
-            type="button"
-            className={styles.saveBtn}
-            onClick={submit}
-            disabled={saving}
-          >
-            {saving ? "저장 중..." : "✓ 이력 저장"}
+          <button type="button" className={styles.saveBtn} onClick={submit}>
+            ✓ 이력 저장
           </button>
         </div>
       </div>

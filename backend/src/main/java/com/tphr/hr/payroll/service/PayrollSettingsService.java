@@ -21,11 +21,41 @@ public class PayrollSettingsService {
     private final MinimumWageRepository minimumWageRepository;
 
     public PayrollSettingsSummaryDto getSummary() {
+<<<<<<< HEAD
         return PayrollSettingsSummaryDto.builder()
                 .baseSalaries(getBaseSalaries())
                 .allowanceItems(getAllowanceItems())
                 .deductionItems(getDeductionItems())
                 .minimumWage(getMinimumWage())
+=======
+        List<BaseSalaryDto> baseSalaries = getBaseSalaries();
+        List<AllowanceItemDto> allowanceItems = getAllowanceItems();
+        List<DeductionItemDto> deductionItems = getDeductionItems();
+        MinimumWageDto minimumWage = getMinimumWage();
+
+        long averageBaseSalary = 0L;
+        if (!baseSalaries.isEmpty()) {
+            averageBaseSalary = baseSalaries.stream()
+                    .mapToLong(b -> b.getActualAmount() != null ? b.getActualAmount().longValue() : 0L)
+                    .sum() / baseSalaries.size();
+        }
+
+        int activeAllowanceCount = (int) allowanceItems.stream().filter(a -> Boolean.TRUE.equals(a.getIsActive())).count();
+        int activeDeductionCount = (int) deductionItems.stream().filter(d -> Boolean.TRUE.equals(d.getIsActive())).count();
+
+        // 2026년 7월로 현재 시뮬레이션 고정 (또는 LocalDateTime.now() 사용)
+        String applicableMonth = "2026년 7월";
+
+        return PayrollSettingsSummaryDto.builder()
+                .baseSalaries(baseSalaries)
+                .allowanceItems(allowanceItems)
+                .deductionItems(deductionItems)
+                .minimumWage(minimumWage)
+                .averageBaseSalary(averageBaseSalary)
+                .allowanceCount(activeAllowanceCount)
+                .deductionCount(activeDeductionCount)
+                .applicableMonth(applicableMonth)
+>>>>>>> e4aeb421f7d3e5cae72099ee9ba963ba6ea31d3f
                 .build();
     }
 
@@ -47,6 +77,10 @@ public class PayrollSettingsService {
                 .amountType(a.getAmountType())
                 .amountOrRate(a.getAmountOrRate())
                 .calculationBasis(a.getCalculationBasis())
+<<<<<<< HEAD
+=======
+                .isActive(a.getIsActive())
+>>>>>>> e4aeb421f7d3e5cae72099ee9ba963ba6ea31d3f
                 .build()).collect(Collectors.toList());
     }
 
@@ -57,6 +91,10 @@ public class PayrollSettingsService {
                 .category(d.getCategory())
                 .deductionType(d.getDeductionType())
                 .rateOrAmount(d.getRateOrAmount())
+<<<<<<< HEAD
+=======
+                .isActive(d.getIsActive())
+>>>>>>> e4aeb421f7d3e5cae72099ee9ba963ba6ea31d3f
                 .build()).collect(Collectors.toList());
     }
 
@@ -135,4 +173,19 @@ public class PayrollSettingsService {
     public void deleteDeductionItem(Long id) {
         deductionItemRepository.deleteById(id);
     }
+<<<<<<< HEAD
+=======
+
+    @Transactional
+    public void toggleAllowanceActive(Long id, Boolean isActive) {
+        AllowanceItem entity = allowanceItemRepository.findById(id).orElseThrow(() -> new RuntimeException("AllowanceItem not found"));
+        entity.setIsActive(isActive);
+    }
+
+    @Transactional
+    public void toggleDeductionActive(Long id, Boolean isActive) {
+        DeductionItem entity = deductionItemRepository.findById(id).orElseThrow(() -> new RuntimeException("DeductionItem not found"));
+        entity.setIsActive(isActive);
+    }
+>>>>>>> e4aeb421f7d3e5cae72099ee9ba963ba6ea31d3f
 }

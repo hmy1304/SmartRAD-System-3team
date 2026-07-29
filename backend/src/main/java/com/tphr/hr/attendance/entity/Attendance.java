@@ -38,4 +38,28 @@ public class Attendance extends BaseEntity {
 
     @Column(name = "note", length = 255)
     private String note;
+
+    @Column(name = "is_corrected", nullable = false)
+    @Builder.Default
+    private Boolean isCorrected = false;
+
+    @Column(name = "correction_reason", length = 500)
+    private String correctionReason;
+
+    @Column(name = "corrected_by", length = 50)
+    private String correctedBy;
+
+    public void updateByAdmin(LocalTime checkInTime, LocalTime checkOutTime, String status, String note, String correctionReason, String correctedBy) {
+        this.checkInTime = checkInTime;
+        this.checkOutTime = checkOutTime;
+        if (status != null && !status.isBlank()) {
+            this.status = status;
+        }
+        if (note != null) {
+            this.note = note;
+        }
+        this.isCorrected = true;
+        this.correctionReason = correctionReason;
+        this.correctedBy = correctedBy;
+    }
 }

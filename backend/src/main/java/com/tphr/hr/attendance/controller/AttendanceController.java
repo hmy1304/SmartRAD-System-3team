@@ -1,8 +1,6 @@
 package com.tphr.hr.attendance.controller;
 
-import com.tphr.hr.attendance.dto.AttendanceCheckInRequest;
-import com.tphr.hr.attendance.dto.AttendanceCheckOutRequest;
-import com.tphr.hr.attendance.dto.AttendanceResponse;
+import com.tphr.hr.attendance.dto.*;
 import com.tphr.hr.attendance.service.AttendanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -43,5 +41,41 @@ public class AttendanceController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
         return ResponseEntity.ok(attendanceService.getDepartmentAttendances(deptId, startDate, endDate));
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<List<com.tphr.hr.attendance.dto.AttendanceSummaryDto>> getMonthlySummary(
+            @RequestParam int year,
+            @RequestParam int month,
+            @RequestParam(required = false) Long departmentId) {
+        return ResponseEntity.ok(attendanceService.getMonthlySummary(year, month, departmentId));
+    }
+
+    // ===== 관리자 전용 근태 정정 및 수동 보정 API =====
+
+    @GetMapping("/admin")
+    public ResponseEntity<List<AttendanceResponse>> getAdminAttendances(
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        return ResponseEntity.ok(attendanceService.getAdminAttendances(departmentId, startDate, endDate));
+    }
+
+    @PostMapping("/admin")
+    public ResponseEntity<AttendanceResponse> createAttendanceByAdmin(@RequestBody AttendanceAdminCreateRequest request) {
+        return ResponseEntity.ok(attendanceService.createAttendanceByAdmin(request));
+    }
+
+    @PutMapping("/admin/{id}")
+    public ResponseEntity<AttendanceResponse> updateAttendanceByAdmin(
+            @PathVariable Long id,
+            @RequestBody AttendanceAdminUpdateRequest request) {
+        return ResponseEntity.ok(attendanceService.updateAttendanceByAdmin(id, request));
+    }
+
+    @DeleteMapping("/admin/{id}")
+    public ResponseEntity<Void> deleteAttendanceByAdmin(@PathVariable Long id) {
+        attendanceService.deleteAttendanceByAdmin(id);
+        return ResponseEntity.noContent().build();
     }
 }
