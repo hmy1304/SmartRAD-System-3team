@@ -50,8 +50,14 @@ interface AttendanceRow {
 
 const TONES: Array<"blue" | "green" | "red" | "purple" | "orange"> = ["blue", "green", "red", "purple", "orange"];
 
-function formatTime(timeStr?: string | null): string | null {
-  if (!timeStr) return null;
+function formatTime(timeVal?: any): string | null {
+  if (!timeVal) return null;
+  if (Array.isArray(timeVal)) {
+    const h = String(timeVal[0]).padStart(2, "0");
+    const m = String(timeVal[1]).padStart(2, "0");
+    return `${h}:${m}`;
+  }
+  const timeStr = String(timeVal);
   return timeStr.length > 5 ? timeStr.slice(0, 5) : timeStr;
 }
 
@@ -162,7 +168,10 @@ export default function AttendancePage() {
   const [records, setRecords] = useState<AttendanceRow[]>([]);
   const [employeeList, setEmployeeList] = useState<EmployeeSummaryDto[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [currentDateFilter] = useState<string>("2026-07-11"); // 기준 뷰 셋업 (테스트 데이터 7월)
+  const [startDate, setStartDate] = useState<string>("2026-07-01");
+  const [endDate, setEndDate] = useState<string>("2026-07-31");
+  const [page, setPage] = useState<number>(0);
+  const [totalPages, setTotalPages] = useState<number>(1);
 
   // Filter & Selection States
   const [activeTab, setActiveTab] = useState<"all" | "anomalies" | "normal">("all");
@@ -207,16 +216,17 @@ export default function AttendancePage() {
     return headers;
   };
 
-  // 1. 실 DB 근태 기록 및 사원 정보 API 조회
+  // 1. 실 DB 근태 기록 API 조회 (페이징 적용)
   const fetchAttendanceRecords = useCallback(async () => {
     setIsLoading(true);
     try {
-      // 2026년 7월 전체 내역 로드 (월간 타임라인 대장과 1일 대조를 겸함)
-      const res = await fetch(`/api/v1/attendance/admin?startDate=2026-07-01&endDate=2026-07-31`, {
+      const res = await fetch(`/api/v1/attendance/admin?startDate=${startDate}&endDate=${endDate}&page=${page}&size=50`, {
         headers: getAuthHeaders(),
       });
       if (res.ok) {
-        const data: AttendanceApiDto[] = await res.json();
+        const body = await res.json();
+        const data: AttendanceApiDto[] = body.content || [];
+        setTotalPages(body.totalPages || 1);
         if (data && data.length > 0) {
           const mapped: AttendanceRow[] = data.map((d, idx) => {
             const cIn = formatTime(d.checkInTime);
@@ -235,7 +245,7 @@ export default function AttendancePage() {
               checkIn: cIn,
               checkOut: cOut || (cIn ? "퇴근 전" : null),
               workTime: wTime,
-              status: d.status || "정상",
+              status: d.status === "NORMAL" ? "정상" : d.status === "LATE" ? "지각" : d.status === "ABSENT" ? "결근" : d.status === "EARLY_LEAVE" ? "조기퇴근" : (d.status || "정상"),
               note: d.note || (d.correctionReason ? `[정정] ${d.correctionReason}` : "-"),
               isCorrected: d.isCorrected || false,
             };
@@ -252,7 +262,7 @@ export default function AttendancePage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [startDate, endDate, page]);
 
   const fetchEmployees = useCallback(async () => {
     try {
@@ -628,7 +638,7 @@ export default function AttendancePage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `근태관리대장_${currentDateFilter.replaceAll("-", "")}.csv`);
+    link.setAttribute("download", `근태관리대장_${startDate.replaceAll("-", "")}_to_${endDate.replaceAll("-", "")}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -649,7 +659,21 @@ export default function AttendancePage() {
         <div className={styles.pageActions}>
           <div className={styles.dateSelect}>
             <span>📅</span>
-            <span>2026.07.11 (금) · 실연동 완료</span>
+            <input 
+              type="date" 
+              value={startDate} 
+              onChange={(e) => setStartDate(e.target.value)} 
+              className={styles.dateInput} 
+              style={{ border: "1px solid #e2e8f0", borderRadius: "6px", padding: "4px 8px", fontSize: "14px", outline: "none" }}
+            />
+            <span style={{ margin: "0 8px", color: "#64748b" }}>~</span>
+            <input 
+              type="date" 
+              value={endDate} 
+              onChange={(e) => setEndDate(e.target.value)} 
+              className={styles.dateInput} 
+              style={{ border: "1px solid #e2e8f0", borderRadius: "6px", padding: "4px 8px", fontSize: "14px", outline: "none" }}
+            />
           </div>
           <button type="button" className={styles.primaryBtn} onClick={() => setIsAddModalOpen(true)}>
             <span>➕</span>
@@ -910,6 +934,31 @@ export default function AttendancePage() {
             )}
           </tbody>
         </table>
+        
+        {/* 페이징 컨트롤 */}
+        {totalPages > 1 && (
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "16px", marginTop: "20px" }}>
+            <button 
+              type="button" 
+              onClick={() => setPage(p => Math.max(0, p - 1))}
+              disabled={page === 0}
+              style={{ padding: "8px 16px", borderRadius: "6px", border: "1px solid #e2e8f0", background: page === 0 ? "#f8fafc" : "#fff", cursor: page === 0 ? "not-allowed" : "pointer" }}
+            >
+              이전 페이지
+            </button>
+            <span style={{ fontSize: "14px", color: "#475569", fontWeight: 500 }}>
+              {page + 1} / {totalPages}
+            </span>
+            <button 
+              type="button" 
+              onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+              disabled={page >= totalPages - 1}
+              style={{ padding: "8px 16px", borderRadius: "6px", border: "1px solid #e2e8f0", background: page >= totalPages - 1 ? "#f8fafc" : "#fff", cursor: page >= totalPages - 1 ? "not-allowed" : "pointer" }}
+            >
+              다음 페이지
+            </button>
+          </div>
+        )}
       </section>
 
       {/* 모달 1: 수동 근태 기록 등록 모달 */}

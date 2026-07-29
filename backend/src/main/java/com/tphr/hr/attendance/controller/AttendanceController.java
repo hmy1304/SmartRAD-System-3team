@@ -7,6 +7,10 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import java.time.LocalDate;
 import java.util.List;
 
@@ -53,19 +57,23 @@ public class AttendanceController {
 
     // ===== 관리자 전용 근태 정정 및 수동 보정 API =====
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @GetMapping("/admin")
-    public ResponseEntity<List<AttendanceResponse>> getAdminAttendances(
+    public ResponseEntity<Page<AttendanceResponse>> getAdminAttendances(
             @RequestParam(required = false) Long departmentId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return ResponseEntity.ok(attendanceService.getAdminAttendances(departmentId, startDate, endDate));
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            Pageable pageable) {
+        return ResponseEntity.ok(attendanceService.getAdminAttendances(departmentId, startDate, endDate, pageable));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PostMapping("/admin")
     public ResponseEntity<AttendanceResponse> createAttendanceByAdmin(@RequestBody AttendanceAdminCreateRequest request) {
         return ResponseEntity.ok(attendanceService.createAttendanceByAdmin(request));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @PutMapping("/admin/{id}")
     public ResponseEntity<AttendanceResponse> updateAttendanceByAdmin(
             @PathVariable Long id,
@@ -73,6 +81,7 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.updateAttendanceByAdmin(id, request));
     }
 
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     @DeleteMapping("/admin/{id}")
     public ResponseEntity<Void> deleteAttendanceByAdmin(@PathVariable Long id) {
         attendanceService.deleteAttendanceByAdmin(id);

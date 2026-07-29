@@ -14,6 +14,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSp
     boolean existsByEmpNo(String empNo);
 
     long countByDepartmentId(Long departmentId);
+    
+    long countByDepartmentIdAndAccountStatusNot(Long departmentId, String accountStatus);
 
     List<Employee> findByAccountStatus(String accountStatus);
 }

@@ -6,6 +6,8 @@ import com.tphr.hr.attendance.repository.AttendanceRepository;
 import com.tphr.hr.employee.entity.Employee;
 import com.tphr.hr.employee.repository.EmployeeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -136,14 +138,15 @@ public class AttendanceService {
     }
 
     @Transactional(readOnly = true)
-    public List<AttendanceResponse> getAdminAttendances(Long departmentId, LocalDate startDate, LocalDate endDate) {
-        List<Attendance> attendances;
-        if (departmentId == null || departmentId == 0) {
-            attendances = attendanceRepository.findByWorkDateBetweenOrderByWorkDateDesc(startDate, endDate);
+    public Page<AttendanceResponse> getAdminAttendances(Long departmentId, LocalDate startDate, LocalDate endDate, Pageable pageable) {
+        Page<Attendance> attendances;
+        if (departmentId != null) {
+            attendances = attendanceRepository.findByEmployeeDepartmentIdAndWorkDateBetweenOrderByWorkDateDesc(departmentId, startDate, endDate, pageable);
         } else {
-            attendances = attendanceRepository.findByEmployeeDepartmentIdAndWorkDateBetweenOrderByWorkDateDesc(departmentId, startDate, endDate);
+            attendances = attendanceRepository.findByWorkDateBetweenOrderByWorkDateDesc(startDate, endDate, pageable);
         }
-        return attendances.stream().map(this::mapToResponse).collect(Collectors.toList());
+
+        return attendances.map(this::mapToResponse);
     }
 
     private AttendanceResponse mapToResponse(Attendance attendance) {

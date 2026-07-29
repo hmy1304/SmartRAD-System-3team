@@ -1,14 +1,17 @@
 package com.tphr.hr.system.dto;
 
 import jakarta.validation.constraints.NotBlank;
+import java.time.LocalDate;
 
-/**
- * POST /departments 요청 바디. parentId 가 없으면 최상위 부서로 생성된다.
- */
 public record DepartmentCreateRequest(
-        @NotBlank
+        @NotBlank(message = "부서명은 필수입니다.")
         String name,
-
+        String nameEn,
+        String deptCode,
+        Long managerId,
+        String location,
+        String phone,
+        LocalDate establishedDate,
+        String description,
         Long parentId
-) {
-}
+) {}

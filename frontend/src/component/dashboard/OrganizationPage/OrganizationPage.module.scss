@@ -227,6 +227,7 @@
   border-radius: 18px;
   padding: 24px;
   margin-bottom: 20px;
+  overflow-x: auto;
 }
 
 .sectionHeader {
@@ -284,6 +285,8 @@
   flex-direction: column;
   align-items: center;
   gap: 0;
+  min-width: max-content;
+  margin: 0 auto;
 }
 
 .orgRoot {
@@ -317,8 +320,50 @@
 
 .orgLevel {
   display: flex;
-  gap: 40px;
-  margin-bottom: 20px;
+  justify-content: center;
+  position: relative;
+  /* margin-bottom removed, handled by padding */
+}
+
+.orgBranch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 20px 10px 0 10px; /* 20px padding-top for vertical line */
+  
+  /* Vertical line from horizontal line to node */
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 20px;
+    background: #d0d8e8;
+    transform: translateX(-50%);
+  }
+
+  /* Horizontal line connecting siblings */
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #d0d8e8;
+  }
+
+  /* Fix for first child */
+  &:first-child::after {
+    left: 50%;
+  }
+
+  /* Fix for last child */
+  &:last-child::after {
+    right: 50%;
+  }
 }
 
 .orgNodeDept {
@@ -343,16 +388,69 @@
 
 .orgSubLevel {
   display: flex;
-  gap: 32px;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding-top: 20px; /* Space for the vertical line from parent */
+
+  /* Vertical line connecting parent to children container */
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 20px;
+    background: #d0d8e8;
+    transform: translateX(-50%);
+  }
 }
 
 .orgSubGroup {
   display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
   justify-content: center;
-  max-width: 320px;
+  position: relative;
+}
+
+.orgSubBranch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  padding: 20px 8px 0 8px; /* 20px padding-top for vertical line */
+
+  /* Vertical line from horizontal line to node */
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 2px;
+    height: 20px;
+    background: #d0d8e8;
+    transform: translateX(-50%);
+  }
+
+  /* Horizontal line connecting siblings */
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #d0d8e8;
+  }
+
+  /* Fix for first child */
+  &:first-child::after {
+    left: 50%;
+  }
+
+  /* Fix for last child */
+  &:last-child::after {
+    right: 50%;
+  }
 }
 
 .orgNode {
@@ -364,6 +462,8 @@
   font-weight: 500;
   color: #3a5a8c;
   text-align: center;
+  position: relative;
+  min-width: 90px;
 
   span {
     display: block;
@@ -425,6 +525,7 @@
   justify-content: space-between;
   width: 100%;
   padding: 10px 12px;
+  margin-bottom: 6px;
   border-radius: 10px;
   border: none;
   background: transparent;
@@ -602,7 +703,7 @@
     padding: 10px 8px;
     color: #8a97ad;
     font-weight: 600;
-    border-bottom: 1px solid #e8eef6;
+    border-bottom: 2px solid transparent;
   }
   td {
     padding: 12px 8px;
@@ -673,3 +774,176 @@
     justify-content: center;
   }
 }
+
+/* ===== Department Modal Styles ===== */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modalContent {
+  background: white;
+  width: 90%;
+  max-height: 90vh;
+  border-radius: 16px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 24px;
+  border-bottom: 1px solid #e2e8f0;
+
+  .modalTitleBox {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .modalIcon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: #eff4ff;
+      color: #3b82f6;
+      display: grid;
+      place-items: center;
+      font-size: 24px;
+    }
+
+    h3 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1e293b;
+      margin: 0 0 4px;
+    }
+
+    p {
+      margin: 0;
+      font-size: 13px;
+      color: #64748b;
+    }
+  }
+
+  .closeBtn {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-size: 18px;
+    color: #94a3b8;
+    cursor: pointer;
+    &:hover {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+  }
+}
+
+.modalForm {
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &::before {
+    content: "";
+    display: block;
+    width: 4px;
+    height: 16px;
+    background: #3b82f6;
+    border-radius: 2px;
+  }
+}
+
+.formRow2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #475569;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100%;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 14px;
+    color: #1e293b;
+    outline: none;
+    transition: all 0.2s;
+    background: white;
+
+    &:focus {
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    
+    &::placeholder {
+      color: #94a3b8;
+    }
+  }
+
+  .disabledInput {
+    background: #f1f5f9;
+    color: #64748b;
+    cursor: not-allowed;
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
+}
+

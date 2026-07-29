@@ -1,10 +1,15 @@
 package com.tphr.hr.system.dto;
 
-/**
- * PATCH /departments/{id} 요청 바디. null 필드는 변경하지 않는다(부분 수정).
- */
+import java.time.LocalDate;
+
 public record DepartmentUpdateRequest(
         String name,
+        String nameEn,
+        String deptCode,
+        Long managerId,
+        String location,
+        String phone,
+        LocalDate establishedDate,
+        String description,
         Long parentId
-) {
-}
+) {}

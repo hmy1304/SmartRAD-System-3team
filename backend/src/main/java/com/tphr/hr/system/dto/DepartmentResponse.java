@@ -1,25 +1,23 @@
 package com.tphr.hr.system.dto;
 
-import com.tphr.hr.employee.entity.Department;
-
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 public record DepartmentResponse(
         Long id,
         String name,
+        String deptCode,
+        String nameEn,
+        Long managerId,
+        String managerName,
+        String managerPosition,
+        String location,
+        String phone,
+        LocalDate establishedDate,
+        String description,
         Long parentId,
         String parentName,
+        Long memberCount,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
-) {
-    public static DepartmentResponse from(Department d) {
-        return new DepartmentResponse(
-                d.getId(),
-                d.getName(),
-                d.getParent() != null ? d.getParent().getId() : null,
-                d.getParent() != null ? d.getParent().getName() : null,
-                d.getCreatedAt(),
-                d.getUpdatedAt()
-        );
-    }
-}
+) {}

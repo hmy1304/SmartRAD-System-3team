@@ -44,10 +44,17 @@ public class DepartmentController {
         return ResponseEntity.ok(departmentService.getDepartment(id));
     }
 
-    // PATCH /departments/{id} - 부서명/상위 부서 수정
+    // PATCH /departments/{id} - 부서명/상위 부서 등 수정
     @PatchMapping("/{id}")
     public ResponseEntity<DepartmentResponse> updateDepartment(@PathVariable Long id,
                                                                 @RequestBody DepartmentUpdateRequest request) {
         return ResponseEntity.ok(departmentService.updateDepartment(id, request));
+    }
+
+    // DELETE /departments/{id} - 부서 삭제 (소속 인원이 있으면 차단)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteDepartment(@PathVariable Long id) {
+        departmentService.deleteDepartment(id);
+        return ResponseEntity.noContent().build();
     }
 }
