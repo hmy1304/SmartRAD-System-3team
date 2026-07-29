@@ -1,4 +1,4 @@
-﻿package com.tphr.hr.payroll.controller;
+package com.tphr.hr.payroll.controller;
 
 import com.tphr.hr.payroll.dto.*;
 import com.tphr.hr.payroll.service.PayrollSettingsService;

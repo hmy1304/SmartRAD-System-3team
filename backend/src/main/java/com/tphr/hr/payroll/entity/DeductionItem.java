@@ -1,4 +1,4 @@
-﻿package com.tphr.hr.payroll.entity;
+package com.tphr.hr.payroll.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;

@@ -1,4 +1,4 @@
-﻿package com.tphr.hr.payroll.dto;
+package com.tphr.hr.payroll.dto;
 
 import lombok.Builder;
 import lombok.Getter;
