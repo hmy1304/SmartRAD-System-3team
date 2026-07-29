@@ -1,22 +1,81 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-
-
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import type { DashboardData } from "@/types/dashboard";
-
 import styles from "./DashboardPage.module.scss";
+
+import NoticeCreateModal from "./NoticeCreateModal";
+import NoticeDetailModal, {
+  type NoticeDetailFallback,
+} from "./NoticeDetailModal";
+import NoticeEditModal from "./NoticeEditModal";
+import {
+  getNotices,
+  type NoticeResponse,
+  type NoticeSummary,
+} from "@/services/noticeService";
 
 interface DashboardPageProps {
   initialData: DashboardData;
 }
 
+const QUICK_ACTIONS = [
+  { href: "/dashboard/employees", label: "사원 등록", icon: "user-plus" as const },
+  { href: "/dashboard/attendance-link", label: "근태 관리", icon: "clock" as const },
+  { href: "/dashboard/payroll/info", label: "급여 관리", icon: "wallet" as const },
+  { href: "/dashboard/drafts", label: "문서 관리", icon: "file" as const },
+];
+
+function QuickIcon({ name }: { name: (typeof QUICK_ACTIONS)[number]["icon"] }) {
+  if (name === "user-plus") {
+    return (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <circle cx="9" cy="7" r="4" />
+        <line x1="19" y1="8" x2="19" y2="14" />
+        <line x1="22" y1="11" x2="16" y2="11" />
+      </svg>
+    );
+  }
+  if (name === "clock") {
+    return (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 6v6l4 2" />
+      </svg>
+    );
+  }
+  if (name === "wallet") {
+    return (
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <rect x="2" y="6" width="20" height="14" rx="2" />
+        <path d="M2 10h20" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6" />
+    </svg>
+  );
+}
+
 export default function DashboardPage({ initialData }: DashboardPageProps) {
   const [todayText, setTodayText] = useState("");
+  const [displayName, setDisplayName] = useState(initialData.profile.name);
+
+  const [createOpen, setCreateOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailId, setDetailId] = useState<number | null>(null);
+  const [detailFallback, setDetailFallback] =
+    useState<NoticeDetailFallback | null>(null);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editNotice, setEditNotice] = useState<NoticeResponse | null>(null);
+  const [noticeList, setNoticeList] = useState<NoticeSummary[]>([]);
 
   const {
-    profile,
     summaryCards,
     approvalItems,
     attendanceList,
@@ -25,200 +84,315 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
     approvalCounts,
   } = initialData;
 
+  const reloadNotices = async () => {
+    try {
+      const page = await getNotices(10);
+      setNoticeList(page.content ?? []);
+    } catch {
+      // API 실패 시 noticeList 비움 → 아래 mock 표시
+      setNoticeList([]);
+    }
+  };
+
   useEffect(() => {
-    const updateDate = () => {
-      const now = new Date();
+    const now = new Date();
+    const week = ["일", "월", "화", "수", "목", "금", "토"][now.getDay()];
+    setTodayText(
+      `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일 ${week}요일`,
+    );
 
-      const year = now.getFullYear();
-      const month = now.getMonth() + 1;
-      const date = now.getDate();
+    try {
+      const raw = localStorage.getItem("userProfile");
+      if (raw) {
+        const p = JSON.parse(raw) as { name?: string };
+        if (p?.name) setDisplayName(p.name);
+      }
+    } catch {
+      /* ignore */
+    }
 
-      const week = ["일", "월", "화", "수", "목", "금", "토"];
-
-      const day = week[now.getDay()];
-
-      setTodayText(`${year}년 ${month}월 ${date}일 ${day}요일`);
-    };
-
-    updateDate();
-
-    const timer = window.setInterval(updateDate, 60 * 1000);
-
-    return () => {
-      window.clearInterval(timer);
-    };
+    reloadNotices();
   }, []);
 
+  const chartPoints = useMemo(() => {
+    const ys = [120, 110, 95, 100, 85, 90, 70, 75, 60, 55, 50, 58];
+    return ys.map((y, i) => `${40 + i * 52},${20 + y * 0.9}`).join(" ");
+  }, []);
+
+  // API 목록이 있으면 API
+  const displayNotices: {
+  id: number;
+  title: string;
+  dateText: string;
+  fromApi: boolean;
+  content?: string;
+}[] =
+  noticeList.length > 0
+    ? noticeList.map((n) => ({
+        id: Number(n.id),
+        title: n.title,
+        dateText: n.createdAt
+          ? String(n.createdAt).slice(0, 10).replaceAll("-", ".")
+          : "",
+        fromApi: true,
+      }))
+    : []; // 비어 있으면 [] → "공지사항이 없습니다"
+
+  const openDetail = (item: (typeof displayNotices)[number]) => {
+    setDetailId(item.id);
+    if (item.fromApi) {
+      setDetailFallback(null);
+    } else {
+      setDetailFallback({
+        id: item.id,
+        title: item.title,
+        content:
+          item.content ??
+          "이 공지는 미리보기 데이터입니다.\n공지사항 작성으로 등록하면 서버에 저장됩니다.",
+        dateText: item.dateText,
+        authorName: "관리자",
+        noticeTypeName: "일반공지",
+      });
+    }
+    setDetailOpen(true);
+  };
+
   return (
-    <>
+    <div className={styles.dashboardHome}>
+      <section className={styles.welcome}>
+        <div>
+          <h1>
+            좋은 아침입니다, {displayName}님 <span aria-hidden>👋</span>
+          </h1>
+          <p>
+            오늘도 원내 인사 현황을 빠르게 확인하고, 처리가 필요한 업무를
+            챙겨보세요.
+          </p>
+        </div>
+        <div className={styles.today}>
+          <small>오늘</small>
+          <strong>{todayText || "…"}</strong>
+        </div>
+      </section>
 
-        <main className={styles.main}>
-          <section className={styles.welcome}>
-            <div>
-              <h1>좋은 아침입니다, {profile.name}님 👋</h1>
-
-              <p>
-                오늘도 원내 인사 현황을 빠르게 확인하고, 처리가 필요한 업무를
-                챙겨보세요.
-              </p>
+      <section className={styles.summaryGrid}>
+        {summaryCards.map((card) => (
+          <article key={card.label} className={styles.summaryCard}>
+            <div className={styles.summaryTop}>
+              <span className={styles.summaryIcon}>
+                {card.icon === "people" && "👥"}
+                {card.icon === "check" && "✓"}
+                {card.icon === "calendar" && "📅"}
+                {card.icon === "document" && "📄"}
+              </span>
+              <em className={styles[card.statusType]}>{card.status}</em>
             </div>
+            <p>{card.label}</p>
+            <h2>
+              {card.value}
+              <small>{card.unit}</small>
+            </h2>
+          </article>
+        ))}
+      </section>
 
-            <div className={styles.today}>
-              <small>오늘</small>
-              <strong>{todayText || "날짜 불러오는 중..."}</strong>
-            </div>
-          </section>
+      <section className={styles.middleGrid}>
+        <article className={styles.panel}>
+          <div className={styles.panelTitle}>
+            <h2>월별 근태 현황</h2>
+            <span className={styles.legend}>
+              <i className={styles.dotBlue} /> 정상 출근율
+            </span>
+          </div>
+          <div className={styles.lineChart}>
+            <svg viewBox="0 0 700 190" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#3a7bff" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="#3a7bff" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <polyline
+                fill="url(#areaFill)"
+                stroke="none"
+                points={`40,180 ${chartPoints} 664,180`}
+              />
+              <polyline
+                fill="none"
+                stroke="#3a7bff"
+                strokeWidth="3"
+                strokeLinejoin="round"
+                points={chartPoints}
+              />
+            </svg>
+          </div>
+        </article>
 
-          <section className={styles.summaryGrid}>
-            {summaryCards.map((card) => (
-              <article key={card.label} className={styles.summaryCard}>
-                <div className={styles.summaryTop}>
-                  <span className={styles.summaryIcon}>
-                    {card.icon === "people" && "👥"}
-                    {card.icon === "check" && "✓"}
-                    {card.icon === "calendar" && "▣"}
-                    {card.icon === "document" && "▤"}
-                  </span>
-
-                  <em className={styles[card.statusType]}>{card.status}</em>
-                </div>
-
-                <p>{card.label}</p>
-
-                <h2>
-                  {card.value}
-                  <small>{card.unit}</small>
-                </h2>
-              </article>
+        <article className={styles.panel}>
+          <div className={styles.panelTitle}>
+            <h2>결재 대기 안건</h2>
+            <Link href="/dashboard/approvals" className={styles.linkBtn}>
+              전체보기 ›
+            </Link>
+          </div>
+          <ul className={styles.approvalList}>
+            {approvalItems.map((item) => (
+              <li key={item.id}>
+                <span className={`${styles.dot} ${styles[item.color]}`} />
+                <p>{item.text}</p>
+                <em className={styles.itemBadge}>{item.badge}</em>
+              </li>
             ))}
-          </section>
+          </ul>
+        </article>
+      </section>
 
-          <section className={styles.middleGrid}>
-            <article className={styles.panel}>
-              <div className={styles.panelTitle}>
-                <h2>월별 근태 현황</h2>
-                <span>● 정상 출근율</span>
-              </div>
-
-              {/* 기존 차트 SVG 코드는 그대로 유지 */}
-              <div className={styles.lineChart}>
-                <svg viewBox="0 0 700 190" aria-hidden="true">
-                  <defs>
-                    <linearGradient id="chartFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop
-                        offset="0%"
-                        stopColor="#3a7bff"
-                        stopOpacity="0.25"
-                      />
-
-                      <stop offset="100%" stopColor="#3a7bff" stopOpacity="0" />
-                    </linearGradient>
-                  </defs>
-
-                  <path
-                    d="M20 145 L90 125 L160 135 L230 95 L300 105 L370 70 L440 85 L510 48 L580 62 L650 36 L690 52 L690 180 L20 180 Z"
-                    fill="url(#chartFill)"
-                  />
-
-                  <path
-                    d="M20 145 L90 125 L160 135 L230 95 L300 105 L370 70 L440 85 L510 48 L580 62 L650 36 L690 52"
-                    fill="none"
-                    stroke="#2864ef"
-                    strokeWidth="4"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </div>
-            </article>
-
-            <article className={styles.panel}>
-              <div className={styles.panelTitle}>
-                <h2>결재 대기 안건</h2>
-                <a href="/dashboard/approvals">전체보기 ›</a>
-              </div>
-
-              <ul className={styles.approvalList}>
-                {approvalItems.map((item) => (
-                  <li key={item.id}>
-                    <span className={styles[item.color]} />
-
-                    <p>{item.text}</p>
-                    <em>{item.badge}</em>
-                  </li>
-                ))}
-              </ul>
-            </article>
-          </section>
-
-          {/* 기존 하단 패널 구조는 유지하고 배열만 Mock 데이터로 사용 */}
-          <section className={styles.bottomGrid}>
-            <article className={styles.panel}>
-              <div className={styles.panelTitle}>
-                <h2>오늘의 근무 현황</h2>
-                <a href="#">전체보기 ›</a>
-              </div>
-
-              <div className={styles.attendanceList}>
+      <section className={styles.bottomGrid}>
+        <article className={styles.panel}>
+          <div className={styles.panelTitle}>
+            <h2>오늘의 근무 현황</h2>
+            <Link href="/dashboard/attendance" className={styles.linkBtn}>
+              전체보기 ›
+            </Link>
+          </div>
+          <div className={styles.tableWrap}>
+            <table className={styles.attTable}>
+              <thead>
+                <tr>
+                  <th>이름</th>
+                  <th>부서</th>
+                  <th>출근</th>
+                  <th>상태</th>
+                </tr>
+              </thead>
+              <tbody>
                 {attendanceList.map((row) => (
-                  <div key={row.id}>
-                    <span>{row.name.charAt(0)}</span>
-
-                    <strong>{row.name}</strong>
-                    <p>{row.dept}</p>
-                    <time>{row.time}</time>
-
-                    <em className={styles[row.statusType]}>{row.status}</em>
-                  </div>
+                  <tr key={row.id}>
+                    <td>
+                      <div className={styles.person}>
+                        <span className={styles.avatar}>{row.name.charAt(0)}</span>
+                        {row.name}
+                      </div>
+                    </td>
+                    <td>{row.dept}</td>
+                    <td>{row.time}</td>
+                    <td>
+                      <em className={`${styles.status} ${styles[row.statusType]}`}>
+                        {row.status}
+                      </em>
+                    </td>
+                  </tr>
                 ))}
-              </div>
-            </article>
+              </tbody>
+            </table>
+          </div>
+        </article>
 
-            <article className={styles.panel}>
-              <div className={styles.panelTitle}>
-                <h2>공지사항</h2>
-                <a href="#">공지사항 작성 ›</a>
-              </div>
+        <article className={styles.panel}>
+          <div className={styles.panelTitle}>
+            <h2>공지사항</h2>
+            <button
+              type="button"
+              className={styles.linkBtn}
+              onClick={() => setCreateOpen(true)}
+            >
+              공지사항 작성 ›
+            </button>
+          </div>
+          <ul className={styles.noticeList}>
+            {displayNotices.length === 0 ? (
+              <li className={styles.emptyNotice}>공지사항이 없습니다</li>
+            ) : (
+              displayNotices.map((n) => (
+                <li key={`${n.fromApi ? "api" : "mock"}-${n.id}`}>
+                  <button
+                    type="button"
+                    className={styles.noticeItemBtn}
+                    onClick={() => openDetail(n)}
+                  >
+                    <strong>{n.title}</strong>
+                    <time>{n.dateText}</time>
+                  </button>
+                </li>
+              ))
+            )}
+          </ul>
+        </article>
 
-              <ul className={styles.noticeList}>
-                {notices.map((notice) => (
-                  <li key={notice.id}>
-                    <strong>{notice.title}</strong>
-                    <time>{notice.date}</time>
-                  </li>
-                ))}
-              </ul>
-            </article>
+        <article className={styles.panel}>
+          <div className={styles.panelTitle}>
+            <h2>빠른 업무</h2>
+          </div>
+          <div className={styles.quickGrid}>
+            {QUICK_ACTIONS.map((q) => (
+              <Link key={q.href} href={q.href} className={styles.quickItem}>
+                <span className={styles.quickIcon}>
+                  <QuickIcon name={q.icon} />
+                </span>
+                <span>{q.label}</span>
+              </Link>
+            ))}
+          </div>
+        </article>
 
-            <article className={styles.panel}>
-              <div className={styles.panelTitle}>
-                <h2>나의 결재함</h2>
-                <a href="/dashboard/drafts">전체보기 ›</a>
-              </div>
+        <article className={styles.panel}>
+          <div className={styles.panelTitle}>
+            <h2>나의 결재함</h2>
+            <Link href="/dashboard/approvals" className={styles.linkBtn}>
+              전체보기 ›
+            </Link>
+          </div>
+          <div className={styles.approvalStats}>
+            <span className={styles.statWait}>● 대기 {approvalCounts.waiting}</span>
+            <span className={styles.statOk}>● 승인 {approvalCounts.approved}</span>
+            <span className={styles.statNo}>● 반려 {approvalCounts.rejected}</span>
+          </div>
+          <ul className={styles.myApprovalList}>
+            {myApprovals.map((item) => (
+              <li key={item.id}>
+                <div>
+                  <strong>{item.title}</strong>
+                  <small>
+                    {item.author} · {item.date}
+                  </small>
+                </div>
+                <em className={`${styles.status} ${styles[item.statusType]}`}>
+                  {item.status}
+                </em>
+              </li>
+            ))}
+          </ul>
+        </article>
+      </section>
 
-              <div className={styles.approvalStats}>
-                <span>대기 {approvalCounts.waiting}</span>
-                <span>승인 {approvalCounts.approved}</span>
-                <span>반려 {approvalCounts.rejected}</span>
-              </div>
+      <NoticeCreateModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={reloadNotices}
+      />
 
-              <ul className={styles.myApprovalList}>
-                {myApprovals.map((item) => (
-                  <li key={item.id}>
-                    <div>
-                      <strong>{item.title}</strong>
-                      <small>
-                        {item.author} · {item.date}
-                      </small>
-                    </div>
+      <NoticeDetailModal
+        open={detailOpen}
+        noticeId={detailId}
+        fallback={detailFallback}
+        onClose={() => {
+          setDetailOpen(false);
+          setDetailFallback(null);
+        }}
+        onEdit={(n) => {
+          setDetailOpen(false);
+          setEditNotice(n);
+          setEditOpen(true);
+        }}
+        onDeleted={reloadNotices}
+      />
 
-                    <em className={styles[item.statusType]}>{item.status}</em>
-                  </li>
-                ))}
-              </ul>
-            </article>
-          </section>
-        </main>
-    </>
+      <NoticeEditModal
+        open={editOpen}
+        notice={editNotice}
+        onClose={() => setEditOpen(false)}
+        onUpdated={reloadNotices}
+      />
+    </div>
   );
 }
