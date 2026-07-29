@@ -68,12 +68,20 @@ const initialForm = {
   taxTypeCode: "",
 };
 
+/** DB common_code 기준 (APT_*, POS_*) — APPOINT_* 사용 금지 */
 const TYPE_CODE_MAP: Record<string, string> = {
-  재직: "APPOINT_JOIN",
-  승진: "APPOINT_PROMOTE",
-  "부서 이동": "APPOINT_TRANSFER",
-  인사발령: "APPOINT_HR",
-  "표창/수상": "APPOINT_AWARD",
+  재직: "APT_PROMOTE",
+  승진: "APT_PROMOTE",
+  "부서 이동": "APT_TRANSFER",
+  전보: "APT_TRANSFER",
+  인사발령: "APT_TRANSFER",
+  보직변경: "APT_TRANSFER",
+  "표창/수상": "APT_PROMOTE",
+  휴직: "APT_DISPATCH",
+  퇴직: "APT_DEMOTE",
+  복직: "APT_PROMOTE",
+  강등: "APT_DEMOTE",
+  파견: "APT_DISPATCH",
 };
 
 const DEPT_ID_MAP: Record<string, number> = {
@@ -83,6 +91,19 @@ const DEPT_ID_MAP: Record<string, number> = {
   원무과: 5,
   관리팀: 1,
 };
+
+/** DB POS 코드: POS_01=수석, POS_02=1급, POS_03=수간호사 */
+const POSITION_CODE_MAP: Record<string, string> = {
+  수석: "POS_01",
+  수간호사: "POS_03",
+  "1급": "POS_02",
+  부장: "POS_01",
+  과장: "POS_02",
+  대리: "POS_02",
+  주임: "POS_03",
+};
+
+
 
 export default function EmployeeManagementPage({ initialData }: Props) {
   const router = useRouter();
@@ -356,102 +377,133 @@ export default function EmployeeManagementPage({ initialData }: Props) {
   }, [selectedId, activeTab]);
 
   const onSaveHistory = async (data: EmploymentHistoryForm) => {
-    const empId = Number(selectedId);
-    if (Number.isNaN(empId)) throw new Error("유효한 직원 ID가 아닙니다.");
+  const empId = Number(selectedId);
+  if (Number.isNaN(empId)) {
+    throw new Error("유효한 직원 ID가 아닙니다.");
+  }
+
+  const typeCode = TYPE_CODE_MAP[data.type] ?? "APT_PROMOTE";
+  const positionCode =
+    POSITION_CODE_MAP[data.position] ?? data.position ?? undefined;
+  const departmentId = DEPT_ID_MAP[data.department];
+
+  console.log("[appointment]", {
+    type: data.type,
+    typeCode,
+    positionCode,
+    departmentId,
+  });
+
+  await createAppointment({
+    employeeId: empId,
+    appointmentTypeCode: typeCode,
+    afterDepartmentId: departmentId,
+    afterPositionCode: positionCode,
+    applyDate: data.startDate,
+    note: [
+      data.endDate ? `종료: ${data.endDate}` : "종료: 현재",
+      data.employmentType ? `고용형태: ${data.employmentType}` : "",
+      data.handler ? `처리자: ${data.handler}` : "",
+    ]
+      .filter(Boolean)
+      .join(" | "),
+  });
+
+  setHistories(await getAppointmentHistory(empId));
+  alert("이력이 저장되었습니다.");
+};
+
+  const onLeaveSubmit = async () => {
+  const empId = Number(selectedId);
+  if (Number.isNaN(empId)) {
+    alert("유효한 직원 ID가 아닙니다.");
+    return;
+  }
+  if (!leaveType || !leaveStart) {
+    alert("휴직 유형과 시작일을 입력하세요.");
+    return;
+  }
+
+  setLeaveSubmitting(true);
+  try {
     await createAppointment({
       employeeId: empId,
-      appointmentTypeCode: TYPE_CODE_MAP[data.type] ?? "APPOINT_HR",
-      afterDepartmentId: DEPT_ID_MAP[data.department],
-      afterPositionCode: data.position || undefined,
-      applyDate: data.startDate,
+      appointmentTypeCode: "APT_DISPATCH", // DB에 있는 코드
+      afterDepartmentId: selected
+        ? DEPT_ID_MAP[selected.department]
+        : undefined,
+      afterPositionCode: selected
+        ? POSITION_CODE_MAP[selected.position]
+        : undefined,
+      applyDate: leaveStart,
       note: [
-        data.endDate ? `종료: ${data.endDate}` : "종료: 현재",
-        data.employmentType ? `고용형태: ${data.employmentType}` : "",
-        data.handler ? `처리자: ${data.handler}` : "",
+        `휴직유형: ${leaveType}`,
+        leaveEnd ? `종료예정: ${leaveEnd}` : "",
+        leaveReason ? `사유: ${leaveReason}` : "",
       ]
         .filter(Boolean)
         .join(" | "),
     });
-    setHistories(await getAppointmentHistory(empId));
-    setHistoryModalOpen(false);
-    alert("이력이 저장되었습니다.");
-  };
 
-  const onLeaveSubmit = async () => {
-    const empId = Number(selectedId);
-    if (Number.isNaN(empId)) {
-      alert("유효한 직원 ID가 아닙니다.");
-      return;
-    }
-    if (!leaveType || !leaveStart) {
-      alert("휴직 유형과 시작일을 입력하세요.");
-      return;
-    }
-    setLeaveSubmitting(true);
-    try {
-      await createAppointment({
-        employeeId: empId,
-        appointmentTypeCode: "APPOINT_LEAVE",
-        applyDate: leaveStart,
-        note: [
-          `휴직유형: ${leaveType}`,
-          leaveEnd ? `종료예정: ${leaveEnd}` : "",
-          leaveReason ? `사유: ${leaveReason}` : "",
-        ]
-          .filter(Boolean)
-          .join(" | "),
-      });
-      setHistories(await getAppointmentHistory(empId));
-      setLeaveType("");
-      setLeaveStart("");
-      setLeaveEnd("");
-      setLeaveReason("");
-      alert("휴직 신청이 등록되었습니다.");
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "휴직 신청 실패");
-    } finally {
-      setLeaveSubmitting(false);
-    }
-  };
+    setHistories(await getAppointmentHistory(empId));
+    setLeaveType("");
+    setLeaveStart("");
+    setLeaveEnd("");
+    setLeaveReason("");
+    alert("휴직 신청이 등록되었습니다.");
+  } catch (err) {
+    alert(err instanceof Error ? err.message : "휴직 신청 실패");
+  } finally {
+    setLeaveSubmitting(false);
+  }
+};
 
   const onRetireSubmit = async () => {
-    const empId = Number(selectedId);
-    if (Number.isNaN(empId)) {
-      alert("유효한 직원 ID가 아닙니다.");
-      return;
-    }
-    if (!retireDate || !retireReason) {
-      alert("퇴직일과 사유를 입력하세요.");
-      return;
-    }
-    if (retireReason === "other" && !retireDetail.trim()) {
-      alert("기타 사유를 입력하세요.");
-      return;
-    }
-    setRetireSubmitting(true);
-    try {
-      await createAppointment({
-        employeeId: empId,
-        appointmentTypeCode: "APPOINT_RETIRE",
-        applyDate: retireDate,
-        note: [
-          `퇴직사유: ${retireReason}`,
-          retireReason === "other" ? `상세: ${retireDetail}` : "",
-        ]
-          .filter(Boolean)
-          .join(" | "),
-      });
-      setHistories(await getAppointmentHistory(empId));
-      setRetireDate("");
-      setRetireReason("");
-      setRetireDetail("");
-      alert("퇴직 처리가 등록되었습니다.");
-    } catch (err) {
-      alert(err instanceof Error ? err.message : "퇴직 처리 실패");
-    } finally {
-      setRetireSubmitting(false);
-    }
-  };
+  const empId = Number(selectedId);
+  if (Number.isNaN(empId)) {
+    alert("유효한 직원 ID가 아닙니다.");
+    return;
+  }
+  if (!retireDate || !retireReason) {
+    alert("퇴직일과 사유를 입력하세요.");
+    return;
+  }
+  if (retireReason === "other" && !retireDetail.trim()) {
+    alert("기타 사유를 입력하세요.");
+    return;
+  }
+
+  setRetireSubmitting(true);
+  try {
+    await createAppointment({
+      employeeId: empId,
+      appointmentTypeCode: "APT_DEMOTE", // DB에 있는 코드 (퇴직 전용 없을 때)
+      afterDepartmentId: selected
+        ? DEPT_ID_MAP[selected.department]
+        : undefined,
+      afterPositionCode: selected
+        ? POSITION_CODE_MAP[selected.position]
+        : undefined,
+      applyDate: retireDate,
+      note: [
+        `퇴직사유: ${retireReason}`,
+        retireReason === "other" ? `상세: ${retireDetail}` : "",
+      ]
+        .filter(Boolean)
+        .join(" | "),
+    });
+
+    setHistories(await getAppointmentHistory(empId));
+    setRetireDate("");
+    setRetireReason("");
+    setRetireDetail("");
+    alert("퇴직 처리가 등록되었습니다.");
+  } catch (err) {
+    alert(err instanceof Error ? err.message : "퇴직 처리 실패");
+  } finally {
+    setRetireSubmitting(false);
+  }
+};
 
   return (
     <>

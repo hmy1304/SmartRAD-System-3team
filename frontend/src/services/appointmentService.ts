@@ -46,17 +46,19 @@ export interface AppointmentCreateRequest {
 
 /** 발령 유형 UI → 공통코드 매핑 */
 export const APPOINTMENT_TYPE_CODE_MAP: Record<string, string> = {
-  승진: "APPOINT_PROMOTE",
-  전보: "APPOINT_TRANSFER",
-  보직변경: "APPOINT_HR",
-  휴직: "APPOINT_LEAVE",
-  복직: "APPOINT_RETURN",
-  퇴직: "APPOINT_RETIRE",
-  기타: "APPOINT_HR",
-  재직: "APPOINT_JOIN",
-  "부서 이동": "APPOINT_TRANSFER",
-  인사발령: "APPOINT_HR",
-  "표창/수상": "APPOINT_AWARD",
+  승진: "APT_PROMOTE",
+  전보: "APT_TRANSFER",
+  보직변경: "APT_TRANSFER",
+  휴직: "APT_DISPATCH",
+  복직: "APT_PROMOTE",
+  퇴직: "APT_DEMOTE",
+  기타: "APT_TRANSFER",
+  재직: "APT_PROMOTE",
+  "부서 이동": "APT_TRANSFER",
+  인사발령: "APT_TRANSFER",
+  "표창/수상": "APT_PROMOTE",
+  강등: "APT_DEMOTE",
+  파견: "APT_DISPATCH",
 };
 
 /** 발령 등록 POST /appointments */
