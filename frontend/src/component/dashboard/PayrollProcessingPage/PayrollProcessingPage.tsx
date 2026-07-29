@@ -18,6 +18,14 @@ export default function PayrollProcessingPage() {
   const [payrollList, setPayrollList] = useState<any[]>([]);
   const [history, setHistory] = useState<any[]>([]);
 
+  // Pagination states
+  const [calcPage, setCalcPage] = useState(1);
+  const [transferPage, setTransferPage] = useState(1);
+  const ITEMS_PER_PAGE = 7;
+
+  // Checkbox states
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+
   const fetchSummary = async () => {
     try {
       const token = localStorage.getItem("accessToken");
@@ -40,7 +48,12 @@ export default function PayrollProcessingPage() {
           ...(token ? { "Authorization": `Bearer ${token}` } : {})
         }
       });
-      if (res.ok) setPayrollList(await res.json());
+      if (res.ok) {
+        setPayrollList(await res.json());
+        setSelectedIds([]); // reset selection when data changes
+        setCalcPage(1);
+        setTransferPage(1);
+      }
     } catch (e) { console.error(e); }
   };
 
@@ -58,7 +71,7 @@ export default function PayrollProcessingPage() {
         // Transform data for chart
         const chartData = data.map((d: any) => ({
           name: `${d.month}월`,
-          "총 지급액": d.totalGrossAmount,
+          "총지급액": d.totalGrossAmount,
           "실지급액": d.totalNetAmount,
           "공제액": d.totalDeductionAmount
         }));
@@ -96,6 +109,30 @@ export default function PayrollProcessingPage() {
     return new Intl.NumberFormat('ko-KR').format(amount || 0);
   };
 
+  // Pagination Logic
+  const calcTotalPages = Math.ceil(payrollList.length / ITEMS_PER_PAGE) || 1;
+  const transferTotalPages = Math.ceil(payrollList.length / ITEMS_PER_PAGE) || 1;
+  const paginatedCalcList = payrollList.slice((calcPage - 1) * ITEMS_PER_PAGE, calcPage * ITEMS_PER_PAGE);
+  const paginatedTransferList = payrollList.slice((transferPage - 1) * ITEMS_PER_PAGE, transferPage * ITEMS_PER_PAGE);
+
+  // Checkbox Logic
+  const isAllSelected = paginatedCalcList.length > 0 && paginatedCalcList.every(p => selectedIds.includes(p.id));
+
+  const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.checked) {
+      const newIds = new Set(selectedIds);
+      paginatedCalcList.forEach(p => newIds.add(p.id));
+      setSelectedIds(Array.from(newIds));
+    } else {
+      const currentIds = paginatedCalcList.map(p => p.id);
+      setSelectedIds(selectedIds.filter(id => !currentIds.includes(id)));
+    }
+  };
+
+  const handleSelectOne = (id: number) => {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
   return (
     <div className={styles.container}>
       <header className={styles.pageHeader}>
@@ -104,8 +141,8 @@ export default function PayrollProcessingPage() {
           <p>급여 계산부터 지급 실행, 이력 조회까지 급여 처리 전 과정을 관리합니다.</p>
         </div>
         <div className={styles.actionBtns}>
-          <button className={styles.exportBtn}>📥 전체 내보내기</button>
-          <button className={styles.calcBtn} onClick={handleCalculate}>✓ 일괄 급여 계산 실행</button>
+          <button className={styles.exportBtn}>전체 내보내기</button>
+          <button className={styles.calcBtn} onClick={handleCalculate}>일괄 급여 계산 실행</button>
         </div>
       </header>
 
@@ -119,14 +156,14 @@ export default function PayrollProcessingPage() {
           </div>
         </div>
         <div className={styles.card}>
-          <div className={`${styles.iconBox} ${styles.green}`}>💰</div>
+          <div className={`${styles.iconBox} ${styles.green}`}>￦</div>
           <div className={styles.cardContent}>
             <h3>{targetMonth}월 총 지급액</h3>
             <p className={styles.value}>{formatMoney(summary.totalAmount)} <span>원</span></p>
           </div>
         </div>
         <div className={styles.card}>
-          <div className={`${styles.iconBox} ${styles.yellow}`}>⏱</div>
+          <div className={`${styles.iconBox} ${styles.yellow}`}>⚠</div>
           <div className={styles.cardContent}>
             <h3>계산 대기 인원</h3>
             <p className={styles.value}>{summary.pendingCount} <span>명</span></p>
@@ -134,10 +171,10 @@ export default function PayrollProcessingPage() {
           </div>
         </div>
         <div className={styles.card}>
-          <div className={`${styles.iconBox} ${styles.red}`}>⚠</div>
+          <div className={`${styles.iconBox} ${styles.red}`}>✕</div>
           <div className={styles.cardContent}>
             <h3>이체 실패</h3>
-            <p className={styles.value}>{summary.transferFailedCount} <span>건</span></p>
+            <p className={styles.value}>{summary.transferFailedCount} <span>명</span></p>
             {summary.transferFailedCount > 0 && <span className={`${styles.subtext} ${styles.red}`}>즉시처리 필요</span>}
           </div>
         </div>
@@ -160,7 +197,7 @@ export default function PayrollProcessingPage() {
               ))}
             </select>
             <select><option>부서 전체</option></select>
-            <button className={styles.calcBtn} onClick={handleCalculate} style={{ padding: '0.5rem 1rem', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}>▶ 선택 계산 실행</button>
+            <button className={styles.calcBtn} onClick={handleCalculate} style={{ padding: '0.5rem 1rem', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}>선택 계산 실행</button>
           </div>
         </div>
 
@@ -168,10 +205,10 @@ export default function PayrollProcessingPage() {
           <table>
             <thead>
               <tr>
-                <th><input type="checkbox" /></th>
+                <th><input type="checkbox" checked={isAllSelected} onChange={handleSelectAll} /></th>
                 <th>직원명</th>
                 <th>부서</th>
-                <th>기본급 (원)</th>
+                <th>기본급(원)</th>
                 <th>수당 합계 (원)</th>
                 <th>공제 합계 (원)</th>
                 <th>실지급액 (원)</th>
@@ -180,13 +217,19 @@ export default function PayrollProcessingPage() {
               </tr>
             </thead>
             <tbody>
-              {payrollList.map((p, i) => (
+              {paginatedCalcList.map((p, i) => (
                 <tr key={i}>
-                  <td><input type="checkbox" /></td>
+                  <td>
+                    <input 
+                      type="checkbox" 
+                      checked={selectedIds.includes(p.id)}
+                      onChange={() => handleSelectOne(p.id)}
+                    />
+                  </td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <div style={{ width: '28px', height: '28px', backgroundColor: '#e5e7eb', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
-                        {p.employeeName.charAt(0)}
+                        {p.employeeName?.charAt(0) || '-'}
                       </div>
                       <div>
                         <div style={{ fontWeight: 500 }}>{p.employeeName}</div>
@@ -203,13 +246,13 @@ export default function PayrollProcessingPage() {
                     {p.status === 'CONFIRMED' || p.status === 'MANUAL' ? (
                       <span className={`${styles.badge} ${styles.success}`}><IconCheck /> 계산 완료</span>
                     ) : (
-                      <span className={`${styles.badge} ${styles.default}`}>계산 대기</span>
+                      <span className={`${styles.badge} ${styles.default}`}>계산 전</span>
                     )}
                   </td>
-                  <td><span className={styles.actionIcon}>👁</span></td>
+                  <td><span className={styles.actionIcon}>⋯</span></td>
                 </tr>
               ))}
-              {payrollList.length === 0 && (
+              {paginatedCalcList.length === 0 && (
                 <tr>
                   <td colSpan={9} style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
                     데이터가 없습니다. 급여 계산을 실행해주세요.
@@ -218,6 +261,27 @@ export default function PayrollProcessingPage() {
               )}
             </tbody>
           </table>
+          
+          {/* Pagination for Calc */}
+          {calcTotalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', padding: '1rem' }}>
+              <button 
+                onClick={() => setCalcPage(p => Math.max(1, p - 1))} 
+                disabled={calcPage === 1}
+                style={{ padding: '0.25rem 0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', backgroundColor: '#fff', cursor: calcPage === 1 ? 'not-allowed' : 'pointer' }}
+              >
+                이전
+              </button>
+              <span style={{ fontSize: '0.875rem', color: '#374151' }}>{calcPage} / {calcTotalPages}</span>
+              <button 
+                onClick={() => setCalcPage(p => Math.min(calcTotalPages, p + 1))} 
+                disabled={calcPage === calcTotalPages}
+                style={{ padding: '0.25rem 0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', backgroundColor: '#fff', cursor: calcPage === calcTotalPages ? 'not-allowed' : 'pointer' }}
+              >
+                다음
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -225,14 +289,14 @@ export default function PayrollProcessingPage() {
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <div className={styles.sectionTitle}>
-            <div className={`${styles.iconBox} ${styles.green}`}>💰</div>
+            <div className={`${styles.iconBox} ${styles.green}`}>￦</div>
             <div>
               <h2>급여 지급</h2>
               <p>{targetYear}년 {targetMonth}월 급여 · 계좌이체 실행 및 지급 현황 관리</p>
             </div>
           </div>
           <div className={styles.sectionFilters}>
-            <button className={styles.calcBtn} style={{ padding: '0.5rem 1rem', backgroundColor: '#059669', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }} onClick={() => alert('이체 실행 시뮬레이션입니다.')}>✓ 일괄 이체 실행</button>
+            <button className={styles.calcBtn} style={{ padding: '0.5rem 1rem', backgroundColor: '#059669', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }} onClick={() => alert('이체 실행 준비중입니다.')}>일괄 이체 실행</button>
           </div>
         </div>
 
@@ -251,12 +315,12 @@ export default function PayrollProcessingPage() {
               </tr>
             </thead>
             <tbody>
-              {payrollList.map((p, i) => (
+              {paginatedTransferList.map((p, i) => (
                 <tr key={i}>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <div style={{ width: '28px', height: '28px', backgroundColor: '#e5e7eb', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
-                        {p.employeeName.charAt(0)}
+                        {p.employeeName?.charAt(0) || '-'}
                       </div>
                       <div style={{ fontWeight: 500 }}>{p.employeeName}</div>
                     </div>
@@ -279,8 +343,8 @@ export default function PayrollProcessingPage() {
                   </td>
                   <td>
                     {p.transferStatus === 'FAILED' ? (
-                      <button style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', color: '#dc2626', border: '1px solid #fca5a5', backgroundColor: '#fef2f2', borderRadius: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={() => alert('재이체 실행')}>
-                        <IconRefresh /> 재이체
+                      <button style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem', color: '#dc2626', border: '1px solid #fca5a5', backgroundColor: '#fef2f2', borderRadius: '0.25rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }} onClick={() => alert('재이도 실행')}>
+                        <IconRefresh /> 재이도
                       </button>
                     ) : (
                       <span style={{ color: '#d1d5db' }}>-</span>
@@ -288,7 +352,7 @@ export default function PayrollProcessingPage() {
                   </td>
                 </tr>
               ))}
-              {payrollList.length === 0 && (
+              {paginatedTransferList.length === 0 && (
                 <tr>
                   <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
                     지급 대상이 없습니다.
@@ -297,6 +361,27 @@ export default function PayrollProcessingPage() {
               )}
             </tbody>
           </table>
+
+          {/* Pagination for Transfer */}
+          {transferTotalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.5rem', padding: '1rem' }}>
+              <button 
+                onClick={() => setTransferPage(p => Math.max(1, p - 1))} 
+                disabled={transferPage === 1}
+                style={{ padding: '0.25rem 0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', backgroundColor: '#fff', cursor: transferPage === 1 ? 'not-allowed' : 'pointer' }}
+              >
+                이전
+              </button>
+              <span style={{ fontSize: '0.875rem', color: '#374151' }}>{transferPage} / {transferTotalPages}</span>
+              <button 
+                onClick={() => setTransferPage(p => Math.min(transferTotalPages, p + 1))} 
+                disabled={transferPage === transferTotalPages}
+                style={{ padding: '0.25rem 0.5rem', border: '1px solid #d1d5db', borderRadius: '0.25rem', backgroundColor: '#fff', cursor: transferPage === transferTotalPages ? 'not-allowed' : 'pointer' }}
+              >
+                다음
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -304,7 +389,7 @@ export default function PayrollProcessingPage() {
       <section className={styles.section}>
         <div className={styles.sectionHeader}>
           <div className={styles.sectionTitle}>
-            <div className={`${styles.iconBox} ${styles.purple}`}>📊</div>
+            <div className={`${styles.iconBox} ${styles.purple}`}>↻</div>
             <div>
               <h2>급여 이력</h2>
               <p>월별 급여 처리 이력 및 통계 조회 · {targetYear}년 귀속분</p>
@@ -320,7 +405,7 @@ export default function PayrollProcessingPage() {
               <YAxis axisLine={false} tickLine={false} tickFormatter={(value) => `${value / 10000}만`} />
               <Tooltip formatter={(value: any) => formatMoney(value) + "원"} />
               <Legend />
-              <Bar dataKey="총 지급액" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="총지급액" fill="#3b82f6" radius={[4, 4, 0, 0]} />
               <Bar dataKey="실지급액" fill="#10b981" radius={[4, 4, 0, 0]} />
               <Bar dataKey="공제액" fill="#f87171" radius={[4, 4, 0, 0]} />
             </BarChart>

@@ -27,6 +27,14 @@ public class Appointment extends BaseEntity {
     private CommonCode appointmentType; 
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "before_department_id")
+    private Department beforeDepartment; 
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "before_position_code")
+    private CommonCode beforePosition; 
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "after_department_id")
     private Department afterDepartment; 
 

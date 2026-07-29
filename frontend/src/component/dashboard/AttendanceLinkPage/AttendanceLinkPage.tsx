@@ -209,8 +209,10 @@ export default function AttendanceLinkPage() {
               type="button" 
               className={isCustomMonth ? styles.topTabActive : styles.topTab}
               onClick={() => {
-                setCurrentYear(twoMonthsAgoYear);
-                setCurrentMonth(twoMonthsAgoMonth);
+                if (!isCustomMonth) {
+                  setCurrentYear(twoMonthsAgoYear);
+                  setCurrentMonth(twoMonthsAgoMonth);
+                }
               }}
             >
               지정 조회

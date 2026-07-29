@@ -4,10 +4,14 @@ import com.tphr.hr.approval.dto.ApprovalCreateRequest;
 import com.tphr.hr.approval.dto.ApprovalDetailResponse;
 import com.tphr.hr.approval.dto.ApprovalResponse;
 import com.tphr.hr.approval.dto.ApprovalUpdateRequest;
+import com.tphr.hr.approval.dto.ApprovalInboxResponse;
+import com.tphr.hr.approval.dto.ApprovalCommentCreateRequest;
 import com.tphr.hr.approval.service.ApprovalService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/approvals")
@@ -15,6 +19,24 @@ import org.springframework.web.bind.annotation.*;
 public class ApprovalController {
 
     private final ApprovalService approvalService;
+
+    /**
+     * 0. 결재 대기함 조회
+     */
+    @GetMapping("/pending")
+    public ResponseEntity<ApprovalInboxResponse> getPendingApprovals(@RequestParam Long approverId) {
+        return ResponseEntity.ok(approvalService.getPendingApprovals(approverId));
+    }
+
+    /**
+     * 0-1. 코멘트 추가
+     */
+    @PostMapping("/{id}/comments")
+    public ResponseEntity<Void> addComment(@PathVariable String id, @RequestBody ApprovalCommentCreateRequest request) {
+        approvalService.addComment(id, request);
+        return ResponseEntity.ok().build();
+    }
+
 
     /**
      * 1. 기안 문서 생성 (결재 올리기)
@@ -27,27 +49,27 @@ public class ApprovalController {
 
     /**
      * 2. 결재 승인
-     * @param id 문서 ID
-     * @param approverId 현재 승인하려는 사람의 사번 (실제로는 JWT Token에서 추출)
+     * @param id 문서 ID (접두어 포함)
+     * @param approverId 결재 승인하려는 사람의 사번 (실제로는 JWT Token에서 추출)
      */
     @PatchMapping("/{id}/approve")
     public ResponseEntity<ApprovalResponse> approveDocument(
-            @PathVariable Long id,
+            @PathVariable String id,
             @RequestParam Long approverId) {
-        // TODO: 향후 Spring Security 적용 시 @RequestParam 대신 @AuthenticationPrincipal 등으로 인증 정보 사용
+        // TODO: 추후 Spring Security 적용 시 @RequestParam 대신 @AuthenticationPrincipal 등으로 인증 정보 사용
         ApprovalResponse response = approvalService.approveDocument(id, approverId);
         return ResponseEntity.ok(response);
     }
 
     /**
      * 3. 결재 반려
-     * @param id 문서 ID
+     * @param id 문서 ID (접두어 포함)
      * @param approverId 반려하는 사람의 사번
      * @param reason 반려 사유
      */
     @PatchMapping("/{id}/reject")
     public ResponseEntity<ApprovalResponse> rejectDocument(
-            @PathVariable Long id,
+            @PathVariable String id,
             @RequestParam Long approverId,
             @RequestParam String reason) {
         ApprovalResponse response = approvalService.rejectDocument(id, approverId, reason);

@@ -9,7 +9,7 @@ interface DutyScheduleEntryResponse {
   id: number;
   employeeId: number;
   employeeName: string;
-  workDate: string; // YYYY-MM-DD
+  workDate: string | number[]; // YYYY-MM-DD or [YYYY, MM, DD]
   shiftTypeCode: string;
   shiftTypeName: string;
 }
@@ -57,6 +57,7 @@ export default function DutyPage() {
   
   const [draftShifts, setDraftShifts] = useState<Record<number, Shift[]>>({});
   const [hasChanges, setHasChanges] = useState(false);
+  const [hasSavedOnce, setHasSavedOnce] = useState(false);
   const [message, setMessage] = useState("");
 
   const daysInMonth = useMemo(() => new Date(currentYear, currentMonth, 0).getDate(), [currentYear, currentMonth]);
@@ -71,7 +72,7 @@ export default function DutyPage() {
   }, [currentYear, currentMonth, DAYS]);
 
   // 데이터 로드
-  const fetchSchedule = async () => {
+  const fetchSchedule = async (isAfterSave: boolean = false) => {
     setIsLoading(true);
     setMessage("");
     try {
@@ -88,6 +89,7 @@ export default function DutyPage() {
         setEmployees([]);
         setDraftShifts({});
         setHasChanges(false);
+        setHasSavedOnce(false);
         setIsLoading(false);
         return;
       }
@@ -111,9 +113,18 @@ export default function DutyPage() {
           });
         }
         
-        const dayMatch = entry.workDate.match(/-(\d{2})$/);
-        if (dayMatch) {
-          const dayIdx = parseInt(dayMatch[1], 10) - 1;
+        let dayStr = "";
+        if (Array.isArray(entry.workDate)) {
+          dayStr = String(entry.workDate[2]);
+        } else if (typeof entry.workDate === "string") {
+          const dayMatch = entry.workDate.match(/-(\d{2})$/);
+          if (dayMatch) {
+            dayStr = dayMatch[1];
+          }
+        }
+        
+        if (dayStr) {
+          const dayIdx = parseInt(dayStr, 10) - 1;
           const shift = entry.shiftTypeCode as Shift;
           empMap.get(entry.employeeId)!.shifts[dayIdx] = shift;
         }
@@ -142,6 +153,9 @@ export default function DutyPage() {
       });
       setDraftShifts(drafts);
       setHasChanges(false);
+      if (!isAfterSave) {
+        setHasSavedOnce(false);
+      }
       
     } catch (err) {
       console.error(err);
@@ -263,7 +277,9 @@ export default function DutyPage() {
       if (res.ok) {
         alert("임시 저장되었습니다.");
         setMessage("임시 저장되었습니다.");
-        fetchSchedule();
+        setHasChanges(false);
+        setHasSavedOnce(true);
+        await fetchSchedule(true);
       } else {
         const error = await res.text();
         setMessage(`저장 실패: ${error}`);
@@ -393,10 +409,10 @@ export default function DutyPage() {
               <button type="button" className={styles.outlineBtn} onClick={handleAutoGenerate} disabled={isLoading}>
                 자동 편성
               </button>
-              <button type="button" className={styles.outlineBtn} onClick={handleSaveDraft} disabled={isLoading || !hasChanges}>
+              <button type="button" className={styles.outlineBtn} onClick={handleSaveDraft} disabled={isLoading}>
                 임시 저장
               </button>
-              <button type="button" className={styles.primaryBtn} onClick={handleConfirm} disabled={isLoading || hasChanges}>
+              <button type="button" className={styles.primaryBtn} onClick={handleConfirm} disabled={isLoading || hasChanges || !hasSavedOnce}>
                 듀티표 발행
               </button>
             </>

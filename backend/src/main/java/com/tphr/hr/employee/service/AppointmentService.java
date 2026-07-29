@@ -81,6 +81,14 @@ public class AppointmentService {
                 .toList();
     }
 
+    // GET /appointments - 전체 발령 목록 조회
+    public List<AppointmentResponse> getAllAppointments() {
+        return appointmentRepository.findAll().stream()
+                .sorted((a1, a2) -> a2.getApplyDate().compareTo(a1.getApplyDate()))
+                .map(AppointmentResponse::from)
+                .toList();
+    }
+
     // applyDate 도래 시 Employee.department/position 을 실제 반영하는 배치/스케줄러 진입점.
     // AppointmentScheduler(@Scheduled) 에서 매일 호출된다.
     @Transactional
@@ -112,6 +120,8 @@ public class AppointmentService {
         return Appointment.builder()
                 .employee(employee)
                 .appointmentType(appointmentType)
+                .beforeDepartment(employee.getDepartment())
+                .beforePosition(employee.getPosition())
                 .afterDepartment(afterDepartment)
                 .afterPosition(afterPosition)
                 .afterPayStep(afterPayStep)

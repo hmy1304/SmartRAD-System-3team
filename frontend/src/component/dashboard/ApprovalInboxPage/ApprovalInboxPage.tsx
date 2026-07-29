@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { usePageGuard, hasPermission } from "@/utils/permission";
 
 import type {
@@ -9,6 +9,7 @@ import type {
   ApprovalInboxData,
   ApprovalPriority,
   AvatarTone,
+  ApprovalSummary,
 } from "@/types/approval";
 
 import styles from "./ApprovalInboxPage.module.scss";
@@ -18,10 +19,6 @@ type FilterType = "all" | ApprovalPriority;
 type SummaryTone = "blue" | "red" | "orange" | "green";
 
 type SummaryIconType = "inbox" | "flash" | "clock" | "check";
-
-interface ApprovalInboxPageProps {
-  initialData: ApprovalInboxData;
-}
 
 interface SummaryCard {
   label: string;
@@ -40,7 +37,7 @@ function getAvatarClass(tone: AvatarTone) {
     red: styles.avatarRed,
   };
 
-  return avatarClasses[tone];
+  return avatarClasses[tone] || styles.avatarBlue;
 }
 
 function SearchIcon() {
@@ -152,34 +149,54 @@ function SummaryIcon({ type }: { type: SummaryIconType }) {
   );
 }
 
-export default function ApprovalInboxPage({
-  initialData,
-}: ApprovalInboxPageProps) {
+export default function ApprovalInboxPage() {
   usePageGuard("APPROVAL_INBOX", "canRead");
+  
   const [filter, setFilter] = useState<FilterType>("all");
   const [keyword, setKeyword] = useState("");
 
-  const [documents, setDocuments] = useState<ApprovalDocument[]>(
-    initialData.documents,
-  );
+  const [documents, setDocuments] = useState<ApprovalDocument[]>([]);
+  const [comments, setComments] = useState<ApprovalComment[]>([]);
+  const [summary, setSummary] = useState<ApprovalSummary | null>(null);
 
-  const [comments, setComments] = useState<ApprovalComment[]>(
-    initialData.comments,
-  );
-
-  const [selectedId, setSelectedId] = useState(
-    initialData.documents[0]?.id ?? "",
-  );
-
-  const [isDetailOpen, setIsDetailOpen] = useState(
-    initialData.documents.length > 0,
-  );
-
+  const [selectedId, setSelectedId] = useState("");
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
 
-  const summary = initialData.summary;
+  useEffect(() => {
+    // In a real app, we'd get this from context or JWT decoding. Using a dummy/manager ID 1 for now.
+    setCurrentUserId(1); 
+    fetchData();
+  }, []);
 
-  const summaryCards: SummaryCard[] = [
+  const fetchData = async () => {
+    try {
+      // We assume user 1 for now, in a real system we'd extract this from the backend via token
+      const res = await fetch(`/api/v1/approvals/pending?approverId=1`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}`
+        }
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setDocuments(data.documents || []);
+        setComments(data.comments || []);
+        setSummary(data.summary);
+        
+        if (data.documents && data.documents.length > 0 && !selectedId) {
+            setSelectedId(data.documents[0].id);
+            setIsDetailOpen(true);
+        } else if (!data.documents || data.documents.length === 0) {
+            setIsDetailOpen(false);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch approvals:", error);
+    }
+  };
+
+  const summaryCards: SummaryCard[] = summary ? [
     {
       label: "전체 대기",
       value: `${summary.totalPending}건`,
@@ -208,7 +225,7 @@ export default function ApprovalInboxPage({
       tone: "green",
       icon: "check",
     },
-  ];
+  ] : [];
 
   const filteredDocuments = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
@@ -238,41 +255,88 @@ export default function ApprovalInboxPage({
     setIsDetailOpen(true);
   };
 
-  const handleAddComment = () => {
+  const handleAddComment = async () => {
     const trimmedComment = commentText.trim();
 
     if (!trimmedComment || !selectedDocument) {
       return;
     }
 
-    const newComment: ApprovalComment = {
-      id: Date.now(),
-      documentId: selectedDocument.id,
+    try {
+        const res = await fetch(`/api/v1/approvals/${selectedDocument.id}/comments`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}`
+            },
+            body: JSON.stringify({
+                content: trimmedComment,
+                employeeId: currentUserId || 1
+            })
+        });
 
-      initial: "김",
-      name: "김관리",
-      tag: "결재자",
+        if (res.ok) {
+            setCommentText("");
+            fetchData();
+        } else {
+            alert("코멘트 등록에 실패했습니다.");
+        }
+    } catch (e) {
+        console.error(e);
+        alert("코멘트 등록 중 오류가 발생했습니다.");
+    }
+  };
 
-      time: new Date().toLocaleString("ko-KR", {
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+  const handleApprove = async () => {
+    if (!hasPermission("APPROVAL_INBOX", "canApprove")) {
+        alert("결재 승인 권한이 없습니다.");
+        return;
+    }
+    try {
+        const res = await fetch(`/api/v1/approvals/${selectedDocument.id}/approve?approverId=${currentUserId || 1}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}` }
+        });
+        if (res.ok) {
+            alert("승인 처리되었습니다.");
+            fetchData();
+        } else {
+            alert("승인 처리에 실패했습니다.");
+        }
+    } catch (error) {
+        console.error(error);
+        alert("승인 처리 중 오류가 발생했습니다.");
+    }
+  };
 
-      content: trimmedComment,
-      avatarTone: "blue",
-    };
+  const handleReject = async () => {
+    if (!hasPermission("APPROVAL_INBOX", "canApprove")) {
+        alert("결재 처리(반려) 권한이 없습니다.");
+        return;
+    }
+    const reason = prompt("반려 사유를 입력하세요:");
+    if (reason === null) return;
 
-    setComments((currentComments) => [...currentComments, newComment]);
-
-    setCommentText("");
+    try {
+        const res = await fetch(`/api/v1/approvals/${selectedDocument.id}/reject?approverId=${currentUserId || 1}&reason=${encodeURIComponent(reason)}`, {
+            method: 'PATCH',
+            headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}` }
+        });
+        if (res.ok) {
+            alert("반려 처리되었습니다.");
+            fetchData();
+        } else {
+            const err = await res.json();
+            alert(`반려 처리에 실패했습니다. ${err.message || ''}`);
+        }
+    } catch (error) {
+        console.error(error);
+        alert("반려 처리 중 오류가 발생했습니다.");
+    }
   };
 
   return (
     <>
-
         <div
           className={`${styles.contentGrid} ${
             !isDetailOpen ? styles.detailClosed : ""
@@ -282,7 +346,7 @@ export default function ApprovalInboxPage({
             <section className={styles.pageHeader}>
               <div>
                 <h1>결재 대기함</h1>
-                <p>처리가 필요한 결재 문서 목록입니다.</p>
+                <p>처리가 필요한 결재 문서 및 인사/휴가 발령 목록입니다.</p>
               </div>
 
               <button type="button" className={styles.exportButton}>
@@ -476,10 +540,6 @@ export default function ApprovalInboxPage({
                     1
                   </button>
 
-                  <button type="button">2</button>
-
-                  <button type="button">3</button>
-
                   <button type="button" aria-label="다음 페이지">
                     ›
                   </button>
@@ -563,70 +623,34 @@ export default function ApprovalInboxPage({
                 </section>
 
                 <section className={styles.detailSection}>
-                  <h3>결재선</h3>
-
-                  <div className={styles.approvalStep}>
-                    <span className={styles.stepNumber}>1</span>
-
-                    <span
-                      className={`${styles.stepAvatar} ${styles.avatarBlue}`}
-                    >
-                      김
-                    </span>
-
-                    <div className={styles.stepInfo}>
-                      <strong>김관리 팀장</strong>
-                      <small>인사팀 · 1차 결재</small>
-                    </div>
-
-                    <em className={styles.waitingBadge}>대기중</em>
-                  </div>
-
-                  <div className={styles.approvalStep}>
-                    <span className={styles.stepNumber}>2</span>
-
-                    <span
-                      className={`${styles.stepAvatar} ${styles.avatarGreen}`}
-                    >
-                      박
-                    </span>
-
-                    <div className={styles.stepInfo}>
-                      <strong>박원장 부장</strong>
-                      <small>경영지원 · 최종 결재</small>
-                    </div>
-
-                    <em className={styles.pendingBadge}>미도달</em>
-                  </div>
+                  <h3>상세 내용</h3>
+                  <div 
+                    className={styles.requestContent} 
+                    dangerouslySetInnerHTML={{ __html: selectedDocument.description }} 
+                  />
                 </section>
 
-                <section className={styles.detailSection}>
-                  <h3>요청 내용</h3>
+                {selectedDocument.fileName && (
+                    <section className={styles.detailSection}>
+                    <h3>첨부 파일</h3>
 
-                  <div className={styles.requestContent}>
-                    {selectedDocument.description}
-                  </div>
-                </section>
+                    <div className={styles.fileCard}>
+                        <span className={styles.fileIconBox}>
+                        <FileIcon />
+                        </span>
 
-                <section className={styles.detailSection}>
-                  <h3>첨부 파일</h3>
+                        <div className={styles.fileInfo}>
+                        <strong>{selectedDocument.fileName}</strong>
 
-                  <div className={styles.fileCard}>
-                    <span className={styles.fileIconBox}>
-                      <FileIcon />
-                    </span>
+                        <small>{selectedDocument.fileMeta}</small>
+                        </div>
 
-                    <div className={styles.fileInfo}>
-                      <strong>{selectedDocument.fileName}</strong>
-
-                      <small>{selectedDocument.fileMeta}</small>
+                        <button type="button" className={styles.fileDownload}>
+                        ↓ 다운
+                        </button>
                     </div>
-
-                    <button type="button" className={styles.fileDownload}>
-                      ↓ 다운
-                    </button>
-                  </div>
-                </section>
+                    </section>
+                )}
 
                 <section className={styles.commentSection}>
                   <div className={styles.commentHeader}>
@@ -670,7 +694,7 @@ export default function ApprovalInboxPage({
                     <span
                       className={`${styles.commentAvatar} ${styles.avatarBlue}`}
                     >
-                      김
+                      나
                     </span>
 
                     <input
@@ -700,13 +724,7 @@ export default function ApprovalInboxPage({
                 <button 
                   type="button" 
                   className={styles.rejectButton}
-                  onClick={() => {
-                    if (!hasPermission("APPROVAL_INBOX", "canApprove")) {
-                      alert("결재 처리(반려) 권한이 없습니다.");
-                      return;
-                    }
-                    alert("반려 처리되었습니다.");
-                  }}
+                  onClick={handleReject}
                 >
                   × 반려
                 </button>
@@ -714,13 +732,7 @@ export default function ApprovalInboxPage({
                 <button 
                   type="button" 
                   className={styles.approveButton}
-                  onClick={() => {
-                    if (!hasPermission("APPROVAL_INBOX", "canApprove")) {
-                      alert("결재 승인 권한이 없습니다.");
-                      return;
-                    }
-                    alert("승인 처리되었습니다.");
-                  }}
+                  onClick={handleApprove}
                 >
                   ✓ 승인
                 </button>

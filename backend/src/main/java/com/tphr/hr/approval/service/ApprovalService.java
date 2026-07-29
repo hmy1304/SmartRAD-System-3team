@@ -2,12 +2,18 @@ package com.tphr.hr.approval.service;
 
 import com.tphr.hr.approval.dto.*;
 import com.tphr.hr.approval.entity.ApprovalAttachment;
+import com.tphr.hr.approval.entity.ApprovalComment;
 import com.tphr.hr.approval.entity.ApprovalDocument;
 import com.tphr.hr.approval.entity.ApprovalLine;
 import com.tphr.hr.approval.repository.ApprovalAttachmentRepository;
+import com.tphr.hr.approval.repository.ApprovalCommentRepository;
 import com.tphr.hr.approval.repository.ApprovalDocumentRepository;
 import com.tphr.hr.approval.repository.ApprovalLineRepository;
+import com.tphr.hr.employee.entity.Appointment;
 import com.tphr.hr.employee.entity.Employee;
+import com.tphr.hr.employee.repository.AppointmentRepository;
+import com.tphr.hr.leave.entity.LeaveApplication;
+import com.tphr.hr.leave.repository.LeaveApplicationRepository;
 import com.tphr.hr.system.entity.CommonCode;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -29,69 +37,195 @@ public class ApprovalService {
     private final ApprovalDocumentRepository approvalDocumentRepository;
     private final ApprovalLineRepository approvalLineRepository;
     private final ApprovalAttachmentRepository approvalAttachmentRepository;
+    private final ApprovalCommentRepository approvalCommentRepository;
+    private final LeaveApplicationRepository leaveApplicationRepository;
+    private final AppointmentRepository appointmentRepository;
     private final EntityManager entityManager;
 
-    /**
-     * 1. 문서 기안 (Create Document)
-     */
-    @Transactional
-    public ApprovalResponse createDocument(ApprovalCreateRequest request) {
-        // 프록시 객체로 조회 (Repository 없이 FK만 맵핑)
-        Employee drafter = entityManager.getReference(Employee.class, request.getDraftedById());
-        CommonCode docType = entityManager.getReference(CommonCode.class, request.getDocTypeCode());
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy. MM. dd HH:mm");
 
-        // 1-1. 문서 번호 생성 (예: APP-20260720-UUID)
-        String docNumber = "APP-" + LocalDateTime.now().getYear() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    @Transactional(readOnly = true)
+    public ApprovalInboxResponse getPendingApprovals(Long approverId) {
+        List<ApprovalInboxResponse.ApprovalDocumentDto> docDtos = new ArrayList<>();
 
-        // 1-2. 원본 문서 저장
-        ApprovalDocument document = ApprovalDocument.builder()
-                .docNumber(docNumber)
-                .title(request.getTitle())
-                .docType(docType)
-                .content(request.getContent())
-                .draftedBy(drafter)
-                .status("IN_PROGRESS") // 기안 즉시 진행 중으로 상태 변경
+        // 1. Leave Applications (status = "확인중")
+        // We will fetch all pending leaves for demonstration (in real app, map approverId)
+        List<LeaveApplication> pendingLeaves = leaveApplicationRepository.findAll().stream()
+                .filter(l -> "확인중".equals(l.getStatus()))
+                .collect(Collectors.toList());
+
+        for (LeaveApplication leave : pendingLeaves) {
+            String contentHtml = String.format("<p><strong>휴가 종류:</strong> %s</p><p><strong>기간:</strong> %s ~ %s (%.1f일)</p><p><strong>사유:</strong> %s</p>",
+                    leave.getLeaveType(), leave.getStartDate(), leave.getEndDate(), leave.getDays(), leave.getNote() != null ? leave.getNote() : "없음");
+
+            docDtos.add(ApprovalInboxResponse.ApprovalDocumentDto.builder()
+                    .id("LEAVE-" + leave.getId())
+                    .priority("normal")
+                    .priorityLabel("일반")
+                    .title(leave.getEmployee().getName() + " 휴가 신청 (" + leave.getLeaveType() + ")")
+                    .attachment(leave.getAttachmentName() != null ? leave.getAttachmentName() : "")
+                    .drafter(leave.getEmployee().getName())
+                    .drafterInitial(leave.getEmployee().getName().substring(0, 1))
+                    .drafterDepartment(leave.getEmployee().getDepartment() != null ? leave.getEmployee().getDepartment().getName() : "")
+                    .drafterRole(leave.getEmployee().getPosition() != null ? leave.getEmployee().getPosition().getName() : "")
+                    .avatarTone("blue")
+                    .requestedAt(leave.getCreatedAt() != null ? leave.getCreatedAt().format(FORMATTER) : "")
+                    .dDay(calculateDDay(leave.getStartDate().atStartOfDay()))
+                    .description(contentHtml)
+                    .fileName(leave.getAttachmentName() != null ? leave.getAttachmentName() : "")
+                    .fileMeta(leave.getAttachmentName() != null ? "첨부파일" : "")
+                    .build());
+        }
+
+        // 2. Appointments (applied = false)
+        List<Appointment> pendingAppointments = appointmentRepository.findByAppliedFalse();
+        for (Appointment appt : pendingAppointments) {
+            String contentHtml = String.format("<p><strong>발령일:</strong> %s</p><p><strong>발령유형:</strong> %s</p><p><strong>부서 변경:</strong> %s -> %s</p>",
+                    appt.getApplyDate(),
+                    appt.getAppointmentType() != null ? appt.getAppointmentType().getName() : "",
+                    appt.getBeforeDepartment() != null ? appt.getBeforeDepartment().getName() : "-",
+                    appt.getAfterDepartment() != null ? appt.getAfterDepartment().getName() : "-");
+
+            docDtos.add(ApprovalInboxResponse.ApprovalDocumentDto.builder()
+                    .id("APPT-" + appt.getId())
+                    .priority("urgent")
+                    .priorityLabel("긴급")
+                    .title(appt.getEmployee().getName() + " 인사발령 기안")
+                    .attachment("")
+                    .drafter("시스템")
+                    .drafterInitial("시")
+                    .drafterDepartment("인사부")
+                    .drafterRole("관리자")
+                    .avatarTone("red")
+                    .requestedAt(appt.getCreatedAt() != null ? appt.getCreatedAt().format(FORMATTER) : "")
+                    .dDay(calculateDDay(appt.getApplyDate().atStartOfDay()))
+                    .description(contentHtml)
+                    .fileName("")
+                    .fileMeta("")
+                    .build());
+        }
+
+        // 3. Regular ApprovalDocuments (status = WAITING)
+        List<ApprovalLine> pendingLines = approvalLineRepository.findAll().stream()
+                .filter(l -> l.getApprover().getId().equals(approverId) && "WAITING".equals(l.getStatus()))
+                .collect(Collectors.toList());
+
+        for (ApprovalLine line : pendingLines) {
+            ApprovalDocument doc = line.getDocument();
+            docDtos.add(ApprovalInboxResponse.ApprovalDocumentDto.builder()
+                    .id("DOC-" + doc.getId())
+                    .priority("normal")
+                    .priorityLabel("일반")
+                    .title(doc.getTitle())
+                    .attachment("")
+                    .drafter(doc.getDraftedBy().getName())
+                    .drafterInitial(doc.getDraftedBy().getName().substring(0, 1))
+                    .drafterDepartment(doc.getDraftedBy().getDepartment() != null ? doc.getDraftedBy().getDepartment().getName() : "")
+                    .drafterRole(doc.getDraftedBy().getPosition() != null ? doc.getDraftedBy().getPosition().getName() : "")
+                    .avatarTone("green")
+                    .requestedAt(doc.getCreatedAt() != null ? doc.getCreatedAt().format(FORMATTER) : "")
+                    .dDay("D-0")
+                    .description(doc.getContent())
+                    .fileName("")
+                    .fileMeta("")
+                    .build());
+        }
+
+        // Aggregate comments for all these docs
+        List<ApprovalInboxResponse.ApprovalCommentDto> commentDtos = new ArrayList<>();
+        for (ApprovalInboxResponse.ApprovalDocumentDto doc : docDtos) {
+            List<ApprovalComment> comments = approvalCommentRepository.findByDocumentIdStrOrderByCreatedAtAsc(doc.getId());
+            for (ApprovalComment c : comments) {
+                commentDtos.add(ApprovalInboxResponse.ApprovalCommentDto.builder()
+                        .id(c.getId())
+                        .documentId(c.getDocumentIdStr())
+                        .initial(c.getEmployee().getName().substring(0, 1))
+                        .name(c.getEmployee().getName())
+                        .tag("결재자")
+                        .time(c.getCreatedAt() != null ? c.getCreatedAt().format(FORMATTER) : "")
+                        .content(c.getContent())
+                        .avatarTone("purple")
+                        .build());
+            }
+        }
+
+        int urgentCount = (int) docDtos.stream().filter(d -> "urgent".equals(d.getPriority())).count();
+        int dueTodayCount = (int) docDtos.stream().filter(d -> "D-0".equals(d.getDDay())).count();
+
+        ApprovalInboxResponse.ApprovalSummaryDto summary = ApprovalInboxResponse.ApprovalSummaryDto.builder()
+                .totalPending(docDtos.size())
+                .urgentPending(urgentCount)
+                .dueToday(dueTodayCount)
+                .processedThisMonth(15) // mock
+                .approvalRate(95) // mock
                 .build();
-        ApprovalDocument savedDocument = approvalDocumentRepository.save(document);
 
-        // 1-3. 결재선 저장 (순차적으로)
-        List<ApprovalLine> lines = new ArrayList<>();
-        List<Long> approverIds = request.getApproverIds();
-        for (int i = 0; i < approverIds.size(); i++) {
-            Employee approver = entityManager.getReference(Employee.class, approverIds.get(i));
-            String initialStatus = (i == 0) ? "WAITING" : "PENDING"; // 첫 번째 결재자만 대기 상태
-
-            ApprovalLine line = ApprovalLine.builder()
-                    .document(savedDocument)
-                    .sequence(i + 1)
-                    .approver(approver)
-                    .status(initialStatus)
-                    .build();
-            lines.add(line);
-        }
-        approvalLineRepository.saveAll(lines);
-
-        // 1-4. 첨부파일(메타데이터) 저장
-        if (request.getAttachmentFileNames() != null) {
-            List<ApprovalAttachment> attachments = request.getAttachmentFileNames().stream()
-                    .map(fileName -> ApprovalAttachment.builder()
-                            .document(savedDocument)
-                            .fileName(fileName)
-                            .filePath("/mock-storage/" + fileName) // Mock 경로
-                            .fileSizeKb(1024) // 임의 사이즈
-                            .build())
-                    .collect(Collectors.toList());
-            approvalAttachmentRepository.saveAll(attachments);
-        }
-
-        return mapToResponse(savedDocument);
+        return ApprovalInboxResponse.builder()
+                .summary(summary)
+                .documents(docDtos)
+                .comments(commentDtos)
+                .build();
     }
 
-    /**
-     * 2. 결재 승인
-     */
+    private String calculateDDay(LocalDateTime targetDate) {
+        if (targetDate == null) return "D-0";
+        long days = ChronoUnit.DAYS.between(LocalDateTime.now().toLocalDate(), targetDate.toLocalDate());
+        if (days == 0) return "D-0";
+        if (days < 0) return "D+" + Math.abs(days);
+        return "D-" + days;
+    }
+
     @Transactional
-    public ApprovalResponse approveDocument(Long documentId, Long approverId) {
+    public void addComment(String documentIdStr, ApprovalCommentCreateRequest request) {
+        Employee emp = entityManager.getReference(Employee.class, request.getEmployeeId());
+        ApprovalComment comment = ApprovalComment.builder()
+                .documentIdStr(documentIdStr)
+                .employee(emp)
+                .content(request.getContent())
+                .build();
+        approvalCommentRepository.save(comment);
+    }
+
+    @Transactional
+    public ApprovalResponse approveDocument(String id, Long approverId) {
+        if (id.startsWith("LEAVE-")) {
+            Long leaveId = Long.parseLong(id.split("-")[1]);
+            LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
+                    .orElseThrow(() -> new IllegalArgumentException("휴가신청을 찾을 수 없습니다."));
+            leave.changeStatus("승인완료", leave.getNote());
+            // Need to return a mocked response
+            return ApprovalResponse.builder().id(leaveId).title("휴가 승인됨").status("COMPLETED").build();
+        } else if (id.startsWith("APPT-")) {
+            Long apptId = Long.parseLong(id.split("-")[1]);
+            Appointment appt = appointmentRepository.findById(apptId)
+                    .orElseThrow(() -> new IllegalArgumentException("발령을 찾을 수 없습니다."));
+            appt.markApplied();
+            return ApprovalResponse.builder().id(apptId).title("발령 승인됨").status("COMPLETED").build();
+        } else if (id.startsWith("DOC-")) {
+            Long docId = Long.parseLong(id.split("-")[1]);
+            return approveRegularDocument(docId, approverId);
+        }
+        throw new IllegalArgumentException("Invalid ID Format");
+    }
+
+    @Transactional
+    public ApprovalResponse rejectDocument(String id, Long approverId, String reason) {
+        if (id.startsWith("LEAVE-")) {
+            Long leaveId = Long.parseLong(id.split("-")[1]);
+            LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
+                    .orElseThrow(() -> new IllegalArgumentException("휴가신청을 찾을 수 없습니다."));
+            leave.changeStatus("반려", reason);
+            return ApprovalResponse.builder().id(leaveId).title("휴가 반려됨").status("REJECTED").build();
+        } else if (id.startsWith("APPT-")) {
+            throw new IllegalArgumentException("인사발령은 반려할 수 없습니다. (데이터 삭제 처리 필요)");
+        } else if (id.startsWith("DOC-")) {
+            Long docId = Long.parseLong(id.split("-")[1]);
+            return rejectRegularDocument(docId, approverId, reason);
+        }
+        throw new IllegalArgumentException("Invalid ID Format");
+    }
+
+    private ApprovalResponse approveRegularDocument(Long documentId, Long approverId) {
         ApprovalDocument document = approvalDocumentRepository.findById(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다."));
         
@@ -119,11 +253,7 @@ public class ApprovalService {
         return mapToResponse(document);
     }
 
-    /**
-     * 3. 결재 반려
-     */
-    @Transactional
-    public ApprovalResponse rejectDocument(Long documentId, Long approverId, String reason) {
+    private ApprovalResponse rejectRegularDocument(Long documentId, Long approverId, String reason) {
         ApprovalDocument document = approvalDocumentRepository.findById(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다."));
 
@@ -140,14 +270,58 @@ public class ApprovalService {
         return mapToResponse(document);
     }
 
-    /**
-     * 4. 문서 상세 조회
-     */
+    // Other original methods (createDocument, getApprovalDetail, deleteDocument, updateDocument) ...
+
+    @Transactional
+    public ApprovalResponse createDocument(ApprovalCreateRequest request) {
+        Employee drafter = entityManager.getReference(Employee.class, request.getDraftedById());
+        CommonCode docType = entityManager.getReference(CommonCode.class, request.getDocTypeCode());
+
+        String docNumber = "APP-" + LocalDateTime.now().getYear() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+
+        ApprovalDocument document = ApprovalDocument.builder()
+                .docNumber(docNumber)
+                .title(request.getTitle())
+                .docType(docType)
+                .content(request.getContent())
+                .draftedBy(drafter)
+                .status("IN_PROGRESS")
+                .build();
+        ApprovalDocument savedDocument = approvalDocumentRepository.save(document);
+
+        List<ApprovalLine> lines = new ArrayList<>();
+        List<Long> approverIds = request.getApproverIds();
+        for (int i = 0; i < approverIds.size(); i++) {
+            Employee approver = entityManager.getReference(Employee.class, approverIds.get(i));
+            String initialStatus = (i == 0) ? "WAITING" : "PENDING";
+            ApprovalLine line = ApprovalLine.builder()
+                    .document(savedDocument)
+                    .sequence(i + 1)
+                    .approver(approver)
+                    .status(initialStatus)
+                    .build();
+            lines.add(line);
+        }
+        approvalLineRepository.saveAll(lines);
+
+        if (request.getAttachmentFileNames() != null) {
+            List<ApprovalAttachment> attachments = request.getAttachmentFileNames().stream()
+                    .map(fileName -> ApprovalAttachment.builder()
+                            .document(savedDocument)
+                            .fileName(fileName)
+                            .filePath("/mock-storage/" + fileName)
+                            .fileSizeKb(1024)
+                            .build())
+                    .collect(Collectors.toList());
+            approvalAttachmentRepository.saveAll(attachments);
+        }
+        return mapToResponse(savedDocument);
+    }
+
     @Transactional(readOnly = true)
     public ApprovalDetailResponse getApprovalDetail(Long documentId) {
         ApprovalDocument document = approvalDocumentRepository.findById(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다."));
-        
         List<ApprovalLine> lines = approvalLineRepository.findByDocumentIdOrderBySequenceAsc(documentId);
         List<ApprovalAttachment> attachments = approvalAttachmentRepository.findByDocumentId(documentId);
 
@@ -179,9 +353,6 @@ public class ApprovalService {
                 .build();
     }
 
-    /**
-     * 5. 결재 문서 삭제 (통과(COMPLETED)되지 않은 문서만)
-     */
     @Transactional
     public void deleteDocument(Long documentId) {
         ApprovalDocument document = approvalDocumentRepository.findById(documentId)
@@ -199,9 +370,6 @@ public class ApprovalService {
         approvalDocumentRepository.delete(document);
     }
 
-    /**
-     * 6. 결재 문서 수정 (제목 및 내용)
-     */
     @Transactional
     public ApprovalResponse updateDocument(Long documentId, Long drafterId, ApprovalUpdateRequest request) {
         ApprovalDocument document = approvalDocumentRepository.findById(documentId)
@@ -226,8 +394,6 @@ public class ApprovalService {
         document.updateDocument(request.getTitle(), request.getContent());
         return mapToResponse(document);
     }
-
-    // --- Helper Methods ---
 
     private ApprovalResponse mapToResponse(ApprovalDocument doc) {
         return ApprovalResponse.builder()

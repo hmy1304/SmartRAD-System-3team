@@ -1,15 +1,23 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 
 import styles from "./AppointmentPage.module.scss";
 
-type AppointmentType = "승진" | "전보" | "보직변경";
+import AppointmentModal from "./AppointmentModal";
+import { getAllAppointments } from "@/services/appointmentService";
+import type { AppointmentResponse } from "@/services/appointmentService";
+
+// For Modal dropdowns
+interface Employee { id: number; empNo: string; name: string; departmentName: string; positionName: string; }
+interface Department { id: number; name: string; }
+interface CommonCode { code: string; name: string; }
+
 type AppointmentStatus = "완료" | "처리중" | "대기";
 
 interface AppointmentItem {
   id: string;
-  type: AppointmentType;
+  type: string;
   name: string;
   initial: string;
   tone: "blue" | "green" | "purple" | "orange" | "red";
@@ -21,82 +29,96 @@ interface AppointmentItem {
   status: AppointmentStatus;
 }
 
-const MOCK_DATA: AppointmentItem[] = [
-  {
-    id: "TR-2026-024",
-    type: "승진",
-    name: "박서준",
-    initial: "박",
-    tone: "blue",
-    fromDept: "영상의학과",
-    fromPosition: "과장",
-    toDept: "영상의학과",
-    toPosition: "부장",
-    date: "2026.07.01",
-    status: "완료",
-  },
-  {
-    id: "TR-2026-023",
-    type: "전보",
-    name: "오하윤",
-    initial: "오",
-    tone: "green",
-    fromDept: "간호부",
-    fromPosition: "과장",
-    toDept: "영상의학과",
-    toPosition: "과장",
-    date: "2026.07.05",
-    status: "완료",
-  },
-  {
-    id: "TR-2026-022",
-    type: "보직변경",
-    name: "신유나",
-    initial: "신",
-    tone: "purple",
-    fromDept: "응급의학과",
-    fromPosition: "대리",
-    toDept: "영상의학과",
-    toPosition: "대리",
-    date: "2026.07.08",
-    status: "처리중",
-  },
-  {
-    id: "TR-2026-021",
-    type: "승진",
-    name: "배준혁",
-    initial: "배",
-    tone: "orange",
-    fromDept: "원무과",
-    fromPosition: "주임",
-    toDept: "원무과",
-    toPosition: "대리",
-    date: "2026.07.10",
-    status: "대기",
-  },
-  {
-    id: "TR-2026-020",
-    type: "전보",
-    name: "최지은",
-    initial: "최",
-    tone: "red",
-    fromDept: "시설관리팀",
-    fromPosition: "과장",
-    toDept: "인사총무팀",
-    toPosition: "과장",
-    date: "2026.07.12",
-    status: "대기",
-  },
-];
-
-const FILTERS = ["전체", "승진", "전보", "보직변경"] as const;
+const FILTERS = ["전체", "승진", "전보", "보직변경", "강등", "파견"] as const;
 
 export default function AppointmentPage() {
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("전체");
   const [keyword, setKeyword] = useState("");
+  const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  // For modal data
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [appointmentTypes, setAppointmentTypes] = useState<CommonCode[]>([]);
+  const [positions, setPositions] = useState<CommonCode[]>([]);
+
+  const fetchAppointments = async () => {
+    try {
+      const data = await getAllAppointments();
+      const mapped: AppointmentItem[] = data.map((a: AppointmentResponse) => {
+        let status: AppointmentStatus = "대기";
+        if (a.applied) {
+          status = "완료";
+        } else if (new Date(a.applyDate) <= new Date()) {
+          status = "처리중";
+        }
+        
+        // Random tone based on id
+        const tones: ("blue" | "green" | "purple" | "orange" | "red")[] = ["blue", "green", "purple", "orange", "red"];
+        const tone = tones[a.id % tones.length];
+
+        return {
+          id: `TR-2026-${String(a.id).padStart(3, '0')}`,
+          type: a.appointmentTypeName,
+          name: a.employeeName,
+          initial: a.employeeName.charAt(0),
+          tone,
+          fromDept: a.beforeDepartmentName || "-",
+          fromPosition: a.beforePositionName || "-",
+          toDept: a.afterDepartmentName || "-",
+          toPosition: a.afterPositionName || "-",
+          date: a.applyDate.replace(/-/g, '.'),
+          status
+        };
+      });
+      setAppointments(mapped);
+    } catch (error) {
+      console.error("Failed to fetch appointments:", error);
+    }
+  };
+
+  const fetchModalData = async () => {
+    try {
+      const headers = {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}`
+      };
+      
+      const [empRes, deptRes, codeRes] = await Promise.all([
+        fetch('/api-system/employees', { headers }),
+        fetch('/api-system/departments', { headers }),
+        fetch('/common-codes', { headers })
+      ]);
+      if (empRes.ok) {
+        const empData = await empRes.json();
+        // Extract basic employee info from response (assuming it's a page or list)
+        const emps = empData.content ? empData.content : empData;
+        setEmployees(emps);
+      }
+      if (deptRes.ok) {
+        setDepartments(await deptRes.json());
+      }
+      if (codeRes.ok) {
+        const codes = await codeRes.json();
+        setAppointmentTypes(codes.filter((c: any) => c.groupCode === 'APT'));
+        setPositions(codes.filter((c: any) => c.groupCode === 'POS'));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  useEffect(() => {
+    fetchAppointments();
+    fetchModalData();
+  }, []);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 8;
 
   const filtered = useMemo(() => {
-    return MOCK_DATA.filter((item) => {
+    return appointments.filter((item) => {
       const matchFilter = filter === "전체" || item.type === filter;
       const matchKeyword =
         !keyword ||
@@ -105,7 +127,25 @@ export default function AppointmentPage() {
         item.id.toLowerCase().includes(keyword.toLowerCase());
       return matchFilter && matchKeyword;
     });
+  }, [filter, keyword, appointments]);
+
+  // Reset page to 1 when filter or keyword changes
+  useEffect(() => {
+    setCurrentPage(1);
   }, [filter, keyword]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / ITEMS_PER_PAGE));
+  const paginatedAppointments = filtered.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  // Calculate stats for summary row
+  const thisMonthCount = appointments.filter(a => a.date.startsWith("2026.07") || a.date.startsWith("2026.08")).length; // Assuming current month is 07 or 08
+  const promoteCount = appointments.filter(a => a.type === "승진").length;
+  const transferCount = appointments.filter(a => a.type === "전보").length;
+  const roleChangeCount = appointments.filter(a => a.type === "보직변경").length;
+
 
   return (
     <main className={styles.main}>
@@ -119,7 +159,7 @@ export default function AppointmentPage() {
               <button type="button" className={styles.outlineBtn}>
                 내보내기
               </button>
-              <button type="button" className={styles.primaryBtn}>
+              <button type="button" className={styles.primaryBtn} onClick={() => setIsModalOpen(true)}>
                 + 발령 등록
               </button>
             </div>
@@ -147,7 +187,7 @@ export default function AppointmentPage() {
               <div>
                 <label>이번달 발령</label>
                 <p>
-                  24<span>건</span>
+                  {thisMonthCount}<span>건</span>
                 </p>
               </div>
             </div>
@@ -170,7 +210,7 @@ export default function AppointmentPage() {
               <div>
                 <label>승진 발령</label>
                 <p>
-                  8<span>건</span>
+                  {promoteCount}<span>건</span>
                 </p>
               </div>
             </div>
@@ -193,7 +233,7 @@ export default function AppointmentPage() {
               <div>
                 <label>전보 발령</label>
                 <p>
-                  11<span>건</span>
+                  {transferCount}<span>건</span>
                 </p>
               </div>
             </div>
@@ -216,7 +256,7 @@ export default function AppointmentPage() {
               <div>
                 <label>보직 변경</label>
                 <p>
-                  5<span>건</span>
+                  {roleChangeCount}<span>건</span>
                 </p>
               </div>
             </div>
@@ -246,76 +286,122 @@ export default function AppointmentPage() {
               </div>
             </div>
 
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>발령번호</th>
-                  <th>발령 유형</th>
-                  <th>대상 직원</th>
-                  <th>이전 부서/직위</th>
-                  <th>변경 부서/직위</th>
-                  <th>발령일</th>
-                  <th>상태</th>
-                  <th>처리</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((item) => (
-                  <tr key={item.id}>
-                    <td className={styles.idCell}>{item.id}</td>
-                    <td>
-                      <span
-                        className={`${styles.typeBadge} ${
-                          item.type === "승진"
-                            ? styles.typePromote
-                            : item.type === "전보"
-                              ? styles.typeTransfer
-                              : styles.typePosition
-                        }`}
-                      >
-                        {item.type}
-                      </span>
-                    </td>
-                    <td>
-                      <div className={styles.person}>
-                        <span
-                          className={`${styles.avatar} ${styles[item.tone]}`}
-                        >
-                          {item.initial}
-                        </span>
-                        {item.name}
-                      </div>
-                    </td>
-                    <td>
-                      {item.fromDept} / {item.fromPosition}
-                    </td>
-                    <td className={styles.toCell}>
-                      {item.toDept} / {item.toPosition}
-                    </td>
-                    <td>{item.date}</td>
-                    <td>
-                      <span
-                        className={`${styles.statusBadge} ${
-                          item.status === "완료"
-                            ? styles.statusDone
-                            : item.status === "처리중"
-                              ? styles.statusProgress
-                              : styles.statusWait
-                        }`}
-                      >
-                        {item.status}
-                      </span>
-                    </td>
-                    <td>
-                      <button type="button" className={styles.moreBtn}>
-                        ···
-                      </button>
-                    </td>
+            <div className={styles.tableWrapper}>
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>발령번호</th>
+                    <th>발령 유형</th>
+                    <th>대상 직원</th>
+                    <th>이전 부서/직위</th>
+                    <th>변경 부서/직위</th>
+                    <th>발령일</th>
+                    <th>상태</th>
+                    <th>처리</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {paginatedAppointments.map((item) => (
+                    <tr key={item.id}>
+                      <td className={styles.idCell}>{item.id}</td>
+                      <td>
+                        <span
+                          className={`${styles.typeBadge} ${
+                            item.type === "승진"
+                              ? styles.typePromote
+                              : item.type === "전보"
+                                ? styles.typeTransfer
+                                : item.type === "강등"
+                                  ? styles.typeDemote
+                                  : item.type === "파견"
+                                    ? styles.typeDispatch
+                                    : styles.typePosition
+                          }`}
+                        >
+                          {item.type}
+                        </span>
+                      </td>
+                      <td>
+                        <div className={styles.person}>
+                          <span
+                            className={`${styles.avatar} ${styles[item.tone]}`}
+                          >
+                            {item.initial}
+                          </span>
+                          {item.name}
+                        </div>
+                      </td>
+                      <td>
+                        {item.fromDept} / {item.fromPosition}
+                      </td>
+                      <td className={styles.toCell}>
+                        {item.toDept} / {item.toPosition}
+                      </td>
+                      <td>{item.date}</td>
+                      <td>
+                        <span
+                          className={`${styles.statusBadge} ${
+                            item.status === "완료"
+                              ? styles.statusDone
+                              : item.status === "처리중"
+                                ? styles.statusProgress
+                                : styles.statusWait
+                          }`}
+                        >
+                          {item.status}
+                        </span>
+                      </td>
+                      <td>
+                        <button type="button" className={styles.moreBtn}>
+                          ···
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* 페이지네이션 */}
+            <div className={styles.pagination}>
+              <button
+                className={styles.pageBtn}
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                &lt;
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                <button
+                  key={pageNum}
+                  className={`${styles.pageBtn} ${currentPage === pageNum ? styles.pageBtnActive : ""}`}
+                  onClick={() => setCurrentPage(pageNum)}
+                >
+                  {pageNum}
+                </button>
+              ))}
+              <button
+                className={styles.pageBtn}
+                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                &gt;
+              </button>
+            </div>
           </section>
+          {isModalOpen && (
+            <AppointmentModal
+              employees={employees}
+              departments={departments}
+              appointmentTypes={appointmentTypes}
+              positions={positions}
+              onClose={() => setIsModalOpen(false)}
+              onSuccess={() => {
+                setIsModalOpen(false);
+                fetchAppointments();
+              }}
+            />
+          )}
         </main>
   );
 }

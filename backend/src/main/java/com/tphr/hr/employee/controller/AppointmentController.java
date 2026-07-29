@@ -37,4 +37,10 @@ public class AppointmentController {
     public ResponseEntity<List<AppointmentResponse>> getHistory(@PathVariable Long employeeId) {
         return ResponseEntity.ok(appointmentService.getHistory(employeeId));
     }
+
+    // GET /appointments - 전체 발령 목록 조회
+    @GetMapping
+    public ResponseEntity<List<AppointmentResponse>> getAllAppointments() {
+        return ResponseEntity.ok(appointmentService.getAllAppointments());
+    }
 }

@@ -166,6 +166,11 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 .outlineBtn {
@@ -178,6 +183,11 @@
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 /* 범례 */
