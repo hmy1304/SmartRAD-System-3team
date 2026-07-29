@@ -1,4 +1,4 @@
-package com.tphr.hr.payroll.service;
+﻿package com.tphr.hr.payroll.service;
 
 import com.tphr.hr.payroll.dto.*;
 import com.tphr.hr.payroll.entity.*;
@@ -21,13 +21,6 @@ public class PayrollSettingsService {
     private final MinimumWageRepository minimumWageRepository;
 
     public PayrollSettingsSummaryDto getSummary() {
-<<<<<<< HEAD
-        return PayrollSettingsSummaryDto.builder()
-                .baseSalaries(getBaseSalaries())
-                .allowanceItems(getAllowanceItems())
-                .deductionItems(getDeductionItems())
-                .minimumWage(getMinimumWage())
-=======
         List<BaseSalaryDto> baseSalaries = getBaseSalaries();
         List<AllowanceItemDto> allowanceItems = getAllowanceItems();
         List<DeductionItemDto> deductionItems = getDeductionItems();
@@ -55,7 +48,6 @@ public class PayrollSettingsService {
                 .allowanceCount(activeAllowanceCount)
                 .deductionCount(activeDeductionCount)
                 .applicableMonth(applicableMonth)
->>>>>>> e4aeb421f7d3e5cae72099ee9ba963ba6ea31d3f
                 .build();
     }
 
@@ -77,10 +69,7 @@ public class PayrollSettingsService {
                 .amountType(a.getAmountType())
                 .amountOrRate(a.getAmountOrRate())
                 .calculationBasis(a.getCalculationBasis())
-<<<<<<< HEAD
-=======
                 .isActive(a.getIsActive())
->>>>>>> e4aeb421f7d3e5cae72099ee9ba963ba6ea31d3f
                 .build()).collect(Collectors.toList());
     }
 
@@ -91,10 +80,7 @@ public class PayrollSettingsService {
                 .category(d.getCategory())
                 .deductionType(d.getDeductionType())
                 .rateOrAmount(d.getRateOrAmount())
-<<<<<<< HEAD
-=======
                 .isActive(d.getIsActive())
->>>>>>> e4aeb421f7d3e5cae72099ee9ba963ba6ea31d3f
                 .build()).collect(Collectors.toList());
     }
 
@@ -173,8 +159,6 @@ public class PayrollSettingsService {
     public void deleteDeductionItem(Long id) {
         deductionItemRepository.deleteById(id);
     }
-<<<<<<< HEAD
-=======
 
     @Transactional
     public void toggleAllowanceActive(Long id, Boolean isActive) {
@@ -187,5 +171,4 @@ public class PayrollSettingsService {
         DeductionItem entity = deductionItemRepository.findById(id).orElseThrow(() -> new RuntimeException("DeductionItem not found"));
         entity.setIsActive(isActive);
     }
->>>>>>> e4aeb421f7d3e5cae72099ee9ba963ba6ea31d3f
 }

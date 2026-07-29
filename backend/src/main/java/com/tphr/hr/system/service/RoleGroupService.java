@@ -1,4 +1,4 @@
-package com.tphr.hr.system.service;
+﻿package com.tphr.hr.system.service;
 
 import com.tphr.hr.system.dto.*;
 import com.tphr.hr.system.entity.Menu;
@@ -80,12 +80,8 @@ public class RoleGroupService {
         roleGroupRepository.delete(roleGroup);
     }
 
-<<<<<<< HEAD
-    // GET /role-groups/{roleGroupId}/permissions - 해당 권한 그룹의 메뉴별 권한 전체 조회
-=======
     // GET /role-groups/{roleGroupId}/permissions - 해당 권한 그룹의 메뉴별 권한 전체 조회 (누락된 신규 메뉴 자동 보완 자가치유)
     @Transactional
->>>>>>> e4aeb421f7d3e5cae72099ee9ba963ba6ea31d3f
     public List<RolePermissionResponse> getPermissions(Long roleGroupId) {
         RoleGroup roleGroup = getRoleGroupEntity(roleGroupId);
         List<RolePermission> existing = rolePermissionRepository.findByRoleGroupIdOrderByMenuId(roleGroupId);
