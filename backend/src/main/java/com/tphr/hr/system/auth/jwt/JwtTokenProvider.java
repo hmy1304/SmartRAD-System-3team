@@ -63,6 +63,12 @@ public class JwtTokenProvider {
         Collection<? extends GrantedAuthority> authorities =
                 Arrays.stream(claims.get("auth").toString().split(","))
                         .filter(auth -> !auth.isBlank())
+                        .map(auth -> {
+                            if ("최고관리자".equals(auth)) return "ROLE_ADMIN";
+                            if ("인사관리자".equals(auth)) return "ROLE_HR";
+                            if ("부서장".equals(auth)) return "ROLE_MANAGER";
+                            return auth;
+                        })
                         .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList());
 

@@ -14,6 +14,12 @@ export default function DraftRegisterModal({ onClose, onSuccess }: DraftRegister
   const [title, setTitle] = useState("");
   const [docType, setDocType] = useState("DOC_VACATION");
   const [content, setContent] = useState("");
+  const [leaveType, setLeaveType] = useState("연차");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [days, setDays] = useState(1);
+  const [reason, setReason] = useState("");
+
   const [approverId, setApproverId] = useState(""); 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
@@ -36,9 +42,24 @@ export default function DraftRegisterModal({ onClose, onSuccess }: DraftRegister
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!title || !content || !approverId) {
-      alert("모든 필수 항목을 올바르게 입력해주세요.");
+    if (!title || !approverId) {
+      alert("문서 제목과 결재자를 선택해주세요.");
       return;
+    }
+
+    let finalContent = content;
+
+    if (docType === "DOC_VACATION") {
+      if (!startDate || !endDate || !reason) {
+        alert("휴가 신청 정보를 모두 입력해주세요.");
+        return;
+      }
+      finalContent = JSON.stringify({ leaveType, startDate, endDate, days, reason });
+    } else {
+      if (!content) {
+        alert("상세 내용을 입력해주세요.");
+        return;
+      }
     }
 
     try {
@@ -46,7 +67,7 @@ export default function DraftRegisterModal({ onClose, onSuccess }: DraftRegister
       
       const payload = {
         title: title,
-        content: content,
+        content: finalContent,
         docTypeCode: docType, // Send string, e.g. "DOC_GENERAL"
         draftedById: 1, // Mock current user
         approverIds: [parseInt(approverId)],
@@ -121,17 +142,54 @@ export default function DraftRegisterModal({ onClose, onSuccess }: DraftRegister
 
           <h3 className={styles.sectionTitle} style={{ marginTop: '8px' }}>
             <span className={styles.barGreen}></span>
-            기안 내용
+            {docType === "DOC_VACATION" ? "휴가 정보" : "기안 내용"}
           </h3>
 
-          <div className={styles.formGroup}>
-            <label>상세 내용<b>*</b></label>
-            <textarea 
-              placeholder="내용을 상세히 작성해주세요" 
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-            />
-          </div>
+          {docType === "DOC_VACATION" ? (
+            <>
+              <div className={styles.formGroup}>
+                <label>휴가 종류<b>*</b></label>
+                <select value={leaveType} onChange={(e) => setLeaveType(e.target.value)}>
+                  <option value="연차">연차</option>
+                  <option value="반차 (오전)">반차 (오전)</option>
+                  <option value="반차 (오후)">반차 (오후)</option>
+                  <option value="병가">병가</option>
+                  <option value="기타">기타</option>
+                </select>
+              </div>
+              <div className={styles.formGroupRow}>
+                <div className={styles.formGroup}>
+                  <label>시작일<b>*</b></label>
+                  <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>종료일<b>*</b></label>
+                  <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>신청 일수<b>*</b></label>
+                  <input type="number" step="0.5" min="0" value={days} onChange={(e) => setDays(parseFloat(e.target.value))} />
+                </div>
+              </div>
+              <div className={styles.formGroup}>
+                <label>휴가 사유<b>*</b></label>
+                <textarea 
+                  placeholder="사유를 상세히 작성해주세요" 
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                />
+              </div>
+            </>
+          ) : (
+            <div className={styles.formGroup}>
+              <label>상세 내용<b>*</b></label>
+              <textarea 
+                placeholder="내용을 상세히 작성해주세요" 
+                value={content}
+                onChange={(e) => setContent(e.target.value)}
+              />
+            </div>
+          )}
         </form>
 
         <div className={styles.footer}>

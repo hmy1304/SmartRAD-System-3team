@@ -624,10 +624,26 @@ export default function ApprovalInboxPage() {
 
                 <section className={styles.detailSection}>
                   <h3>상세 내용</h3>
-                  <div 
-                    className={styles.requestContent} 
-                    dangerouslySetInnerHTML={{ __html: selectedDocument.description }} 
-                  />
+                  {(() => {
+                    const content = selectedDocument.description || "";
+                    if (content.includes("leaveType")) {
+                      try {
+                        const leaveData = JSON.parse(content);
+                        return (
+                          <div style={{ background: '#ebf8ff', padding: '1rem', borderRadius: '8px', border: '1px solid #bee3f8' }}>
+                            <p style={{ margin: '0 0 0.5rem 0' }}><strong>휴가 종류:</strong> {leaveData.leaveType}</p>
+                            <p style={{ margin: '0 0 0.5rem 0' }}><strong>시작일:</strong> {leaveData.startDate}</p>
+                            <p style={{ margin: '0 0 0.5rem 0' }}><strong>종료일:</strong> {leaveData.endDate}</p>
+                            <p style={{ margin: '0 0 0.5rem 0' }}><strong>신청 일수:</strong> {leaveData.days} 일</p>
+                            <p style={{ margin: 0 }}><strong>사유:</strong> {leaveData.reason}</p>
+                          </div>
+                        );
+                      } catch (e) {
+                        return <div className={styles.requestContent} dangerouslySetInnerHTML={{ __html: content }} />;
+                      }
+                    }
+                    return <div className={styles.requestContent} dangerouslySetInnerHTML={{ __html: content }} />;
+                  })()}
                 </section>
 
                 {selectedDocument.fileName && (

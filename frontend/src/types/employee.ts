@@ -150,6 +150,7 @@ export interface AppointmentResponse {
   afterPayStep: number | null;
   applyDate: string; // YYYY-MM-DD
   applied: boolean;
+  status: string;
   note: string | null;
 }
 

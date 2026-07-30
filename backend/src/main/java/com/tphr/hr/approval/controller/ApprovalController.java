@@ -91,9 +91,8 @@ public class ApprovalController {
      * 4. 결재 문서 상세 내역 조회
      */
     @GetMapping("/{id}")
-    public ResponseEntity<ApprovalDetailResponse> getApprovalDetail(@PathVariable Long id) {
-        ApprovalDetailResponse response = approvalService.getApprovalDetail(id);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<ApprovalDetailResponse> getApprovalDetail(@PathVariable String id) {
+        return ResponseEntity.ok(approvalService.getApprovalDetail(id));
     }
 
     /**

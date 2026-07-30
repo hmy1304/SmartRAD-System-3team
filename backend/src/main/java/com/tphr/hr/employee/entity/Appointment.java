@@ -56,7 +56,22 @@ public class Appointment extends BaseEntity {
     @Builder.Default
     private Boolean applied = false;
 
+    @Column(name = "status", length = 20)
+    @Builder.Default
+    private String status = "WAITING"; // WAITING, REJECTED, COMPLETED
+
     public void markApplied() {
         this.applied = true;
+    }
+
+    public void reject(String note) {
+        this.status = "REJECTED";
+        if (note != null && !note.isEmpty()) {
+            this.note = note;
+        }
+    }
+
+    public void approve() {
+        this.status = "COMPLETED";
     }
 }

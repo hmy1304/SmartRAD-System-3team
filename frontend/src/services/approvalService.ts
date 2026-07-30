@@ -111,3 +111,17 @@ export async function createDocument(data: any): Promise<any> {
 
   return await response.json();
 }
+
+export async function getApprovalDetail(id: number | string): Promise<any> {
+  if (useMockData) return {};
+  const requestUrl = `${getBaseUrl()}/api/v1/approvals/${id}`;
+  const response = await fetch(requestUrl, {
+    method: "GET",
+    headers: getHeaders(),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`문서 상세 조회 실패: ${response.status} ${response.statusText}`);
+  }
+  return await response.json();
+}

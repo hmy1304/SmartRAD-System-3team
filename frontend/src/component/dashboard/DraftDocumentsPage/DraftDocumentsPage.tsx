@@ -11,7 +11,8 @@ import {
 
 import { getDraftApprovals } from "@/services/approvalService";
 import type { ApprovalDraftData, DraftDocument } from "@/types/approval";
-import DraftRegisterModal from "./DraftRegisterModal"; // Will create next
+import DraftRegisterModal from "./DraftRegisterModal";
+import ApprovalDetailSlideOver from "./ApprovalDetailSlideOver";
 
 const SummaryIcon = ({ name }: { name: string }) => {
   switch (name) {
@@ -40,6 +41,7 @@ export default function DraftDocumentsPage() {
     return d.toISOString().split("T")[0];
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDocumentId, setSelectedDocumentId] = useState<string | number | null>(null);
 
   // In real app, fetch drafterId from context/session. 
   // We use a mock ID for demo purposes.
@@ -239,7 +241,9 @@ export default function DraftDocumentsPage() {
                             <button type="button" className={styles.deleteButton} aria-label="삭제"><TrashIcon /></button>
                           </>
                         ) : (
-                          <button type="button" aria-label="상세보기"><EyeIcon /></button>
+                          <button type="button" aria-label="상세보기" onClick={() => setSelectedDocumentId(document.id)}>
+                            <EyeIcon />
+                          </button>
                         )}
                       </div>
                     </td>
@@ -296,6 +300,13 @@ export default function DraftDocumentsPage() {
             setIsModalOpen(false);
             fetchData();
           }} 
+        />
+      )}
+
+      {selectedDocumentId && (
+        <ApprovalDetailSlideOver 
+          documentId={selectedDocumentId} 
+          onClose={() => setSelectedDocumentId(null)} 
         />
       )}
     </>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   Calendar,
   Clock,
@@ -82,6 +83,7 @@ const MOCK_SUMMARY_DEFAULT: LeaveSummaryResponse = {
 const FILTERS = ["전체", "승인대기", "승인완료", "반려"] as const;
 
 export default function LeavePage() {
+  const router = useRouter();
   const [applications, setApplications] = useState<LeaveApplicationResponse[]>([]);
   const [summary, setSummary] = useState<LeaveSummaryResponse>(MOCK_SUMMARY_DEFAULT);
   const [empList, setEmpList] = useState<EmpOption[]>(MOCK_EMPLOYEES);
@@ -100,18 +102,6 @@ export default function LeavePage() {
   const [keyword, setKeyword] = useState("");
   const [selected, setSelected] = useState<(string | number)[]>([]);
 
-  // 모달 제어 및 입력 폼 상태
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedEmp, setSelectedEmp] = useState<EmpOption>(MOCK_EMPLOYEES[0]);
-  const [modalLeaveType, setModalLeaveType] = useState<"연차" | "반차(오전)" | "반차(오후)" | "병가" | "기타">("연차");
-  const [startDate, setStartDate] = useState("2026-07-14");
-  const [endDate, setEndDate] = useState("2026-07-15");
-  const [proxyName, setProxyName] = useState("오하늘 과장");
-  const [approverName, setApproverName] = useState("김관리 (인사총무팀 · 수석)");
-  const [note, setNote] = useState("");
-  const [attachedFile, setAttachedFile] = useState<File | null>(null);
-  const [quotaInfo, setQuotaInfo] = useState({ totalDays: 15.0, usedDays: 2.0, remainingDays: 13.0 });
-
   // 첨부파일 바로보기 모달 상태
   const [viewingFile, setViewingFile] = useState<{ url: string; name: string } | null>(null);
 
@@ -120,7 +110,7 @@ export default function LeavePage() {
   const [isProxySelectOpen, setIsProxySelectOpen] = useState(false);
   const [isApproverSelectOpen, setIsApproverSelectOpen] = useState(false);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
+
 
   // DB 실데이터 기반 부서 및 승인권자 리스트 동적 생성
   const availableDepts = useMemo(() => {
@@ -185,52 +175,19 @@ export default function LeavePage() {
             };
           });
           setEmpList(mapped);
-          if (mapped.length > 0 && !selectedEmp.id) {
-            setSelectedEmp(mapped[0]);
+          if (mapped.length > 0 && !currentViewer.id) {
+            setCurrentViewer(mapped[0]);
           }
         }
       })
       .catch(() => {});
   }, []);
 
-  // 선택 사원의 해당 연도 연차 대장 실시간 호출
-  useEffect(() => {
-    if (!selectedEmp) return;
-    fetchEmployeeQuota(selectedEmp.id, selectedYear)
-      .then((q) => {
-        if (q) {
-          setQuotaInfo({
-            totalDays: q.totalDays ?? 15.0,
-            usedDays: q.usedDays ?? 0.0,
-            remainingDays: q.remainingDays ?? 15.0,
-          });
-        }
-      })
-      .catch(() => {
-        setQuotaInfo({ totalDays: 15.0, usedDays: 3.0, remainingDays: 12.0 });
-      });
-  }, [selectedEmp, selectedYear]);
 
-  // 영업일 계산 로직
-  const calculatedDays = useMemo(() => {
-    if (modalLeaveType.includes("반차")) return 0.5;
-    const s = new Date(startDate);
-    const e = new Date(endDate);
-    if (isNaN(s.getTime()) || isNaN(e.getTime()) || e < s) return 0;
 
-    let workDays = 0;
-    const cur = new Date(s);
-    while (cur <= e) {
-      const day = cur.getDay();
-      if (day !== 0 && day !== 6) workDays++;
-      cur.setDate(cur.getDate() + 1);
-    }
-    return workDays;
-  }, [startDate, endDate, modalLeaveType]);
 
-  const afterRemainDays = useMemo(() => {
-    return Math.round((quotaInfo.remainingDays - calculatedDays) * 100.0) / 100.0;
-  }, [quotaInfo.remainingDays, calculatedDays]);
+
+
 
   // 부서 등 프론트 필터링 반영
   const filtered = useMemo(() => {
@@ -391,52 +348,9 @@ export default function LeavePage() {
     }
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setAttachedFile(e.target.files[0]);
-    }
-  };
+  
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      setAttachedFile(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleModalSubmit = async () => {
-    if (modalLeaveType === "병가" && !attachedFile) {
-      const confirmNoDoc = window.confirm("병가 신청이나 진단서 첨부파일이 없습니다. 그대로 진행하시겠습니까?");
-      if (!confirmNoDoc) return;
-    }
-
-    const formData = new FormData();
-    formData.append("employeeId", selectedEmp.id.toString());
-    formData.append("leaveType", modalLeaveType);
-    formData.append("startDate", startDate.replaceAll(".", "-"));
-    formData.append("endDate", endDate.replaceAll(".", "-"));
-    formData.append("days", calculatedDays.toString());
-    formData.append("proxyEmployeeName", proxyName);
-    formData.append("approverName", approverName.split(" (")[0]);
-    if (note) formData.append("note", note);
-    if (attachedFile) formData.append("file", attachedFile);
-
-    try {
-      await submitLeaveApplication(formData);
-      alert("휴가 신청이 안전하게 등록되었습니다. (서버 물리 파일 업로드 및 대장 연계 완료)");
-      setIsModalOpen(false);
-      setAttachedFile(null);
-      loadData();
-    } catch (err) {
-      alert("휴가 등록에 실패했습니다. 서버 상태를 확인하세요.");
-    }
-  };
+  
 
   return (
     <main className={styles.main}>
@@ -503,10 +417,7 @@ export default function LeavePage() {
           <button
             type="button"
             className={styles.primaryBtn}
-            onClick={() => {
-              setSelectedEmp(currentViewer);
-              setIsModalOpen(true);
-            }}
+            onClick={() => { router.push("/dashboard/drafts"); }}
           >
             <Plus size={16} strokeWidth={2.5} />
             휴가 등록
@@ -945,338 +856,6 @@ export default function LeavePage() {
         </div>
       )}
 
-      {/* 휴가 등록 모달 오버레이 */}
-      {isModalOpen && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modalContainer}>
-            <div className={styles.modalHeader}>
-              <div className={styles.headerLeft}>
-                <div className={styles.modalIconBox}>
-                  <Calendar size={24} color="#ffffff" />
-                </div>
-                <div>
-                  <h2>휴가 등록</h2>
-                  <p>신규 휴가 신청을 등록하고 파일을 첨부합니다</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                className={styles.closeBtn}
-                onClick={() => setIsModalOpen(false)}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className={styles.modalBody}>
-              <div className={styles.formSection}>
-                <h4 className={styles.sectionTitle}>
-                  <span className={styles.barAccent}>▍</span> 직원 정보
-                </h4>
-                <div className={styles.dropdownWrapper}>
-                  <div
-                    className={styles.fakeSelectBox}
-                    onClick={() => {
-                      setIsEmpSelectOpen(!isEmpSelectOpen);
-                      setIsProxySelectOpen(false);
-                      setIsApproverSelectOpen(false);
-                    }}
-                  >
-                    <div className={styles.selectedEmp}>
-                      <span className={`${styles.avatarBadge} ${styles[selectedEmp.tone || "blue"]}`}>
-                        {selectedEmp.initial}
-                      </span>
-                      <strong>
-                        {selectedEmp.name} · {selectedEmp.dept} · {selectedEmp.pos}
-                      </strong>
-                    </div>
-                    <ChevronDown size={18} color="#6b7280" />
-                  </div>
-
-                  {isEmpSelectOpen && (
-                    <div className={styles.dropdownMenu}>
-                      {empList.map((e) => (
-                        <div
-                          key={e.id}
-                          className={styles.dropdownItem}
-                          onClick={() => {
-                            setSelectedEmp(e);
-                            setIsEmpSelectOpen(false);
-                          }}
-                        >
-                          <span className={`${styles.avatarSmall} ${styles[e.tone || "blue"]}`}>
-                            {e.initial}
-                          </span>
-                          <span>
-                            {e.name} ({e.dept} · {e.pos})
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className={styles.infoBannerGreen}>
-                  <Clock size={16} color="#059669" />
-                  <span>
-                    잔여 연차 <strong className={styles.highlightGreen}>{quotaInfo.remainingDays}일</strong>
-                    &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-                    사용 연차 <strong>{quotaInfo.usedDays}일</strong>
-                    &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
-                    부여 연차 <strong>{quotaInfo.totalDays}일</strong>
-                  </span>
-                </div>
-              </div>
-
-              <div className={styles.formSection}>
-                <h4 className={styles.sectionTitle}>
-                  <span className={styles.barAccent}>▍</span> 휴가 유형
-                </h4>
-                <div className={styles.pillSelector}>
-                  {[
-                    { label: "연차", dot: styles.dotAnnual, val: "연차" },
-                    { label: "반차(오전)", dot: styles.dotHalf, val: "반차(오전)" },
-                    { label: "반차(오후)", dot: styles.dotHalf, val: "반차(오후)" },
-                    { label: "병가", dot: styles.dotSick, val: "병가" },
-                    { label: "기타", dot: styles.dotOther, val: "기타" },
-                  ].map((item) => {
-                    const isSelected = modalLeaveType === item.val;
-                    return (
-                      <button
-                        key={item.val}
-                        type="button"
-                        className={`${styles.typePillBtn} ${isSelected ? styles.pillSelected : ""}`}
-                        onClick={() => setModalLeaveType(item.val as any)}
-                      >
-                        <span className={`${styles.pillDot} ${item.dot}`} />
-                        {item.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className={styles.formSection}>
-                <h4 className={styles.sectionTitle}>
-                  <span className={styles.barAccent}>▍</span> 휴가 기간
-                </h4>
-                <div className={styles.dateRangeRow}>
-                  <div className={styles.dateInputBox}>
-                    <Calendar size={16} color="#6b7280" />
-                    <input
-                      type="date"
-                      value={startDate.replaceAll(".", "-")}
-                      onChange={(e) => setStartDate(e.target.value.replaceAll("-", "."))}
-                    />
-                  </div>
-                  <span className={styles.dateArrow}>→</span>
-                  <div className={styles.dateInputBox}>
-                    <Calendar size={16} color="#6b7280" />
-                    <input
-                      type="date"
-                      value={endDate.replaceAll(".", "-")}
-                      onChange={(e) => setEndDate(e.target.value.replaceAll("-", "."))}
-                    />
-                  </div>
-                </div>
-                <div className={styles.infoBannerTeal}>
-                  <Clock size={16} color="#059669" />
-                  <span>
-                    총 <strong className={styles.highlightGreen}>{calculatedDays}일</strong> 사용 예정 (영업일 기준) · 신청 후 잔여{" "}
-                    <strong className={styles.highlightGreen}>{afterRemainDays}일</strong>
-                  </span>
-                </div>
-              </div>
-
-              <div className={styles.formGridTwo}>
-                <div className={styles.formSection}>
-                  <h4 className={styles.sectionTitle}>
-                    <span className={styles.barAccent}>▍</span> 업무 대리인
-                  </h4>
-                  <div className={styles.dropdownWrapper}>
-                    <div
-                      className={styles.fakeSelectBox}
-                      onClick={() => {
-                        setIsProxySelectOpen(!isProxySelectOpen);
-                        setIsEmpSelectOpen(false);
-                        setIsApproverSelectOpen(false);
-                      }}
-                    >
-                      <div className={styles.selectPlaceholder}>
-                        <User size={16} color="#475569" />
-                        <span className={proxyName ? styles.selectedText : ""}>
-                          {proxyName || "대리인 선택"}
-                        </span>
-                      </div>
-                      <ChevronDown size={16} color="#9ca3af" />
-                    </div>
-
-                    {isProxySelectOpen && (
-                      <div className={styles.dropdownMenu}>
-                        <div
-                          className={styles.dropdownItem}
-                          onClick={() => {
-                            setProxyName("—");
-                            setIsProxySelectOpen(false);
-                          }}
-                        >
-                          <span>— (대리인 없음)</span>
-                        </div>
-                        {empList
-                          .filter((e) => e.id !== selectedEmp.id)
-                          .map((e) => (
-                            <div
-                              key={e.id}
-                              className={styles.dropdownItem}
-                              onClick={() => {
-                                setProxyName(`${e.name} (${e.pos})`);
-                                setIsProxySelectOpen(false);
-                              }}
-                            >
-                              <span className={`${styles.avatarSmall} ${styles[e.tone]}`}>
-                                {e.initial}
-                              </span>
-                              <span>
-                                {e.name} ({e.dept} · {e.pos})
-                              </span>
-                            </div>
-                          ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                <div className={styles.formSection}>
-                  <h4 className={styles.sectionTitle}>
-                    <span className={styles.barAccent}>▍</span> 승인자
-                  </h4>
-                  <div className={styles.dropdownWrapper}>
-                    <div
-                      className={styles.fakeSelectBox}
-                      onClick={() => {
-                        setIsApproverSelectOpen(!isApproverSelectOpen);
-                        setIsEmpSelectOpen(false);
-                        setIsProxySelectOpen(false);
-                      }}
-                    >
-                      <div className={styles.selectedEmp}>
-                        <span className={`${styles.avatarBadge} ${styles.blue}`}>
-                          {approverName.substring(0, 1)}
-                        </span>
-                        <strong>{approverName}</strong>
-                      </div>
-                      <ChevronDown size={16} color="#6b7280" />
-                    </div>
-
-                    {isApproverSelectOpen && (
-                      <div className={styles.dropdownMenu}>
-                        {availableApprovers.map((mgr) => (
-                          <div
-                            key={mgr.id}
-                            className={styles.dropdownItem}
-                            onClick={() => {
-                              setApproverName(`${mgr.name} (${mgr.dept} · ${mgr.pos})`);
-                              setIsApproverSelectOpen(false);
-                            }}
-                          >
-                            <span className={`${styles.avatarSmall} ${styles[mgr.tone]}`}>
-                              {mgr.initial}
-                            </span>
-                            <span>{mgr.name} ({mgr.dept} · {mgr.pos})</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className={styles.formSection}>
-                <h4 className={styles.sectionTitle}>
-                  <span className={styles.barAccent}>▍</span> 첨부파일{" "}
-                  <small className={styles.optionalText}>
-                    (선택 · 병가의 경우 진단서 첨부 필수)
-                  </small>
-                </h4>
-
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  style={{ display: "none" }}
-                  accept=".pdf,.png,.jpg,.jpeg,.doc,.docx"
-                />
-
-                <div
-                  className={`${styles.fileDropZone} ${attachedFile ? styles.fileAttachedZone : ""}`}
-                  onDrop={handleDrop}
-                  onDragOver={handleDragOver}
-                  onClick={() => !attachedFile && fileInputRef.current?.click()}
-                >
-                  {attachedFile ? (
-                    <div className={styles.attachedFileInfo}>
-                      <FileIcon size={18} color="#059669" />
-                      <span className={styles.fileName}>{attachedFile.name}</span>
-                      <span className={styles.fileSize}>
-                        ({Math.round(attachedFile.size / 1024)} KB)
-                      </span>
-                    </div>
-                  ) : (
-                    <div className={styles.fileHint}>
-                      <Paperclip size={16} color="#94a3b8" />
-                      <span>파일을 클릭하거나 컴퓨터 폴더에서 드래그하여 첨부하세요</span>
-                    </div>
-                  )}
-
-                  {attachedFile ? (
-                    <button
-                      type="button"
-                      className={styles.fileRemoveBtn}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setAttachedFile(null);
-                        if (fileInputRef.current) fileInputRef.current.value = "";
-                      }}
-                    >
-                      <Trash2 size={15} />
-                      삭제
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className={styles.fileSelectBtn}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        fileInputRef.current?.click();
-                      }}
-                    >
-                      파일 선택
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className={styles.modalFooter}>
-              <button
-                type="button"
-                className={styles.modalCancelBtn}
-                onClick={() => setIsModalOpen(false)}
-              >
-                취소
-              </button>
-              <button
-                type="button"
-                className={styles.modalSubmitBtn}
-                onClick={handleModalSubmit}
-              >
-                <Check size={18} strokeWidth={2.5} />
-                휴가 등록
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </main>
+          </main>
   );
 }

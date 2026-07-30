@@ -21,6 +21,7 @@ public record AppointmentResponse(
         Integer afterPayStep,
         LocalDate applyDate,
         Boolean applied,
+        String status,
         String note
 ) {
     public static AppointmentResponse from(Appointment a) {
@@ -41,6 +42,7 @@ public record AppointmentResponse(
                 a.getAfterPayStep(),
                 a.getApplyDate(),
                 a.getApplied(),
+                a.getStatus(),
                 a.getNote()
         );
     }

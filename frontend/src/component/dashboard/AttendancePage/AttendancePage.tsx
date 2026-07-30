@@ -222,6 +222,7 @@ export default function AttendancePage() {
     try {
       const res = await fetch(`/api/v1/attendance/admin?startDate=${startDate}&endDate=${endDate}&page=${page}&size=50`, {
         headers: getAuthHeaders(),
+        cache: "no-store",
       });
       if (res.ok) {
         const body = await res.json();
@@ -266,7 +267,10 @@ export default function AttendancePage() {
 
   const fetchEmployees = useCallback(async () => {
     try {
-      const res = await fetch(`/api-system/employees?size=100`, { headers: getAuthHeaders() });
+      const res = await fetch(`/api-system/employees?size=100`, { 
+        headers: getAuthHeaders(),
+        cache: "no-store"
+      });
       if (res.ok) {
         const data = await res.json();
         const list = data?.content || data;

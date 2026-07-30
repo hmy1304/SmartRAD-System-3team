@@ -237,6 +237,18 @@ public class LeaveService {
     }
 
     /**
+     * 전자결재 승인 시 자동 연동을 위한 휴가 자동 생성 및 승인 처리
+     */
+    @Transactional
+    public void createApprovedLeaveFromApproval(Long employeeId, String leaveType, LocalDate startDate, LocalDate endDate, Double days, String reason) {
+        // 1. 휴가 신청서 생성 (상태는 승인대기로 생성하여 updateStatus 로직 태움)
+        LeaveApplicationResponse response = createApplication(employeeId, leaveType, startDate, endDate, days, "", "전자결재시스템", reason, null);
+        
+        // 2. 즉시 승인 처리 (연차 자동차감 로직 발동)
+        updateStatus(List.of(response.getId()), "승인완료", "전자결재 통합 승인");
+    }
+
+    /**
      * 5. 결재 상태 일괄 처리 (승인 시 잔여 연차 자동 차감 트랜잭션 동기화)
      */
     @Transactional

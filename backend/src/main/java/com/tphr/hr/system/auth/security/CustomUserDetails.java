@@ -22,9 +22,19 @@ public class CustomUserDetails implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         // 권한 그룹(RoleGroup)이 있는 경우 ROLE_접두어를 붙이거나 그대로 사용
         // 우선은 RoleGroup의 name 또는 ID를 기반으로 생성 (기본값 설정)
-        String role = (employee.getRoleGroup() != null) 
+        String roleName = (employee.getRoleGroup() != null) 
                 ? employee.getRoleGroup().getName() 
-                : "ROLE_USER";
+                : "일반직원";
+        
+        String role = "ROLE_USER";
+        if ("최고관리자".equals(roleName)) {
+            role = "ROLE_ADMIN";
+        } else if ("인사관리자".equals(roleName)) {
+            role = "ROLE_HR";
+        } else if ("부서장".equals(roleName)) {
+            role = "ROLE_MANAGER";
+        }
+        
         return Collections.singletonList(new SimpleGrantedAuthority(role));
     }
 
