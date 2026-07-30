@@ -20,6 +20,7 @@ export default function DraftRegisterModal({ onClose, onSuccess }: DraftRegister
   const [endDate, setEndDate] = useState("");
   const [days, setDays] = useState(1);
   const [reason, setReason] = useState("");
+  const [welfareAmount, setWelfareAmount] = useState<number | "">("");
 
   const [approverId, setApproverId] = useState(""); 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -58,6 +59,15 @@ export default function DraftRegisterModal({ onClose, onSuccess }: DraftRegister
         return;
       }
       finalContent = JSON.stringify({ leaveType, startDate, endDate, days, reason });
+    } else if (docType === "DOC_WELFARE") {
+      if (!welfareAmount || welfareAmount <= 0) {
+        alert("신청 금액을 올바르게 입력해주세요.");
+        return;
+      }
+      finalContent = JSON.stringify({
+        text: content,
+        welfareAmount: welfareAmount
+      });
     } else {
       if (!content) {
         alert("상세 내용을 입력해주세요.");
@@ -154,7 +164,29 @@ export default function DraftRegisterModal({ onClose, onSuccess }: DraftRegister
             {docType === "DOC_VACATION" ? "휴가 정보" : "기안 내용"}
           </h3>
 
-          {docType === "DOC_VACATION" ? (
+          {docType === "DOC_WELFARE" ? (
+            <>
+              <div className={styles.formGroup}>
+                <label>신청 금액(원)<b>*</b></label>
+                <input 
+                  type="number" 
+                  min="0"
+                  value={welfareAmount}
+                  onChange={(e) => setWelfareAmount(e.target.value ? Number(e.target.value) : "")}
+                  placeholder="예: 100000"
+                />
+              </div>
+              <div className={styles.formGroup}>
+                <label>상세 내용</label>
+                <textarea 
+                  value={content} 
+                  onChange={(e) => setContent(e.target.value)} 
+                  placeholder="지급 대상 및 사유를 상세히 적어주세요." 
+                  rows={4} 
+                />
+              </div>
+            </>
+          ) : docType === "DOC_VACATION" ? (
             <>
               <div className={styles.formGroup}>
                 <label>휴가 종류<b>*</b></label>

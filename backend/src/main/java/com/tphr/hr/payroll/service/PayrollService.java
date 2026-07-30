@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -192,6 +193,24 @@ public class PayrollService {
                     calculatedRecords.add(existingRecord);
                     continue;
                 }
+
+                // Preserve manual/approval details
+                List<PayrollDetail> existingDetails = payrollDetailRepository.findByPayrollRecordId(existingRecord.getId());
+                for (PayrollDetail ed : existingDetails) {
+                    if (ed.getItemName().contains("(결재)")) {
+                        totalAllowance = totalAllowance.add(ed.getAmount());
+                        details.add(PayrollDetail.builder()
+                                .itemType(ed.getItemType())
+                                .itemName(ed.getItemName())
+                                .amount(ed.getAmount())
+                                .build());
+                    }
+                }
+                
+                // Recalculate net pay after adding manual details back
+                grossSalary = baseSalaryAmt.add(totalAllowance);
+                netPay = grossSalary.subtract(totalDeduction);
+
                 existingRecord.updateCalculation(baseSalaryAmt, totalAllowance, totalDeduction, netPay);
                 savedRecord = payrollRecordRepository.save(existingRecord);
                 
@@ -248,6 +267,52 @@ public class PayrollService {
         record.confirm(); // 상태 변경 (JPA 더티 체킹으로 자동 업데이트됨)
         
         return mapToResponse(record);
+    }
+
+    /**
+     * 전자결재(경조사비 등) 최종 승인 시 수당을 급여에 추가합니다.
+     */
+    @Transactional
+    public void addApprovalAllowance(Long employeeId, String itemName, BigDecimal amount) {
+        LocalDate today = LocalDate.now();
+        int year = today.getYear();
+        int month = today.getMonthValue();
+
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new IllegalArgumentException("Employee not found"));
+
+        PayrollRecord record = payrollRecordRepository.findByEmployeeIdAndPayrollYearAndPayrollMonth(employeeId, year, month)
+                .orElseGet(() -> {
+                    PayrollRecord newRecord = PayrollRecord.builder()
+                            .employee(employee)
+                            .payrollYear(year)
+                            .payrollMonth(month)
+                            .baseSalary(BigDecimal.ZERO)
+                            .totalAllowance(BigDecimal.ZERO)
+                            .totalDeduction(BigDecimal.ZERO)
+                            .netPay(BigDecimal.ZERO)
+                            .status("PENDING")
+                            .build();
+                    return payrollRecordRepository.save(newRecord);
+                });
+
+        if ("CONFIRMED".equals(record.getStatus())) {
+            log.warn("급여가 이미 확정되었습니다. 수당 지급이 누락될 수 있습니다.");
+            return;
+        }
+
+        PayrollDetail detail = PayrollDetail.builder()
+                .payrollRecord(record)
+                .itemType("ALLOWANCE")
+                .itemName(itemName)
+                .amount(amount)
+                .build();
+        payrollDetailRepository.save(detail);
+
+        BigDecimal newTotal = record.getTotalAllowance().add(amount);
+        BigDecimal newNet = record.getNetPay().add(amount);
+        record.updateCalculation(record.getBaseSalary(), newTotal, record.getTotalDeduction(), newNet);
+        payrollRecordRepository.save(record);
     }
 
     /**

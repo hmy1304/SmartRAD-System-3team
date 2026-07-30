@@ -1,0 +1,48 @@
+@use "../../../styles/variables" as *;
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    #eef2f8 25%,
+    #dce3ee 37%,
+    #eef2f8 63%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite ease-in-out;
+}
+
+.text {
+  height: 14px;
+  border-radius: 7px;
+  width: 100%;
+}
+
+.circle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+}
+
+.rect {
+  width: 100%;
+  height: 100px;
+  border-radius: $radius-sm;
+}
+
+.card {
+  padding: 20px;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-surface;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}

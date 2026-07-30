@@ -15,9 +15,11 @@ import com.tphr.hr.employee.repository.AppointmentRepository;
 import com.tphr.hr.leave.entity.LeaveApplication;
 import com.tphr.hr.leave.repository.LeaveApplicationRepository;
 import com.tphr.hr.leave.service.LeaveService;
+import com.tphr.hr.payroll.service.PayrollService;
 import com.tphr.hr.system.entity.CommonCode;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -45,6 +47,7 @@ public class ApprovalService {
     private final ApprovalCommentRepository approvalCommentRepository;
     private final LeaveApplicationRepository leaveApplicationRepository;
     private final LeaveService leaveService;
+    private final PayrollService payrollService;
     private final AppointmentRepository appointmentRepository;
     private final EntityManager entityManager;
 
@@ -393,6 +396,20 @@ public class ApprovalService {
                     leaveService.createApprovedLeaveFromApproval(document.getDraftedBy().getId(), leaveType, startDate, endDate, days, reason);
                 } catch (Exception e) {
                     log.error("휴가 데이터 파싱 및 연동 실패: {}", e.getMessage());
+                }
+            } 
+            // 경조사비 신청서일 경우 PayrollService 연동
+            else if ("DOC_WELFARE".equals(document.getDocType().getCode())) {
+                try {
+                    JsonParser parser = JsonParserFactory.getJsonParser();
+                    Map<String, Object> map = parser.parseMap(document.getContent());
+                    if (map.containsKey("welfareAmount")) {
+                        BigDecimal amount = new BigDecimal(map.get("welfareAmount").toString());
+                        payrollService.addApprovalAllowance(document.getDraftedBy().getId(), "경조사비 (결재)", amount);
+                        log.info("경조사비 {}원이 {}번 직원에게 지급 예약되었습니다.", amount, document.getDraftedBy().getId());
+                    }
+                } catch (Exception e) {
+                    log.error("경조사비 데이터 파싱 및 급여 연동 실패: {}", e.getMessage());
                 }
             }
         }

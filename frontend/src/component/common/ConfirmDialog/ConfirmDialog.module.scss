@@ -1,0 +1,122 @@
+@use "../../../styles/variables" as *;
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: rgba(7, 21, 45, 0.45);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease;
+}
+
+.dialog {
+  width: min(420px, calc(100% - 40px));
+  padding: 32px;
+  border-radius: $radius-lg;
+  background: $color-surface;
+  box-shadow: $shadow-float;
+  text-align: center;
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.iconWrap {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+
+  svg {
+    width: 28px;
+    height: 28px;
+  }
+
+  &.danger {
+    background: #fde8ea;
+    color: $color-danger;
+  }
+
+  &.warning {
+    background: #fff4e5;
+    color: $color-warning;
+  }
+
+  &.default {
+    background: $color-blue-50;
+    color: $color-info;
+  }
+}
+
+.title {
+  margin: 0 0 8px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: $color-text;
+}
+
+.message {
+  margin: 0 0 24px;
+  font-size: 0.82rem;
+  color: $color-muted;
+  line-height: 1.55;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+}
+
+.cancelBtn,
+.confirmBtn {
+  flex: 1;
+  height: 44px;
+  border: 0;
+  border-radius: $radius-sm;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all $transition-smooth;
+}
+
+.cancelBtn {
+  background: $color-surface-soft;
+  color: $color-muted;
+  border: 1px solid $color-border;
+
+  &:hover {
+    background: #eef1f6;
+    color: $color-text;
+  }
+}
+
+.confirm_default {
+  background: $color-blue-600;
+  color: #fff;
+  &:hover { background: $color-blue-700; box-shadow: $shadow-glow-blue; }
+}
+
+.confirm_danger {
+  background: $color-danger;
+  color: #fff;
+  &:hover { background: #c93d44; box-shadow: 0 0 20px rgba(225, 77, 85, 0.3); }
+}
+
+.confirm_warning {
+  background: $color-warning;
+  color: #fff;
+  &:hover { background: #b8750a; box-shadow: 0 0 20px rgba(212, 137, 10, 0.3); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to { opacity: 1; transform: scale(1); }
+}
