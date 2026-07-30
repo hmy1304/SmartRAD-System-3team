@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { DashboardData } from "@/types/dashboard";
 import styles from "./DashboardPage.module.scss";
+import { getDashboardData } from "@/services/dashboardService";
 
 import NoticeCreateModal from "./NoticeCreateModal";
 import NoticeDetailModal, {
@@ -19,6 +20,8 @@ import {
 interface DashboardPageProps {
   initialData: DashboardData;
 }
+
+const ADMIN_ROLES = ["최고관리자", "시스템관리자", "관리자"];
 
 const QUICK_ACTIONS = [
   { href: "/dashboard/employees", label: "사원 등록", icon: "user-plus" as const },
@@ -62,10 +65,24 @@ function QuickIcon({ name }: { name: (typeof QUICK_ACTIONS)[number]["icon"] }) {
   );
 }
 
+function resolveIsAdmin(): boolean {
+  try {
+    const raw = localStorage.getItem("userProfile");
+    if (!raw) return false;
+    const p = JSON.parse(raw) as { roleGroupName?: string };
+    const role = p.roleGroupName ?? "";
+    return ADMIN_ROLES.some((r) => role.includes(r));
+  } catch {
+    return false;
+  }
+}
+
 export default function DashboardPage({ initialData }: DashboardPageProps) {
   const [todayText, setTodayText] = useState("");
   const [displayName, setDisplayName] = useState(initialData.profile.name);
+  const [isAdmin, setIsAdmin] = useState(false);
 
+  const [data, setData] = useState(initialData);
   const [createOpen, setCreateOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -79,17 +96,15 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
     summaryCards,
     approvalItems,
     attendanceList,
-    notices,
     myApprovals,
     approvalCounts,
-  } = initialData;
+  } = data;
 
   const reloadNotices = async () => {
     try {
       const page = await getNotices(10);
       setNoticeList(page.content ?? []);
     } catch {
-      // API 실패 시 noticeList 비움 → 아래 mock 표시
       setNoticeList([]);
     }
   };
@@ -101,6 +116,8 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
       `${now.getFullYear()}년 ${now.getMonth() + 1}월 ${now.getDate()}일 ${week}요일`,
     );
 
+    setIsAdmin(resolveIsAdmin());
+
     try {
       const raw = localStorage.getItem("userProfile");
       if (raw) {
@@ -111,6 +128,12 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
       /* ignore */
     }
 
+    getDashboardData()
+      .then(setData)
+      .catch(() => {
+        /* initialData 유지 */
+      });
+
     reloadNotices();
   }, []);
 
@@ -119,24 +142,17 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
     return ys.map((y, i) => `${40 + i * 52},${20 + y * 0.9}`).join(" ");
   }, []);
 
-  // API 목록이 있으면 API
-  const displayNotices: {
-  id: number;
-  title: string;
-  dateText: string;
-  fromApi: boolean;
-  content?: string;
-}[] =
-  noticeList.length > 0
-    ? noticeList.map((n) => ({
-        id: Number(n.id),
-        title: n.title,
-        dateText: n.createdAt
-          ? String(n.createdAt).slice(0, 10).replaceAll("-", ".")
-          : "",
-        fromApi: true,
-      }))
-    : []; // 비어 있으면 [] → "공지사항이 없습니다"
+  const displayNotices =
+    noticeList.length > 0
+      ? noticeList.map((n) => ({
+          id: Number(n.id),
+          title: n.title,
+          dateText: n.createdAt
+            ? String(n.createdAt).slice(0, 10).replaceAll("-", ".")
+            : "",
+          fromApi: true as const,
+        }))
+      : [];
 
   const openDetail = (item: (typeof displayNotices)[number]) => {
     setDetailId(item.id);
@@ -146,9 +162,7 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
       setDetailFallback({
         id: item.id,
         title: item.title,
-        content:
-          item.content ??
-          "이 공지는 미리보기 데이터입니다.\n공지사항 작성으로 등록하면 서버에 저장됩니다.",
+        content: "이 공지는 미리보기 데이터입니다.",
         dateText: item.dateText,
         authorName: "관리자",
         noticeTypeName: "일반공지",
@@ -156,6 +170,16 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
     }
     setDetailOpen(true);
   };
+
+  const visibleSummaryCards = summaryCards.filter((card) => {
+    if (isAdmin) return true;
+    if (card.label === "금일 출근" || card.label === "결재 대기") return false;
+    return true;
+  });
+
+  const visibleQuickActions = isAdmin
+    ? QUICK_ACTIONS
+    : QUICK_ACTIONS.filter((q) => q.label !== "사원 등록");
 
   return (
     <div className={styles.dashboardHome}>
@@ -175,8 +199,11 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
         </div>
       </section>
 
-      <section className={styles.summaryGrid}>
-        {summaryCards.map((card) => (
+      <section
+        className={styles.summaryGrid}
+        style={!isAdmin ? { gridTemplateColumns: "repeat(2, 1fr)" } : undefined}
+      >
+        {visibleSummaryCards.map((card) => (
           <article key={card.label} className={styles.summaryCard}>
             <div className={styles.summaryTop}>
               <span className={styles.summaryIcon}>
@@ -196,122 +223,150 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
         ))}
       </section>
 
-      <section className={styles.middleGrid}>
-        <article className={styles.panel}>
-          <div className={styles.panelTitle}>
-            <h2>월별 근태 현황</h2>
-            <span className={styles.legend}>
-              <i className={styles.dotBlue} /> 정상 출근율
-            </span>
-          </div>
-          <div className={styles.lineChart}>
-            <svg viewBox="0 0 700 190" preserveAspectRatio="none">
-              <defs>
-                <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3a7bff" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="#3a7bff" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <polyline
-                fill="url(#areaFill)"
-                stroke="none"
-                points={`40,180 ${chartPoints} 664,180`}
-              />
-              <polyline
-                fill="none"
-                stroke="#3a7bff"
-                strokeWidth="3"
-                strokeLinejoin="round"
-                points={chartPoints}
-              />
-            </svg>
-          </div>
-        </article>
+      {isAdmin && (
+        <section className={styles.middleGrid}>
+          <article className={styles.panel}>
+            <div className={styles.panelTitle}>
+              <h2>월별 근태 현황</h2>
+              <span className={styles.legend}>
+                <i className={styles.dotBlue} /> 정상 출근율
+              </span>
+            </div>
+            <div className={styles.lineChart}>
+              <svg viewBox="0 0 700 190" preserveAspectRatio="none">
+                <defs>
+                  <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3a7bff" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#3a7bff" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+                <polyline
+                  fill="url(#areaFill)"
+                  stroke="none"
+                  points={`40,180 ${chartPoints} 664,180`}
+                />
+                <polyline
+                  fill="none"
+                  stroke="#3a7bff"
+                  strokeWidth="3"
+                  strokeLinejoin="round"
+                  points={chartPoints}
+                />
+              </svg>
+            </div>
+          </article>
 
-        <article className={styles.panel}>
-          <div className={styles.panelTitle}>
-            <h2>결재 대기 안건</h2>
-            <Link href="/dashboard/approvals" className={styles.linkBtn}>
-              전체보기 ›
-            </Link>
-          </div>
-          <ul className={styles.approvalList}>
-            {approvalItems.map((item) => (
-              <li key={item.id}>
-                <span className={`${styles.dot} ${styles[item.color]}`} />
-                <p>{item.text}</p>
-                <em className={styles.itemBadge}>{item.badge}</em>
-              </li>
-            ))}
-          </ul>
-        </article>
-      </section>
+          <article className={styles.panel}>
+            <div className={styles.panelTitle}>
+              <h2>결재 대기 안건</h2>
+              <Link href="/dashboard/approvals" className={styles.linkBtn}>
+                전체보기 ›
+              </Link>
+            </div>
+            <ul className={styles.approvalList}>
+              {approvalItems.length === 0 ? (
+                <li className={styles.emptyNotice}>대기 안건이 없습니다</li>
+              ) : (
+                approvalItems.map((item) => (
+                  <li key={item.id}>
+                    <span className={`${styles.dot} ${styles[item.color]}`} />
+                    <p>{item.text}</p>
+                    <em className={styles.itemBadge}>{item.badge}</em>
+                  </li>
+                ))
+              )}
+            </ul>
+          </article>
+        </section>
+      )}
 
-      <section className={styles.bottomGrid}>
-        <article className={styles.panel}>
-          <div className={styles.panelTitle}>
-            <h2>오늘의 근무 현황</h2>
-            <Link href="/dashboard/attendance" className={styles.linkBtn}>
-              전체보기 ›
-            </Link>
-          </div>
-          <div className={styles.tableWrap}>
-            <table className={styles.attTable}>
-              <thead>
-                <tr>
-                  <th>이름</th>
-                  <th>부서</th>
-                  <th>출근</th>
-                  <th>상태</th>
-                </tr>
-              </thead>
-              <tbody>
-                {attendanceList.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      <div className={styles.person}>
-                        <span className={styles.avatar}>{row.name.charAt(0)}</span>
-                        {row.name}
-                      </div>
-                    </td>
-                    <td>{row.dept}</td>
-                    <td>{row.time}</td>
-                    <td>
-                      <em className={`${styles.status} ${styles[row.statusType]}`}>
-                        {row.status}
-                      </em>
-                    </td>
+      <section
+        className={styles.bottomGrid}
+        style={!isAdmin ? { gridTemplateColumns: "1fr 1fr 1fr" } : undefined}
+      >
+        {isAdmin && (
+          <article className={styles.panel}>
+            <div className={styles.panelTitle}>
+              <h2>오늘의 근무 현황</h2>
+              <Link href="/dashboard/attendance" className={styles.linkBtn}>
+                전체보기 ›
+              </Link>
+            </div>
+            <div className={styles.tableWrap}>
+              <table className={styles.attTable}>
+                <thead>
+                  <tr>
+                    <th>이름</th>
+                    <th>부서</th>
+                    <th>출근</th>
+                    <th>상태</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </article>
+                </thead>
+                <tbody>
+                  {attendanceList.length === 0 ? (
+                    <tr>
+                      <td
+                        colSpan={4}
+                        style={{ textAlign: "center", color: "#a0aec0" }}
+                      >
+                        근무 현황이 없습니다
+                      </td>
+                    </tr>
+                  ) : (
+                    attendanceList.map((row) => (
+                      <tr key={row.id}>
+                        <td>
+                          <div className={styles.person}>
+                            <span className={styles.avatar}>
+                              {row.name.charAt(0)}
+                            </span>
+                            {row.name}
+                          </div>
+                        </td>
+                        <td>{row.dept}</td>
+                        <td>{row.time}</td>
+                        <td>
+                          <em
+                            className={`${styles.status} ${styles[row.statusType]}`}
+                          >
+                            {row.status}
+                          </em>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </article>
+        )}
 
         <article className={styles.panel}>
           <div className={styles.panelTitle}>
             <h2>공지사항</h2>
-            <button
-              type="button"
-              className={styles.linkBtn}
-              onClick={() => setCreateOpen(true)}
-            >
-              공지사항 작성 ›
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                className={styles.linkBtn}
+                onClick={() => setCreateOpen(true)}
+              >
+                공지사항 작성 ›
+              </button>
+            )}
           </div>
           <ul className={styles.noticeList}>
             {displayNotices.length === 0 ? (
               <li className={styles.emptyNotice}>공지사항이 없습니다</li>
             ) : (
               displayNotices.map((n) => (
-                <li key={`${n.fromApi ? "api" : "mock"}-${n.id}`}>
+                <li key={n.id} className={styles.noticeItem}>
                   <button
                     type="button"
                     className={styles.noticeItemBtn}
                     onClick={() => openDetail(n)}
                   >
-                    <strong>{n.title}</strong>
-                    <time>{n.dateText}</time>
+                    <strong className={styles.noticeTitle}>{n.title}</strong>
+                    <time className={styles.noticeDate}>{n.dateText}</time>
                   </button>
                 </li>
               ))
@@ -324,7 +379,7 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
             <h2>빠른 업무</h2>
           </div>
           <div className={styles.quickGrid}>
-            {QUICK_ACTIONS.map((q) => (
+            {visibleQuickActions.map((q) => (
               <Link key={q.href} href={q.href} className={styles.quickItem}>
                 <span className={styles.quickIcon}>
                   <QuickIcon name={q.icon} />
@@ -338,38 +393,50 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
         <article className={styles.panel}>
           <div className={styles.panelTitle}>
             <h2>나의 결재함</h2>
-            <Link href="/dashboard/approvals" className={styles.linkBtn}>
+            <Link href="/dashboard/drafts" className={styles.linkBtn}>
               전체보기 ›
             </Link>
           </div>
           <div className={styles.approvalStats}>
-            <span className={styles.statWait}>● 대기 {approvalCounts.waiting}</span>
-            <span className={styles.statOk}>● 승인 {approvalCounts.approved}</span>
-            <span className={styles.statNo}>● 반려 {approvalCounts.rejected}</span>
+            <span className={styles.statWait}>
+              ● 대기 {approvalCounts.waiting}
+            </span>
+            <span className={styles.statOk}>
+              ● 승인 {approvalCounts.approved}
+            </span>
+            <span className={styles.statNo}>
+              ● 반려 {approvalCounts.rejected}
+            </span>
           </div>
           <ul className={styles.myApprovalList}>
-            {myApprovals.map((item) => (
-              <li key={item.id}>
-                <div>
-                  <strong>{item.title}</strong>
-                  <small>
-                    {item.author} · {item.date}
-                  </small>
-                </div>
-                <em className={`${styles.status} ${styles[item.statusType]}`}>
-                  {item.status}
-                </em>
-              </li>
-            ))}
+            {myApprovals.length === 0 ? (
+              <li className={styles.emptyNotice}>결재 문서가 없습니다</li>
+            ) : (
+              myApprovals.map((item) => (
+                <li key={item.id}>
+                  <div>
+                    <strong>{item.title}</strong>
+                    <small>
+                      {item.author} · {item.date}
+                    </small>
+                  </div>
+                  <em className={`${styles.status} ${styles[item.statusType]}`}>
+                    {item.status}
+                  </em>
+                </li>
+              ))
+            )}
           </ul>
         </article>
       </section>
 
-      <NoticeCreateModal
-        open={createOpen}
-        onClose={() => setCreateOpen(false)}
-        onCreated={reloadNotices}
-      />
+      {isAdmin && (
+        <NoticeCreateModal
+          open={createOpen}
+          onClose={() => setCreateOpen(false)}
+          onCreated={reloadNotices}
+        />
+      )}
 
       <NoticeDetailModal
         open={detailOpen}
@@ -380,6 +447,7 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
           setDetailFallback(null);
         }}
         onEdit={(n) => {
+          if (!isAdmin) return;
           setDetailOpen(false);
           setEditNotice(n);
           setEditOpen(true);
@@ -387,12 +455,14 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
         onDeleted={reloadNotices}
       />
 
-      <NoticeEditModal
-        open={editOpen}
-        notice={editNotice}
-        onClose={() => setEditOpen(false)}
-        onUpdated={reloadNotices}
-      />
+      {isAdmin && (
+        <NoticeEditModal
+          open={editOpen}
+          notice={editNotice}
+          onClose={() => setEditOpen(false)}
+          onUpdated={reloadNotices}
+        />
+      )}
     </div>
   );
 }
