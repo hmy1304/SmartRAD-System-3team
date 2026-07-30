@@ -5,12 +5,37 @@ interface ApprovalApiEnvelope {
   data: ApprovalInboxData;
 }
 
-const useMockData = process.env.USE_APPROVAL_MOCK_DATA !== "false";
+const isServer = typeof window === "undefined";
 
-const backendApiUrl = process.env.BACKEND_API_URL;
+function getBaseUrl() {
+  if (isServer) {
+    return (
+      process.env.BACKEND_INTERNAL_URL ||
+      process.env.BACKEND_URL ||
+      "http://backend:8080"
+    ).replace(/\/$/, "");
+  }
+  // Client requests use the Next.js rewrite proxy to /api-system
+  return "/api-system";
+}
 
-const approvalPendingPath =
-  process.env.APPROVAL_PENDING_API_PATH ?? "/api/v1/approvals/pending";
+const useMockData = process.env.NEXT_PUBLIC_USE_APPROVAL_MOCK_DATA === "true";
+const approvalPendingPath = process.env.APPROVAL_PENDING_API_PATH ?? "/api/v1/approvals/pending";
+
+function getHeaders(): HeadersInit {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  };
+
+  if (!isServer) {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
+  return headers;
+}
 
 function isDataEnvelope(
   value: ApprovalInboxData | ApprovalApiEnvelope,
@@ -19,31 +44,15 @@ function isDataEnvelope(
 }
 
 export async function getApprovalInboxData(): Promise<ApprovalInboxData> {
-  /*
-   * 백엔드 연결 전:
-   * USE_APPROVAL_MOCK_DATA=true
-   */
   if (useMockData) {
     return approvalMockData;
   }
 
-  if (!backendApiUrl) {
-    throw new Error("BACKEND_API_URL 환경변수가 설정되지 않았습니다.");
-  }
-
-  const requestUrl = new URL(approvalPendingPath, backendApiUrl).toString();
+  const requestUrl = `${getBaseUrl()}${approvalPendingPath}`;
 
   const response = await fetch(requestUrl, {
     method: "GET",
-
-    headers: {
-      Accept: "application/json",
-    },
-
-    /*
-     * 결재 데이터는 변경이 잦으므로
-     * 요청할 때마다 최신 데이터를 조회합니다.
-     */
+    headers: getHeaders(),
     cache: "no-store",
   });
 
@@ -58,4 +67,47 @@ export async function getApprovalInboxData(): Promise<ApprovalInboxData> {
     | ApprovalApiEnvelope;
 
   return isDataEnvelope(responseData) ? responseData.data : responseData;
+}
+
+export async function getDraftApprovals(drafterId: string, status: string = "ALL"): Promise<import("@/types/approval").ApprovalDraftData> {
+  if (useMockData) {
+    return {
+      summary: { totalDrafts: 0, pendingDrafts: 0, approvedThisMonth: 0, rejectedDrafts: 0, temporaryDrafts: 0 },
+      tabs: { inProgress: 0, rejected: 0, approved: 0, temporary: 0 },
+      documents: []
+    };
+  }
+
+  const requestUrl = new URL(`${getBaseUrl()}/api/v1/approvals/drafts`, isServer ? undefined : window.location.origin);
+  requestUrl.searchParams.append("drafterId", drafterId);
+  requestUrl.searchParams.append("status", status);
+
+  const response = await fetch(isServer ? requestUrl.toString() : requestUrl.pathname + requestUrl.search, {
+    method: "GET",
+    headers: getHeaders(),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(`기안 문서함 조회 실패: ${response.status} ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+export async function createDocument(data: any): Promise<any> {
+  if (useMockData) return {};
+  
+  const requestUrl = `${getBaseUrl()}/api/v1/approvals`;
+  const response = await fetch(requestUrl, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error(`문서 기안 실패: ${response.status} ${response.statusText}`);
+  }
+
+  return await response.json();
 }
