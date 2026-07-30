@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, type ChangeEvent, type FormEvent } from "react";
+import { useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-
+import { useAuthStore } from "@/store/authStore";
 import {
   CreateEmployeeRequest,
   createEmployeeDetailed,
@@ -66,6 +66,20 @@ const initialForm: FormState = {
 
 export default function EmployeeCreatePage() {
   const router = useRouter();
+  const { userProfile } = useAuthStore();
+
+  const canEdit = useMemo(() => {
+    const perm = userProfile?.perms?.find(p => p.menuCode === 'EMP_LIST');
+    return perm ? perm.canWrite : false;
+  }, [userProfile]);
+
+  useEffect(() => {
+    if (userProfile && !canEdit) {
+      alert("해당 메뉴의 수정 권한이 없습니다.");
+      router.push("/dashboard/employees");
+    }
+  }, [userProfile, canEdit, router]);
+
   const [form, setForm] = useState<FormState>(initialForm);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");

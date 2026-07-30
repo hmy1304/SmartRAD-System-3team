@@ -136,8 +136,13 @@ export default function RoleManagementPage() {
   const [departments, setDepartments] = useState<DepartmentResponse[]>([]);
   const [selectedEmployeeIds, setSelectedEmployeeIds] = useState<number[]>([]);
 
-  // 직원 초대 모달 State
+  // 직원 초대  // Modals
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 15;
+
   const [newEmployee, setNewEmployee] = useState<CreateEmployeeRequest>({
     empNo: "",
     name: "",
@@ -415,11 +420,19 @@ export default function RoleManagementPage() {
                     <button 
                       className={`${styles.outlineBtn} ${styles.dangerBtn}`} 
                       onClick={handleDeleteEmployees}
-                      disabled={selectedEmployeeIds.length === 0}
+                      disabled={selectedEmployeeIds.length === 0 || !canEdit}
                     >
                       <Trash2 size={16} /> 직원 삭제
                     </button>
-                    <button className={styles.primaryBtn} onClick={() => setIsInviteModalOpen(true)}>+ 직원 초대</button>
+                    <button 
+                      className={styles.primaryBtn} 
+                      onClick={() => setIsInviteModalOpen(true)}
+                      disabled={!canEdit}
+                      style={{ opacity: canEdit ? 1 : 0.4, cursor: canEdit ? 'pointer' : 'not-allowed' }}
+                      title={!canEdit ? "수정 권한이 없습니다" : "새로운 직원을 초대합니다"}
+                    >
+                      + 직원 초대
+                    </button>
                   </div>
                 </div>
 
@@ -479,7 +492,7 @@ export default function RoleManagementPage() {
                       </tr>
                     </thead>
                     <tbody>
-                      {employees.map((emp) => (
+                      {employees.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE).map((emp) => (
                         <tr key={emp.id}>
                           <td style={{ textAlign: 'center' }}>
                             <input 
@@ -503,17 +516,19 @@ export default function RoleManagementPage() {
                           <td>
                             <div className={styles.roleSelectWrapper}>
                               <div className={`${styles.roleDot} ${(emp.roleGroupName || "").includes("수석") ? styles.dotBlue : (emp.roleGroupName || "").includes("일반") ? styles.dotGrey : (emp.roleGroupName || "").includes("시스템") ? styles.dotPurple : styles.dotYellow}`}></div>
-                              <select
-                                className={styles.roleSelect}
-                                value={roleGroups.find(rg => rg.name === emp.roleGroupName)?.id || ""}
-                                onChange={(e) => handleRoleChange(emp.id, Number(e.target.value))}
-                              >
-                                {roleGroups.map((rg) => (
-                                  <option key={rg.id} value={rg.id}>
-                                    {rg.name}
-                                  </option>
-                                ))}
-                              </select>
+                                <select
+                                  className={styles.roleSelect}
+                                  value={roleGroups.find(rg => rg.name === emp.roleGroupName)?.id || ""}
+                                  disabled={!canEdit}
+                                  style={{ opacity: canEdit ? 1 : 0.6, cursor: canEdit ? 'pointer' : 'not-allowed' }}
+                                  onChange={(e) => handleRoleChange(emp.id, Number(e.target.value))}
+                                >
+                                  {roleGroups.map((rg) => (
+                                    <option key={rg.id} value={rg.id}>
+                                      {rg.name}
+                                    </option>
+                                  ))}
+                                </select>
                             </div>
                           </td>
                           <td>
@@ -529,7 +544,13 @@ export default function RoleManagementPage() {
                           </td>
                           <td style={{ textAlign: "right" }}>
                             <div className={styles.actionButtons}>
-                              <button className={styles.iconBtn} onClick={() => handleIssueAccount(emp.id)}>
+                              <button 
+                                className={styles.iconBtn} 
+                                onClick={() => handleIssueAccount(emp.id)}
+                                disabled={!canEdit}
+                                style={{ opacity: canEdit ? 1 : 0.4, cursor: canEdit ? 'pointer' : 'not-allowed' }}
+                                title={!canEdit ? "수정 권한이 없습니다" : "비밀번호 초기화"}
+                              >
                                 <Key size={16} />
                               </button>
                               <button
@@ -548,13 +569,34 @@ export default function RoleManagementPage() {
                   </table>
                 </div>
                 <div className={styles.paginationRow}>
-                  <span className={styles.pageInfo}>총 {employees.length.toLocaleString()}명 중 {employees.length}명 표시</span>
+                  <span className={styles.pageInfo}>
+                    총 {employees.length.toLocaleString()}명 중 {(currentPage - 1) * ITEMS_PER_PAGE + 1}-
+                    {Math.min(currentPage * ITEMS_PER_PAGE, employees.length)}명 표시
+                  </span>
                   <div className={styles.pagination}>
-                    <button className={styles.pageNav}><ChevronLeft size={16} /></button>
-                    <button className={styles.pageNum + " " + styles.active}>1</button>
-                    {employees.length > 5 && <button className={styles.pageNum}>2</button>}
-                    {employees.length > 10 && <button className={styles.pageNum}>3</button>}
-                    <button className={styles.pageNav}><ChevronRight size={16} /></button>
+                    <button 
+                      className={styles.pageNav} 
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    {Array.from({ length: Math.ceil(employees.length / ITEMS_PER_PAGE) || 1 }, (_, i) => i + 1).map((pageNum) => (
+                      <button
+                        key={pageNum}
+                        className={`${styles.pageNum} ${currentPage === pageNum ? styles.active : ""}`}
+                        onClick={() => setCurrentPage(pageNum)}
+                      >
+                        {pageNum}
+                      </button>
+                    ))}
+                    <button 
+                      className={styles.pageNav} 
+                      onClick={() => setCurrentPage(prev => Math.min(Math.ceil(employees.length / ITEMS_PER_PAGE) || 1, prev + 1))}
+                      disabled={currentPage === (Math.ceil(employees.length / ITEMS_PER_PAGE) || 1)}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
                   </div>
                 </div>
               </>
@@ -569,7 +611,7 @@ export default function RoleManagementPage() {
                     </div>
                     <h2>권한 그룹 및 메뉴 권한 설정</h2>
                   </div>
-                  <button className={styles.primaryBtn} onClick={handleCreateRoleGroup}>+ 새 권한 그룹 만들기</button>
+                  <button className={styles.primaryBtn} onClick={handleCreateRoleGroup} disabled={!canEdit}>+ 새 권한 그룹 만들기</button>
                 </div>
                 
                 <div className={styles.splitLayout}>
@@ -610,7 +652,9 @@ export default function RoleManagementPage() {
                           <button 
                             className={styles.deleteGroupBtn}
                             onClick={(e) => handleDeleteRoleGroup(e, rg.id)}
-                            title="이 권한 그룹 삭제"
+                            disabled={!canEdit}
+                            style={{ opacity: canEdit ? 1 : 0.4, cursor: canEdit ? 'pointer' : 'not-allowed' }}
+                            title={!canEdit ? "수정 권한이 없습니다" : "이 권한 그룹 삭제"}
                           >
                             <Trash2 size={14} />
                           </button>

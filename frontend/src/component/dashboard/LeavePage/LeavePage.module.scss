@@ -6,7 +6,7 @@
   flex-direction: column;
   gap: 24px;
   background-color: #f8fafc;
-  min-height: calc(100vh - 72px);
+  height: 100%;
   color: #1e293b;
   font-family: "Pretendard", -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", sans-serif;
 }
@@ -580,6 +580,28 @@
   background-color: #fffbeb;
   color: #d97706;
   .dot { background-color: #d97706; }
+}
+
+.statusBadge {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+  min-width: 70px;
+}
+.statusPending {
+  background-color: #f1f5f9;
+  color: #475569;
+}
+.statusApproved {
+  background-color: #dcfce7;
+  color: #166534;
+}
+.statusRejected {
+  background-color: #fee2e2;
+  color: #991b1b;
 }
 
 .dateCell,

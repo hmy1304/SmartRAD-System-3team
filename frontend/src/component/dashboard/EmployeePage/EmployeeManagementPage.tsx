@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   useMemo,
@@ -8,6 +8,7 @@ import {
   type FormEvent,
 } from "react";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
 import {
   createEmployeeDetailed,
   getAppointmentHistory,
@@ -107,6 +108,12 @@ const POSITION_CODE_MAP: Record<string, string> = {
 
 export default function EmployeeManagementPage({ initialData }: Props) {
   const router = useRouter();
+  const { userProfile } = useAuthStore();
+  
+  const canEdit = useMemo(() => {
+    const perm = userProfile?.perms?.find(p => p.menuCode === 'EMP_LIST');
+    return perm ? perm.canWrite : false;
+  }, [userProfile]);
 
   const [employees, setEmployees] = useState(initialData.employees);
   const [totalCount, setTotalCount] = useState(initialData.totalCount);
@@ -889,6 +896,9 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                   type="button"
                   className={styles.addBtn}
                   onClick={openCreate}
+                  disabled={!canEdit}
+                  title={!canEdit ? "수정 권한이 없습니다" : "직원 추가"}
+                  style={{ opacity: canEdit ? 1 : 0.4, cursor: canEdit ? 'pointer' : 'not-allowed' }}
                 >
                   + 직원 추가
                 </button>
@@ -991,6 +1001,9 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                       if (!selectedId) return;
                       router.push(`/dashboard/employees/${selectedId}/edit`);
                     }}
+                    disabled={!canEdit}
+                    title={!canEdit ? "수정 권한이 없습니다" : "정보 수정"}
+                    style={{ opacity: canEdit ? 1 : 0.4, cursor: canEdit ? 'pointer' : 'not-allowed' }}
                   >
                     정보 수정
                   </button>
@@ -1148,6 +1161,8 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                             type="button"
                             className={styles.addHistoryBtn}
                             onClick={() => setHistoryModalOpen(true)}
+                            disabled={!canEdit}
+                            title={!canEdit ? "수정 권한이 없습니다" : undefined}
                           >
                             + 이력 추가
                           </button>
@@ -1254,7 +1269,8 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                             type="button"
                             className={styles.leaveApplyBtn}
                             onClick={onLeaveSubmit}
-                            disabled={leaveSubmitting}
+                            disabled={leaveSubmitting || !canEdit}
+                            title={!canEdit ? "수정 권한이 없습니다" : undefined}
                           >
                             {leaveSubmitting ? "처리 중..." : "휴직 신청"}
                           </button>
@@ -1316,7 +1332,8 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                             type="button"
                             className={styles.retireBtn}
                             onClick={onRetireSubmit}
-                            disabled={retireSubmitting}
+                            disabled={retireSubmitting || !canEdit}
+                            title={!canEdit ? "수정 권한이 없습니다" : undefined}
                           >
                             {retireSubmitting
                               ? "처리 중..."
@@ -1400,6 +1417,8 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                 item: null,
                               })
                             }
+                            disabled={!canEdit}
+                            title={!canEdit ? "수정 권한이 없습니다" : undefined}
                           >
                             + 자격 추가
                           </button>
@@ -1450,6 +1469,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                     item: lic,
                                   })
                                 }
+                                disabled={!canEdit}
                               >
                                 ✎
                               </button>
@@ -1461,6 +1481,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                     prev.filter((x) => x.id !== lic.id),
                                   )
                                 }
+                                disabled={!canEdit}
                               >
                                 🗑
                               </button>
@@ -1513,6 +1534,8 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                   item: null,
                                 })
                               }
+                              disabled={!canEdit}
+                              title={!canEdit ? "수정 권한이 없습니다" : undefined}
                             >
                               + 추가
                             </button>
@@ -1577,6 +1600,7 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                       item: edu,
                                     })
                                   }
+                                  disabled={!canEdit}
                                 >
                                   ✎
                                 </button>
@@ -1645,6 +1669,8 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                             type="button"
                             className={styles.addHealthBtn}
                             onClick={() => setHealthModalOpen(true)}
+                            disabled={!canEdit}
+                            title={!canEdit ? "수정 권한이 없습니다" : undefined}
                           >
                             + 검진 추가
                           </button>
@@ -1808,6 +1834,9 @@ export default function EmployeeManagementPage({ initialData }: Props) {
                                     mode: nextSchedule ? "edit" : "create",
                                   })
                                 }
+                                disabled={!canEdit}
+                                title={!canEdit ? "수정 권한이 없습니다" : "일정 수정"}
+                                style={{ opacity: canEdit ? 1 : 0.4, cursor: canEdit ? 'pointer' : 'not-allowed' }}
                               >
                                 일정 수정
                               </button>

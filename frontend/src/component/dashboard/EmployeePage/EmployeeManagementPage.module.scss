@@ -107,9 +107,9 @@
 /* ========== 메인 콘텐츠 ========== */
 .main {
   flex: 1;
-  min-height: 0;
+  height: 100%;
   padding: 20px 24px;
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 .contentLayout {

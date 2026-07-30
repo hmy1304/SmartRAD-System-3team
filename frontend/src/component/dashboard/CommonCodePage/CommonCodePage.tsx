@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useAuthStore } from "@/store/authStore";
 import type { DashboardData } from "@/types/dashboard";
 import styles from "./CommonCodePage.module.scss";
 import { fetchGroupCodes, fetchCommonCodes, CommonCode, createCommonCode, updateCommonCode } from "@/services/commonCodeService";
@@ -19,6 +20,12 @@ export default function CommonCodePage({ initialData }: CommonCodePageProps) {
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingCode, setEditingCode] = useState<CommonCode | null>(null);
+
+  const { userProfile } = useAuthStore();
+  const canEdit = useMemo(() => {
+    const perm = userProfile?.perms?.find(p => p.menuCode === 'SYSTEM_CODE');
+    return perm ? perm.canWrite : false;
+  }, [userProfile]);
 
   // Fetch group codes on mount
   useEffect(() => {
@@ -42,6 +49,10 @@ export default function CommonCodePage({ initialData }: CommonCodePageProps) {
   }, [selectedGroup]);
 
   const handleToggleActive = async (code: CommonCode) => {
+    if (!canEdit) {
+      alert("수정 권한이 없습니다.");
+      return;
+    }
     try {
       const updated = await updateCommonCode(code.code, {
         name: code.name,
@@ -112,13 +123,15 @@ export default function CommonCodePage({ initialData }: CommonCodePageProps) {
                 <div className={styles.breadcrumbs}>
                   <span>공통코드 관리</span> &gt; <strong>{selectedGroup}</strong>
                 </div>
-                <div className={styles.rightHeaderAction}>
+                <div className={styles.tableHeaderActions}>
                   <h2>{selectedGroup ? `${selectedGroup} 코드 목록` : "코드 목록"}</h2>
                   <button 
-                    className={styles.btnAdd} 
+                    className={styles.btnPrimary} 
                     onClick={() => { setEditingCode(null); setIsModalOpen(true); }}
+                    disabled={!canEdit}
+                    title={!canEdit ? "수정 권한이 없습니다" : undefined}
                   >
-                    + 코드 추가
+                    + 신규 등록
                   </button>
                 </div>
               </div>
@@ -157,10 +170,12 @@ export default function CommonCodePage({ initialData }: CommonCodePageProps) {
                         </td>
                         <td>
                           <button 
-                            className={styles.btnEdit}
+                            className={styles.btnEdit} 
                             onClick={() => { setEditingCode(code); setIsModalOpen(true); }}
+                            disabled={!canEdit}
+                            title={!canEdit ? "수정 권한이 없습니다" : undefined}
                           >
-                            ✎
+                            수정
                           </button>
                         </td>
                       </tr>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { useAuthStore } from "@/store/authStore";
 
 import styles from "./AppointmentPage.module.scss";
 
@@ -36,6 +37,12 @@ export default function AppointmentPage() {
   const [keyword, setKeyword] = useState("");
   const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  
+  const { userProfile } = useAuthStore();
+  const canEdit = useMemo(() => {
+    const perm = userProfile?.perms?.find(p => p.menuCode === 'APPOINTMENT');
+    return perm ? perm.canWrite : false;
+  }, [userProfile]);
   
   // For modal data
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -159,10 +166,17 @@ export default function AppointmentPage() {
             </div>
             <div className={styles.pageActions}>
               <button type="button" className={styles.outlineBtn}>
-                내보내기
+                인쇄하기
               </button>
-              <button type="button" className={styles.primaryBtn} onClick={() => setIsModalOpen(true)}>
-                + 발령 등록
+              <button 
+                type="button" 
+                className={styles.primaryBtn} 
+                onClick={() => setIsModalOpen(true)}
+                disabled={!canEdit}
+                title={!canEdit ? "수정 권한이 없습니다" : undefined}
+                style={{ opacity: canEdit ? 1 : 0.4, cursor: canEdit ? 'pointer' : 'not-allowed' }}
+              >
+                + 신규 발령 등록
               </button>
             </div>
           </div>

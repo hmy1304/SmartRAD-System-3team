@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { useAuthStore } from "@/store/authStore";
 import styles from "./StatutoryPage.module.scss";
 import StatutoryDashboardTab from "./StatutoryDashboardTab";
 import StatutoryCalendarTab from "./StatutoryCalendarTab";
@@ -10,6 +11,12 @@ export default function StatutoryPage() {
   const [activeTab, setActiveTab] = useState<"dashboard" | "calendar" | "guide">("dashboard");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const { userProfile } = useAuthStore();
+  const canEdit = useMemo(() => {
+    const perm = userProfile?.perms?.find(p => p.menuCode === 'STATUTORY_REPORT');
+    return perm ? perm.canWrite : false;
+  }, [userProfile]);
 
   const handleSuccess = () => {
     setIsModalOpen(false);
@@ -46,7 +53,13 @@ export default function StatutoryPage() {
             신고 가이드
           </button>
 
-          <button className={styles.primaryAction} onClick={() => setIsModalOpen(true)}>
+          <button 
+            className={styles.primaryAction} 
+            onClick={() => setIsModalOpen(true)}
+            disabled={!canEdit}
+            title={!canEdit ? "수정 권한이 없습니다" : undefined}
+            style={{ opacity: canEdit ? 1 : 0.4, cursor: canEdit ? 'pointer' : 'not-allowed' }}
+          >
             + 일정 추가
           </button>
         </div>

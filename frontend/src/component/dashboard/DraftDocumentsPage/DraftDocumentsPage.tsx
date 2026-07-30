@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { useAuthStore } from "@/store/authStore";
 import styles from "./DraftDocumentsPage.module.scss";
 
 import { 
@@ -42,6 +43,11 @@ export default function DraftDocumentsPage() {
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | number | null>(null);
+  const { userProfile } = useAuthStore();
+  const canEdit = useMemo(() => {
+    const perm = userProfile?.perms?.find(p => p.menuCode === 'APPROVAL_DRAFT');
+    return perm ? perm.canWrite : false;
+  }, [userProfile]);
 
   // In real app, fetch drafterId from context/session. 
   // We use a mock ID for demo purposes.
@@ -121,8 +127,14 @@ export default function DraftDocumentsPage() {
               엑셀 다운로드
             </button>
 
-            <button type="button" className={styles.newDocumentButton} onClick={() => setIsModalOpen(true)}>
-              <PlusIcon /> 새 문서 기안
+            <button 
+              type="button" 
+              className={styles.newDocumentButton} 
+              onClick={() => setIsModalOpen(true)}
+              disabled={!canEdit}
+              title={!canEdit ? "수정 권한이 없습니다" : undefined}
+            >
+              <PlusIcon /> 새 결재 진행
             </button>
           </div>
         </section>
@@ -237,8 +249,19 @@ export default function DraftDocumentsPage() {
                       <div className={styles.management}>
                         {document.temporary ? (
                           <>
-                            <button type="button" aria-label="수정"><EditIcon /></button>
-                            <button type="button" className={styles.deleteButton} aria-label="삭제"><TrashIcon /></button>
+                            <button 
+                              type="button" 
+                              aria-label="수정"
+                              disabled={!canEdit}
+                              title={!canEdit ? "수정 권한이 없습니다" : undefined}
+                            ><EditIcon /></button>
+                            <button 
+                              type="button" 
+                              className={styles.deleteButton} 
+                              aria-label="삭제"
+                              disabled={!canEdit}
+                              title={!canEdit ? "수정 권한이 없습니다" : undefined}
+                            ><TrashIcon /></button>
                           </>
                         ) : (
                           <button type="button" aria-label="상세보기" onClick={() => setSelectedDocumentId(document.id)}>

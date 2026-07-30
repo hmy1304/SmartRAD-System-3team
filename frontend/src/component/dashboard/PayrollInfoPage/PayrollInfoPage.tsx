@@ -14,6 +14,25 @@ const EditIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor
 
 export default function PayrollInfoPage() {
   const [activeTab, setActiveTab] = useState<"taxable" | "non-taxable">("taxable");
+  const [canWrite, setCanWrite] = useState(false);
+
+  useEffect(() => {
+    try {
+      const userStr = localStorage.getItem("userProfile");
+      if (userStr) {
+        const user = JSON.parse(userStr);
+        const isAdminRole = user.empNo === "ADMIN-001" || user.roleGroupName === "최고관리자";
+        if (isAdminRole) {
+          setCanWrite(true);
+        } else {
+          const perm = user.permissions?.find((p: any) => p.menuCode === "PAYROLL_INFO");
+          setCanWrite(perm ? !!perm.canWrite : false);
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
   
   // Data states
   const [summary, setSummary] = useState<any>(null);
@@ -128,7 +147,7 @@ export default function PayrollInfoPage() {
               <p>급여 계산의 기준이 되는 기본급 테이블, 수당 및 공제 항목을 관리합니다.</p>
             </div>
             <div className={styles.actionBox}>
-              <button type="button">
+              <button type="button" disabled={!canWrite} style={{ opacity: canWrite ? 1 : 0.5, cursor: canWrite ? 'pointer' : 'not-allowed' }}>
                 <SaveIcon /> 전체 저장
               </button>
               <button type="button" className={styles.greenText}>
@@ -246,7 +265,11 @@ export default function PayrollInfoPage() {
                           </td>
                           <td>{item.actualAmount ? item.actualAmount.toLocaleString() : '-'}</td>
                           <td>2026-01-01</td>
-                          <td><button className={styles.editBtn} onClick={() => setEditingBaseSalary(item)}><EditIcon /></button></td>
+                          <td>
+                            <button className={styles.editBtn} onClick={() => setEditingBaseSalary(item)} disabled={!canWrite} style={{ opacity: canWrite ? 1 : 0.4, cursor: canWrite ? 'pointer' : 'not-allowed' }}>
+                              <EditIcon />
+                            </button>
+                          </td>
                         </tr>
                       )) : (
                         <tr><td colSpan={6} style={{textAlign: 'center', padding: '2rem'}}>데이터가 없습니다.</td></tr>
@@ -265,9 +288,11 @@ export default function PayrollInfoPage() {
                     <p>급여에서 차감되는 법정 및 자체 공제 항목</p>
                   </div>
                   <div className={styles.headerAction}>
-                    <button className={`${styles.solidBtn} ${styles.blue}`} onClick={() => setIsDeductionAddOpen(true)}>
-                      공제 항목 추가
-                    </button>
+                    {canWrite && (
+                      <button className={`${styles.solidBtn} ${styles.blue}`} onClick={() => setIsDeductionAddOpen(true)} disabled={!canWrite} title={!canWrite ? "권한없음" : undefined}>
+                        공제 항목 추가
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -299,16 +324,21 @@ export default function PayrollInfoPage() {
                             </span>
                           </td>
                           <td>
-                              <label className={styles.toggleSwitch}>
+                              <label className={styles.toggleSwitch} style={{ opacity: canWrite ? 1 : 0.6, cursor: canWrite ? 'pointer' : 'not-allowed' }}>
                                 <input 
                                   type="checkbox" 
                                   checked={item.isActive !== false} 
+                                  disabled={!canWrite}
                                   onChange={() => handleToggleDeduction(item.id, item.isActive !== false)} 
                                 />
                                 <span className={styles.slider}></span>
                               </label>
                           </td>
-                          <td><button className={styles.editBtn} onClick={() => setEditingDeduction(item)}><EditIcon /></button></td>
+                          <td>
+                            <button className={styles.editBtn} onClick={() => setEditingDeduction(item)} disabled={!canWrite} style={{ opacity: canWrite ? 1 : 0.4, cursor: canWrite ? 'pointer' : 'not-allowed' }}>
+                              <EditIcon />
+                            </button>
+                          </td>
                         </tr>
                       )) : (
                         <tr><td colSpan={6} style={{textAlign: 'center', padding: '2rem'}}>데이터가 없습니다.</td></tr>
@@ -345,9 +375,11 @@ export default function PayrollInfoPage() {
                     <p>총 {allowances.length}개 항목</p>
                   </div>
                   <div className={styles.headerAction}>
-                    <button className={`${styles.solidBtn} ${styles.green}`} onClick={() => setIsAllowanceAddOpen(true)}>
-                      <PlusIcon /> 추가
-                    </button>
+                    {canWrite && (
+                      <button className={`${styles.solidBtn} ${styles.green}`} onClick={() => setIsAllowanceAddOpen(true)} disabled={!canWrite} title={!canWrite ? "권한없음" : undefined}>
+                        <PlusIcon /> 추가
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -383,15 +415,18 @@ export default function PayrollInfoPage() {
                           {item.amountOrRate}
                         </div>
                           <div className={styles.itemActions}>
-                            <label className={styles.toggleSwitch}>
+                            <label className={styles.toggleSwitch} style={{ opacity: canWrite ? 1 : 0.6, cursor: canWrite ? 'pointer' : 'not-allowed' }}>
                               <input 
                                 type="checkbox" 
                                 checked={item.isActive !== false} 
+                                disabled={!canWrite}
                                 onChange={() => handleToggleAllowance(item.id, item.isActive !== false)} 
                               />
                               <span className={styles.slider}></span>
                             </label>
-                            <button className={styles.editBtn} onClick={() => setEditingAllowance(item)}><EditIcon /></button>
+                            <button className={styles.editBtn} onClick={() => setEditingAllowance(item)} disabled={!canWrite} style={{ opacity: canWrite ? 1 : 0.4, cursor: canWrite ? 'pointer' : 'not-allowed' }}>
+                              <EditIcon />
+                            </button>
                           </div>
                       </div>
                     </div>
