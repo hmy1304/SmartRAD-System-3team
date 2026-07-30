@@ -12,6 +12,8 @@ import com.tphr.hr.employee.entity.Department;
 import com.tphr.hr.employee.entity.Employee;
 import com.tphr.hr.employee.repository.DepartmentRepository;
 import com.tphr.hr.employee.repository.EmployeeRepository;
+import com.tphr.hr.leave.entity.LeaveApplication;
+import com.tphr.hr.leave.repository.LeaveApplicationRepository;
 import com.tphr.hr.system.entity.CommonCode;
 import com.tphr.hr.system.entity.Menu;
 import com.tphr.hr.system.entity.RolePermission;
@@ -35,6 +37,7 @@ public class DutyScheduleService {
     private final EmployeeRepository employeeRepository;
     private final CommonCodeRepository commonCodeRepository;
     private final com.tphr.hr.employee.repository.EmploymentHistoryRepository employmentHistoryRepository;
+    private final LeaveApplicationRepository leaveApplicationRepository;
     
     // 권한 검증용
     private final MenuRepository menuRepository;
@@ -161,6 +164,12 @@ public class DutyScheduleService {
                 .filter(e -> !finalExcluded.contains(e.getId()))
                 .collect(Collectors.toList());
 
+        // 휴가 일정 가져오기
+        List<LeaveApplication> approvedLeaves = new java.util.ArrayList<>();
+        for (Employee emp : activeWorkers) {
+            approvedLeaves.addAll(leaveApplicationRepository.findApprovedLeavesForEmployeeInMonth(emp.getId(), monthStart, monthEnd));
+        }
+
         // 3. 자동 생성 알고리즘 초기화
         dutyScheduleEntryRepository.deleteByDutyScheduleId(scheduleId);
         List<DutyScheduleEntry> newEntries = new java.util.ArrayList<>();
@@ -194,6 +203,24 @@ public class DutyScheduleService {
                 String yesterdayShift = yesterdayShifts.get(empId);
                 int currentConsecutiveN = consecutiveNightCounts.get(empId);
                 int currentTotalN = nightCounts.get(empId);
+
+                // 휴가 체크
+                boolean isOnLeave = approvedLeaves.stream().anyMatch(l -> 
+                        l.getEmployee().getId().equals(empId) && 
+                        !currentDate.isBefore(l.getStartDate()) && 
+                        !currentDate.isAfter(l.getEndDate()));
+
+                if (isOnLeave) {
+                    newEntries.add(DutyScheduleEntry.builder()
+                            .dutySchedule(schedule)
+                            .employee(emp)
+                            .workDate(currentDate)
+                            .shiftType(shiftOFF)
+                            .build());
+                    yesterdayShifts.put(empId, "OFF");
+                    consecutiveNightCounts.put(empId, 0);
+                    continue;
+                }
 
                 CommonCode assignedShift = shiftOFF;
 

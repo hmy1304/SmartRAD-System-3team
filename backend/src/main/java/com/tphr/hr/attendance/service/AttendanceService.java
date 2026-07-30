@@ -5,6 +5,8 @@ import com.tphr.hr.attendance.entity.Attendance;
 import com.tphr.hr.attendance.repository.AttendanceRepository;
 import com.tphr.hr.employee.entity.Employee;
 import com.tphr.hr.employee.repository.EmployeeRepository;
+import com.tphr.hr.leave.entity.LeaveApplication;
+import com.tphr.hr.leave.repository.LeaveApplicationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -25,6 +27,7 @@ public class AttendanceService {
 
     private final AttendanceRepository attendanceRepository;
     private final EmployeeRepository employeeRepository;
+    private final LeaveApplicationRepository leaveApplicationRepository;
 
     @Transactional
     public AttendanceResponse checkIn(AttendanceCheckInRequest request) {
@@ -213,6 +216,27 @@ public class AttendanceService {
                 } else if ("LEAVE".equalsIgnoreCase(status)) {
                     days.set(dayIndex, "leave");
                     leave++;
+                }
+            }
+
+            // Fetch approved leaves
+            List<LeaveApplication> approvedLeaves = leaveApplicationRepository.findApprovedLeavesForEmployeeInMonth(emp.getId(), startDate, endDate);
+            for (LeaveApplication leaveApp : approvedLeaves) {
+                LocalDate cur = leaveApp.getStartDate();
+                LocalDate end = leaveApp.getEndDate();
+                while (!cur.isAfter(end)) {
+                    if (!cur.isBefore(startDate) && !cur.isAfter(endDate)) {
+                        int dayIndex = cur.getDayOfMonth() - 1;
+                        if (!"leave".equals(days.get(dayIndex))) {
+                            String oldStatus = days.get(dayIndex);
+                            days.set(dayIndex, "leave");
+                            leave++;
+                            if ("normal".equals(oldStatus)) attend--;
+                            else if ("late".equals(oldStatus)) late--;
+                            else if ("absent".equals(oldStatus)) absent--;
+                        }
+                    }
+                    cur = cur.plusDays(1);
                 }
             }
 
