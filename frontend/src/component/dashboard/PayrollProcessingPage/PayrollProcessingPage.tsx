@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useAuthStore } from "@/store/authStore";
 import styles from "./PayrollProcessingPage.module.scss";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 
@@ -13,6 +14,11 @@ const IconRefresh = () => <svg viewBox="0 0 24 24" width="16" height="16" fill="
 export default function PayrollProcessingPage() {
   const [targetYear, setTargetYear] = useState(2026);
   const [targetMonth, setTargetMonth] = useState(7);
+  const { userProfile } = useAuthStore();
+  const canWrite = useMemo(() => {
+    const perm = userProfile?.perms?.find(p => p.menuCode === 'PAYROLL_PROC');
+    return perm ? perm.canWrite : false;
+  }, [userProfile]);
   
   const [summary, setSummary] = useState({ targetCount: 0, totalAmount: 0, pendingCount: 0, transferFailedCount: 0 });
   const [payrollList, setPayrollList] = useState<any[]>([]);
@@ -142,7 +148,14 @@ export default function PayrollProcessingPage() {
         </div>
         <div className={styles.actionBtns}>
           <button className={styles.exportBtn}>전체 내보내기</button>
-          <button className={styles.calcBtn} onClick={handleCalculate}>일괄 급여 계산 실행</button>
+          <button 
+            className={styles.calcBtn} 
+            onClick={handleCalculate}
+            disabled={!canWrite}
+            style={{ opacity: canWrite ? 1 : 0.5, cursor: canWrite ? 'pointer' : 'not-allowed' }}
+          >
+            일괄 급여 계산 실행
+          </button>
         </div>
       </header>
 
@@ -197,7 +210,7 @@ export default function PayrollProcessingPage() {
               ))}
             </select>
             <select><option>부서 전체</option></select>
-            <button className={styles.calcBtn} onClick={handleCalculate} style={{ padding: '0.5rem 1rem', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }}>선택 계산 실행</button>
+            <button className={styles.calcBtn} onClick={handleCalculate} disabled={!canWrite || selectedIds.length === 0} style={{ padding: '0.5rem 1rem', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: canWrite ? 'pointer' : 'not-allowed', opacity: canWrite ? 1 : 0.5 }}>선택 계산 실행</button>
           </div>
         </div>
 
@@ -296,7 +309,7 @@ export default function PayrollProcessingPage() {
             </div>
           </div>
           <div className={styles.sectionFilters}>
-            <button className={styles.calcBtn} style={{ padding: '0.5rem 1rem', backgroundColor: '#059669', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: 'pointer' }} onClick={() => alert('이체 실행 준비중입니다.')}>일괄 이체 실행</button>
+            <button className={styles.calcBtn} style={{ padding: '0.5rem 1rem', backgroundColor: '#059669', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: canWrite ? 'pointer' : 'not-allowed', opacity: canWrite ? 1 : 0.5 }} onClick={() => alert('이체 실행 준비중입니다.')} disabled={!canWrite}>일괄 이체 실행</button>
           </div>
         </div>
 

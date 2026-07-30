@@ -34,7 +34,7 @@ public class ApprovalDraftResponse {
     @Getter
     @Builder
     public static class DraftDocumentDto {
-        private Long id;
+        private String id;
         private String number; // "DOC-20250101-001" or string ID
         private String title;
         private String attachment;

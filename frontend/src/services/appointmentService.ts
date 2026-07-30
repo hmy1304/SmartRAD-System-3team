@@ -34,6 +34,7 @@ export interface AppointmentResponse {
   afterPayStep: number | null;
   applyDate: string;
   applied: boolean;
+  status: string;
   note: string | null;
 }
 

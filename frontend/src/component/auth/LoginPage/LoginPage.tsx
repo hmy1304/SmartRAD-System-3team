@@ -50,8 +50,7 @@ export default function LoginPage() {
           <BrandLogo inverse={true} />
         </div>
         <div className={styles.headerRight}>
-          <span>아직 계정이 없으신가요?</span>
-          <button className={styles.signupBtn}>회원가입</button>
+          {/* 회원가입 버튼 제거됨 */}
         </div>
       </header>
 
@@ -157,16 +156,12 @@ export default function LoginPage() {
                   <input type="checkbox" />
                   <span>로그인 상태 유지</span>
                 </label>
-                <a href="#" className={styles.forgotPassword}>비밀번호 찾기</a>
               </div>
 
               <button type="submit" className={styles.loginBtn}>
                 로그인 <span className={styles.arrow}>→</span>
               </button>
 
-              <div className={styles.mobileSignup}>
-                아직 계정이 없으신가요? <a href="#">회원가입</a>
-              </div>
             </form>
           </div>
         </div>

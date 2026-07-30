@@ -67,7 +67,7 @@ export interface DraftTabs {
 }
 
 export interface DraftDocument {
-  id: number;
+  id: string;
   number: string;
   title: string;
   attachment: string;

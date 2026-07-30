@@ -55,7 +55,7 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.getMonthlySummary(year, month, departmentId));
     }
 
-    // ===== 관리자 전용 근태 정정 및 수동 보정 API =====
+    // ===== 관리자 전용 근태 수정 및 수동 보정 API =====
 
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', '최고관리자', '시스템 관리자')")
     @GetMapping("/admin")

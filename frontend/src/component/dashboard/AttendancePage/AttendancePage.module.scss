@@ -93,8 +93,7 @@
 /* ===== 메인 ===== */
 .main {
   padding: 24px;
-  overflow-y: auto;
-  height: calc(100svh - 72px);
+  height: 100%;
 }
 
 .pageHeader {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { useAuthStore } from "@/store/authStore";
 import styles from "./DutyPage.module.scss";
 
 type Shift = "D" | "E" | "N" | "OFF" | "AL" | "";
@@ -58,6 +59,12 @@ export default function DutyPage() {
   const [draftShifts, setDraftShifts] = useState<Record<number, Shift[]>>({});
   const [hasChanges, setHasChanges] = useState(false);
   const [hasSavedOnce, setHasSavedOnce] = useState(false);
+
+  const { userProfile } = useAuthStore();
+  const canEdit = useMemo(() => {
+    const perm = userProfile?.perms?.find(p => p.menuCode === 'DUTY_SCHEDULE');
+    return perm ? perm.canWrite : false;
+  }, [userProfile]);
   const [message, setMessage] = useState("");
 
   const daysInMonth = useMemo(() => new Date(currentYear, currentMonth, 0).getDate(), [currentYear, currentMonth]);
@@ -399,21 +406,45 @@ export default function DutyPage() {
           </select>
           
           {!schedule && (
-            <button type="button" className={styles.primaryBtn} onClick={handleCreateSchedule} disabled={isLoading}>
-              스케줄 생성
+            <button 
+              type="button" 
+              className={styles.primaryBtn} 
+              onClick={handleCreateSchedule} 
+              disabled={isLoading || !canEdit}
+              title={!canEdit ? "수정 권한이 없습니다" : undefined}
+            >
+              + 신규 스케줄 생성
             </button>
           )}
 
           {schedule && !isConfirmed && (
             <>
-              <button type="button" className={styles.outlineBtn} onClick={handleAutoGenerate} disabled={isLoading}>
-                자동 편성
+              <button 
+                type="button" 
+                className={styles.outlineBtn} 
+                onClick={handleAutoGenerate} 
+                disabled={isLoading || !canEdit}
+                title={!canEdit ? "수정 권한이 없습니다" : undefined}
+              >
+                자동 배정
               </button>
-              <button type="button" className={styles.outlineBtn} onClick={handleSaveDraft} disabled={isLoading}>
-                임시 저장
+              <button 
+                type="button" 
+                className={styles.outlineBtn} 
+                onClick={handleSaveDraft} 
+                disabled={isLoading || !canEdit}
+                title={!canEdit ? "수정 권한이 없습니다" : undefined}
+              >
+                임시저장
               </button>
-              <button type="button" className={styles.primaryBtn} onClick={handleConfirm} disabled={isLoading || hasChanges || !hasSavedOnce}>
-                듀티표 발행
+              <button 
+                type="button" 
+                className={styles.primaryBtn} 
+                onClick={handleConfirm} 
+                disabled={isLoading || hasChanges || !hasSavedOnce || !canEdit}
+                title={!canEdit ? "수정 권한이 없습니다" : undefined}
+              >
+                최종 확정
               </button>
             </>
           )}

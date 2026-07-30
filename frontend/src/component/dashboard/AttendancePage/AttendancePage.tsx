@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { useAuthStore } from "@/store/authStore";
 import styles from "./AttendancePage.module.scss";
 
 type Status = "정상" | "지각" | "결근" | "조기퇴근" | string;
@@ -185,6 +186,12 @@ export default function AttendancePage() {
   const [editingRow, setEditingRow] = useState<AttendanceRow | null>(null);
   const [selectedUserForTimeline, setSelectedUserForTimeline] = useState<AttendanceRow | null>(null);
 
+  const { userProfile } = useAuthStore();
+  const canEdit = useMemo(() => {
+    const perm = userProfile?.perms?.find(p => p.menuCode === 'ATTEND_ADMIN');
+    return perm ? perm.canWrite : false;
+  }, [userProfile]);
+
   // Add Form State
   const [addForm, setAddForm] = useState({
     employeeId: "",
@@ -222,6 +229,7 @@ export default function AttendancePage() {
     try {
       const res = await fetch(`/api/v1/attendance/admin?startDate=${startDate}&endDate=${endDate}&page=${page}&size=50`, {
         headers: getAuthHeaders(),
+        cache: "no-store",
       });
       if (res.ok) {
         const body = await res.json();
@@ -266,7 +274,10 @@ export default function AttendancePage() {
 
   const fetchEmployees = useCallback(async () => {
     try {
-      const res = await fetch(`/api-system/employees?size=100`, { headers: getAuthHeaders() });
+      const res = await fetch(`/api-system/employees?size=100`, { 
+        headers: getAuthHeaders(),
+        cache: "no-store"
+      });
       if (res.ok) {
         const data = await res.json();
         const list = data?.content || data;
@@ -295,7 +306,6 @@ export default function AttendancePage() {
 
   // 일별 렌더링 필터링 (기존 선택 일자 및 검색어 기준)
   const todayRecords = useMemo(() => {
-    // 2026-07-11 일자 기록 우선 표출, 만약 전체가 해당일이 아니면 최신 기록 순 표출
     return records;
   }, [records]);
 
@@ -374,7 +384,6 @@ export default function AttendancePage() {
       }
     }
 
-    // fallback state update in case some rows are frontend mocks
     setRecords((prev) =>
       prev.map((r) => {
         if (selectedIds.includes(r.id)) {
@@ -512,7 +521,6 @@ export default function AttendancePage() {
       // onError fall back
     }
 
-    // fallback state updates for non-connected dev mode
     const newId = Date.now().toString();
     const newRow: AttendanceRow = {
       id: newId,
@@ -581,7 +589,6 @@ export default function AttendancePage() {
       }
     }
 
-    // fallback UI state modification
     const updated = records.map((r) => {
       if (r.id === editingRow.id) {
         const checkOutVal = editForm.checkOut || (editForm.checkIn ? "퇴근 전" : null);
@@ -675,7 +682,14 @@ export default function AttendancePage() {
               style={{ border: "1px solid #e2e8f0", borderRadius: "6px", padding: "4px 8px", fontSize: "14px", outline: "none" }}
             />
           </div>
-          <button type="button" className={styles.primaryBtn} onClick={() => setIsAddModalOpen(true)}>
+          <button 
+            type="button" 
+            className={styles.primaryBtn} 
+            onClick={() => setIsAddModalOpen(true)}
+            disabled={!canEdit}
+            title={!canEdit ? "수정 권한이 없습니다" : undefined}
+            style={{ opacity: canEdit ? 1 : 0.4, cursor: canEdit ? 'pointer' : 'not-allowed' }}
+          >
             <span>➕</span>
             <span>수동 근태 등록</span>
           </button>
@@ -811,10 +825,22 @@ export default function AttendancePage() {
             ☑️ 현재 <span>{selectedIds.length}명</span> 직원의 근태 기록을 선택했습니다.
           </div>
           <div className={styles.batchActions}>
-            <button type="button" className={styles.batchNormalBtn} onClick={handleBatchNormalize}>
+            <button 
+              type="button" 
+              className={styles.batchNormalBtn} 
+              onClick={handleBatchNormalize}
+              disabled={!canEdit || selectedIds.length === 0}
+              title={!canEdit ? "수정 권한이 없습니다" : undefined}
+            >
               ✨ 선택 일괄 정상 처리
             </button>
-            <button type="button" className={styles.batchDeleteBtn} onClick={handleBatchDelete}>
+            <button 
+              type="button" 
+              className={styles.batchDeleteBtn} 
+              onClick={handleBatchDelete}
+              disabled={!canEdit || selectedIds.length === 0}
+              title={!canEdit ? "수정 권한이 없습니다" : undefined}
+            >
               🗑️ 선택 일괄 삭제
             </button>
           </div>
@@ -920,10 +946,22 @@ export default function AttendancePage() {
                   </td>
                   <td>
                     <div className={styles.rowActions}>
-                      <button type="button" className={styles.editBtn} onClick={() => openEditModal(row)}>
+                      <button 
+                        type="button" 
+                        className={styles.editBtn} 
+                        onClick={() => openEditModal(row)}
+                        disabled={!canEdit}
+                        title={!canEdit ? "수정 권한이 없습니다" : undefined}
+                      >
                         🛠️ 정정
                       </button>
-                      <button type="button" className={styles.deleteBtn} onClick={() => handleDelete(row)}>
+                      <button 
+                        type="button" 
+                        className={styles.deleteBtn} 
+                        onClick={() => handleDelete(row)}
+                        disabled={!canEdit}
+                        title={!canEdit ? "수정 권한이 없습니다" : undefined}
+                      >
                         ❌ 삭제
                       </button>
                     </div>

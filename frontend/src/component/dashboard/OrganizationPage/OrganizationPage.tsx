@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import styles from "./OrganizationPage.module.scss";
 import DepartmentModal, { DepartmentTreeData } from "./DepartmentModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuthStore } from "@/store/authStore";
 
 export default function OrganizationPage() {
   const router = useRouter();
@@ -17,7 +18,11 @@ export default function OrganizationPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editDeptData, setEditDeptData] = useState<DepartmentTreeData | null>(null);
 
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { userProfile } = useAuthStore();
+  const isAdmin = useMemo(() => {
+    const perm = userProfile?.perms?.find(p => p.menuCode === 'EMP_ORG');
+    return perm ? perm.canWrite : false;
+  }, [userProfile]);
 
   // 데이터 로드
   const fetchData = async () => {
@@ -54,14 +59,6 @@ export default function OrganizationPage() {
   };
 
   useEffect(() => {
-    // 권한 체크: LoginPage에서 저장한 userProfile을 읽어옵니다.
-    const userStr = localStorage.getItem("userProfile");
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      if (user.empNo === "ADMIN-001" || user.role === "ROLE_ADMIN" || user.roleGroupId === 1) {
-        setIsAdmin(true);
-      }
-    }
     fetchData();
   }, []);
 

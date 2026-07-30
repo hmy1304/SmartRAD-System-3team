@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { useAuthStore } from "@/store/authStore";
 
 import styles from "./AppointmentPage.module.scss";
 
@@ -13,7 +14,7 @@ interface Employee { id: number; empNo: string; name: string; departmentName: st
 interface Department { id: number; name: string; }
 interface CommonCode { code: string; name: string; }
 
-type AppointmentStatus = "완료" | "처리중" | "대기";
+type AppointmentStatus = "완료" | "처리중" | "대기" | "반려";
 
 interface AppointmentItem {
   id: string;
@@ -37,6 +38,12 @@ export default function AppointmentPage() {
   const [appointments, setAppointments] = useState<AppointmentItem[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  const { userProfile } = useAuthStore();
+  const canEdit = useMemo(() => {
+    const perm = userProfile?.perms?.find(p => p.menuCode === 'APPOINTMENT');
+    return perm ? perm.canWrite : false;
+  }, [userProfile]);
+  
   // For modal data
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -48,7 +55,9 @@ export default function AppointmentPage() {
       const data = await getAllAppointments();
       const mapped: AppointmentItem[] = data.map((a: AppointmentResponse) => {
         let status: AppointmentStatus = "대기";
-        if (a.applied) {
+        if (a.status === "REJECTED") {
+          status = "반려" as any; // Type override since we are adding a new status
+        } else if (a.applied || a.status === "COMPLETED") {
           status = "완료";
         } else if (new Date(a.applyDate) <= new Date()) {
           status = "처리중";
@@ -157,10 +166,17 @@ export default function AppointmentPage() {
             </div>
             <div className={styles.pageActions}>
               <button type="button" className={styles.outlineBtn}>
-                내보내기
+                인쇄하기
               </button>
-              <button type="button" className={styles.primaryBtn} onClick={() => setIsModalOpen(true)}>
-                + 발령 등록
+              <button 
+                type="button" 
+                className={styles.primaryBtn} 
+                onClick={() => setIsModalOpen(true)}
+                disabled={!canEdit}
+                title={!canEdit ? "수정 권한이 없습니다" : undefined}
+                style={{ opacity: canEdit ? 1 : 0.4, cursor: canEdit ? 'pointer' : 'not-allowed' }}
+              >
+                + 신규 발령 등록
               </button>
             </div>
           </div>
@@ -343,9 +359,11 @@ export default function AppointmentPage() {
                           className={`${styles.statusBadge} ${
                             item.status === "완료"
                               ? styles.statusDone
-                              : item.status === "처리중"
-                                ? styles.statusProgress
-                                : styles.statusWait
+                              : item.status === "반려"
+                                ? styles.statusWait // Use statusWait or statusReject if available, will just style as grey/red
+                                : item.status === "처리중"
+                                  ? styles.statusProgress
+                                  : styles.statusWait
                           }`}
                         >
                           {item.status}

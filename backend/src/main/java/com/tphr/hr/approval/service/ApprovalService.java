@@ -14,12 +14,17 @@ import com.tphr.hr.employee.entity.Employee;
 import com.tphr.hr.employee.repository.AppointmentRepository;
 import com.tphr.hr.leave.entity.LeaveApplication;
 import com.tphr.hr.leave.repository.LeaveApplicationRepository;
+import com.tphr.hr.leave.service.LeaveService;
 import com.tphr.hr.system.entity.CommonCode;
 import jakarta.persistence.EntityManager;
+import java.time.LocalDate;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.boot.json.JsonParser;
+import org.springframework.boot.json.JsonParserFactory;
+import java.util.Map;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -39,6 +44,7 @@ public class ApprovalService {
     private final ApprovalAttachmentRepository approvalAttachmentRepository;
     private final ApprovalCommentRepository approvalCommentRepository;
     private final LeaveApplicationRepository leaveApplicationRepository;
+    private final LeaveService leaveService;
     private final AppointmentRepository appointmentRepository;
     private final EntityManager entityManager;
 
@@ -209,7 +215,7 @@ public class ApprovalService {
             }
 
             docDtos.add(ApprovalDraftResponse.DraftDocumentDto.builder()
-                    .id(doc.getId())
+                    .id("DOC-" + doc.getId())
                     .number(doc.getDocNumber() != null ? doc.getDocNumber() : "DOC-" + doc.getId())
                     .title(doc.getTitle())
                     .attachment(approvalAttachmentRepository.findByDocumentId(doc.getId()).isEmpty() ? "" : "첨부파일")
@@ -223,6 +229,43 @@ public class ApprovalService {
                     .deadline("")
                     .deadlineWarning(false)
                     .temporary("DRAFT".equals(currentStatus))
+                    .build());
+        }
+
+        // Add Appointments
+        List<Appointment> appts = appointmentRepository.findAll();
+        for (Appointment appt : appts) {
+            String currentStatus = appt.getStatus();
+            if (currentStatus == null) currentStatus = "WAITING";
+            String statusLabel;
+            switch(currentStatus) {
+                case "WAITING": statusLabel = "결재중"; inProgress++; break;
+                case "REJECTED": statusLabel = "반려"; rejected++; break;
+                case "COMPLETED": statusLabel = "결재완료"; approved++; break;
+                default: statusLabel = currentStatus;
+            }
+
+            if (status != null && !status.isEmpty() && !"ALL".equalsIgnoreCase(status)) {
+                if (!status.equalsIgnoreCase(currentStatus)) {
+                    continue;
+                }
+            }
+
+            docDtos.add(ApprovalDraftResponse.DraftDocumentDto.builder()
+                    .id("APPT-" + appt.getId())
+                    .number("APPT-" + appt.getId())
+                    .title(appt.getEmployee().getName() + " 인사발령 기안")
+                    .attachment("")
+                    .kind("appointment")
+                    .kindLabel("인사발령")
+                    .createdAt(appt.getCreatedAt() != null ? appt.getCreatedAt().format(FORMATTER) : "")
+                    .approverInitial("시")
+                    .approver("시스템 관리자")
+                    .status(currentStatus)
+                    .statusLabel(statusLabel)
+                    .deadline("")
+                    .deadlineWarning(false)
+                    .temporary(false)
                     .build());
         }
 
@@ -298,7 +341,11 @@ public class ApprovalService {
             leave.changeStatus("반려", reason);
             return ApprovalResponse.builder().id(leaveId).title("휴가 반려됨").status("REJECTED").build();
         } else if (id.startsWith("APPT-")) {
-            throw new IllegalArgumentException("인사발령은 반려할 수 없습니다. (데이터 삭제 처리 필요)");
+            Long apptId = Long.parseLong(id.split("-")[1]);
+            Appointment appt = appointmentRepository.findById(apptId)
+                    .orElseThrow(() -> new IllegalArgumentException("발령 정보를 찾을 수 없습니다."));
+            appt.reject(reason);
+            return ApprovalResponse.builder().id(apptId).title("발령 반려됨").status("REJECTED").build();
         } else if (id.startsWith("DOC-")) {
             Long docId = Long.parseLong(id.split("-")[1]);
             return rejectRegularDocument(docId, approverId, reason);
@@ -329,6 +376,23 @@ public class ApprovalService {
             nextLine.markAsWaiting();
         } else {
             document.updateStatus("COMPLETED");
+
+            // 휴가 신청서일 경우 LeaveService 연동
+            if ("DOC_VACATION".equals(document.getDocType().getCode())) {
+                try {
+                    JsonParser parser = JsonParserFactory.getJsonParser();
+                    Map<String, Object> map = parser.parseMap(document.getContent());
+                    String leaveType = map.containsKey("leaveType") ? map.get("leaveType").toString() : "연차";
+                    LocalDate startDate = LocalDate.parse(map.get("startDate").toString());
+                    LocalDate endDate = LocalDate.parse(map.get("endDate").toString());
+                    double days = map.containsKey("days") ? Double.parseDouble(map.get("days").toString()) : 1.0;
+                    String reason = map.containsKey("reason") ? map.get("reason").toString() : "전자결재 승인 휴가";
+
+                    leaveService.createApprovedLeaveFromApproval(document.getDraftedBy().getId(), leaveType, startDate, endDate, days, reason);
+                } catch (Exception e) {
+                    log.error("휴가 데이터 파싱 및 연동 실패: {}", e.getMessage());
+                }
+            }
         }
 
         return mapToResponse(document);
@@ -400,7 +464,41 @@ public class ApprovalService {
     }
 
     @Transactional(readOnly = true)
-    public ApprovalDetailResponse getApprovalDetail(Long documentId) {
+    public ApprovalDetailResponse getApprovalDetail(String id) {
+        if (id.startsWith("APPT-")) {
+            Long apptId = Long.parseLong(id.split("-")[1]);
+            Appointment appt = appointmentRepository.findById(apptId)
+                    .orElseThrow(() -> new IllegalArgumentException("발령 정보를 찾을 수 없습니다."));
+
+            String contentHtml = String.format("<p><strong>발령일:</strong> %s</p><p><strong>발령유형:</strong> %s</p><p><strong>부서변경:</strong> %s -> %s</p>",
+                    appt.getApplyDate(),
+                    appt.getAppointmentType() != null ? appt.getAppointmentType().getName() : "",
+                    appt.getBeforeDepartment() != null ? appt.getBeforeDepartment().getName() : "-",
+                    appt.getAfterDepartment() != null ? appt.getAfterDepartment().getName() : "-");
+
+            ApprovalResponse docResponse = ApprovalResponse.builder()
+                    .id(apptId)
+                    .title(appt.getEmployee().getName() + " 인사발령 기안")
+                    .status(appt.getStatus() != null ? appt.getStatus() : "WAITING")
+                    .docNumber("APPT-" + apptId)
+                    .build();
+
+            return ApprovalDetailResponse.builder()
+                    .document(docResponse)
+                    .content(contentHtml)
+                    .approvalLines(new ArrayList<>())
+                    .attachments(new ArrayList<>())
+                    .build();
+        }
+
+        Long documentId;
+        if (id.startsWith("DOC-")) {
+            documentId = Long.parseLong(id.split("-")[1]);
+        } else {
+            // fallback if someone just passes the ID without prefix (though frontend will pass DOC- / APPT-)
+            documentId = Long.parseLong(id);
+        }
+
         ApprovalDocument document = approvalDocumentRepository.findById(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다."));
         List<ApprovalLine> lines = approvalLineRepository.findByDocumentIdOrderBySequenceAsc(documentId);

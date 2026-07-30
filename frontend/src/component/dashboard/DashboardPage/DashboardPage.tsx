@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useAuthStore } from "@/store/authStore";
 import type { DashboardData } from "@/types/dashboard";
 import styles from "./DashboardPage.module.scss";
 import { getDashboardData } from "@/services/dashboardService";
@@ -83,6 +84,11 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const [data, setData] = useState(initialData);
+  const { userProfile } = useAuthStore();
+  const canEdit = useMemo(() => {
+    const perm = userProfile?.perms?.find(p => p.menuCode === 'NOTICE');
+    return perm ? perm.canWrite : false;
+  }, [userProfile]);
   const [createOpen, setCreateOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailId, setDetailId] = useState<number | null>(null);
@@ -344,15 +350,16 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
         <article className={styles.panel}>
           <div className={styles.panelTitle}>
             <h2>공지사항</h2>
-            {isAdmin && (
-              <button
-                type="button"
-                className={styles.linkBtn}
-                onClick={() => setCreateOpen(true)}
-              >
-                공지사항 작성 ›
-              </button>
-            )}
+            <button
+              type="button"
+              className={styles.linkBtn}
+              onClick={() => setCreateOpen(true)}
+              disabled={!canEdit}
+              title={!canEdit ? "수정 권한이 없습니다" : undefined}
+              style={{ opacity: canEdit ? 1 : 0.4, cursor: canEdit ? 'pointer' : 'not-allowed' }}
+            >
+              공지사항 작성 ›
+            </button>
           </div>
           <ul className={styles.noticeList}>
             {displayNotices.length === 0 ? (
