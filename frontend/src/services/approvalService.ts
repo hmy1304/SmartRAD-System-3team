@@ -43,12 +43,28 @@ function isDataEnvelope(
   return "data" in value;
 }
 
-export async function getApprovalInboxData(): Promise<ApprovalInboxData> {
+export async function getApprovalInboxData(
+  approverId?: number,
+): Promise<ApprovalInboxData> {
   if (useMockData) {
     return approvalMockData;
   }
 
-  const requestUrl = `${getBaseUrl()}${approvalPendingPath}`;
+  let id = approverId;
+  if (id == null && !isServer) {
+    try {
+      const raw = localStorage.getItem("userProfile");
+      if (raw) {
+        const p = JSON.parse(raw) as { employeeId?: number };
+        if (p.employeeId) id = Number(p.employeeId);
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  if (id == null) id = 1;
+
+  const requestUrl = `${getBaseUrl()}${approvalPendingPath}?approverId=${id}`;
 
   const response = await fetch(requestUrl, {
     method: "GET",

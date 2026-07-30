@@ -151,39 +151,77 @@
     font-size: 0.8rem;
     color: $color-text;
   }
+}
 
-  .linkBtn {
+.linkBtn {
   border: none;
   background: none;
   color: $color-blue-600;
   font-size: 0.65rem;
   cursor: pointer;
   padding: 0;
+  text-decoration: none;
+  font-family: inherit;
+  line-height: 1;
 
   &:hover {
     text-decoration: underline;
   }
 }
 
+/* 공지 — panelTitle 밖 (루트) */
+.noticeList {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+}
+
+.noticeItem {
+  border-bottom: 1px solid #eef2f8;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
 .noticeItemBtn {
-  all: unset;
-  display: block;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
   width: 100%;
+  padding: 12px 2px;
+  border: none;
+  background: transparent;
   cursor: pointer;
   text-align: left;
+  border-radius: 8px;
+  transition: background 0.15s ease;
 
-  strong {
-    display: block;
-    font-size: 0.78rem;
-    color: $color-text;
-    margin-bottom: 4px;
-    font-weight: 600;
+  &:hover {
+    background: #f5f8fc;
   }
+}
 
-  time {
-    font-size: 0.68rem;
-    color: $color-muted;
-  }
+.noticeTitle {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: #1a2b4a;
+  word-break: keep-all;
+}
+
+.noticeDate {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: #8a97ad;
+  font-style: normal;
 }
 
 .emptyNotice {
@@ -191,9 +229,8 @@
   padding: 28px 8px;
   text-align: center;
   font-size: 0.78rem;
-  color: #a0aec0; // 흐린 색
+  color: #a0aec0;
   font-weight: 500;
-}
 }
 
 .legend {
