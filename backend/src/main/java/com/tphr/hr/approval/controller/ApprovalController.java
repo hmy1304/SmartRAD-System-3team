@@ -5,6 +5,7 @@ import com.tphr.hr.approval.dto.ApprovalDetailResponse;
 import com.tphr.hr.approval.dto.ApprovalResponse;
 import com.tphr.hr.approval.dto.ApprovalUpdateRequest;
 import com.tphr.hr.approval.dto.ApprovalInboxResponse;
+import com.tphr.hr.approval.dto.ApprovalDraftResponse;
 import com.tphr.hr.approval.dto.ApprovalCommentCreateRequest;
 import com.tphr.hr.approval.service.ApprovalService;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,16 @@ public class ApprovalController {
         return ResponseEntity.ok().build();
     }
 
+
+    /**
+     * 0-2. 기안 문서함 조회
+     */
+    @GetMapping("/drafts")
+    public ResponseEntity<ApprovalDraftResponse> getDraftApprovals(
+            @RequestParam Long drafterId,
+            @RequestParam(required = false, defaultValue = "ALL") String status) {
+        return ResponseEntity.ok(approvalService.getDraftApprovals(drafterId, status));
+    }
 
     /**
      * 1. 기안 문서 생성 (결재 올리기)

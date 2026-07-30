@@ -1,5 +1,9 @@
 @use "../../../styles/variables" as *;
 
+.draftContainer {
+  padding: 24px 32px;
+}
+
 .dashboard {
   min-height: 100svh;
   display: grid;
@@ -389,37 +393,37 @@
   gap: 8px;
 }
 
-.dateButton {
+.dateFilter {
   height: 34px;
   display: flex;
   align-items: center;
   gap: 7px;
-
   padding: 0 11px;
-
   border: 1px solid $color-border;
   border-radius: 8px;
-
-  color: #667289;
   background: $color-surface;
 
-  font-size: 0.65rem;
-
-  cursor: pointer;
-
-  svg {
-    width: 14px;
-    height: 14px;
-
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.7;
-    stroke-linecap: round;
-    stroke-linejoin: round;
+  span {
+    color: #667289;
+    font-size: 0.65rem;
   }
+}
 
-  b {
-    font-weight: 400;
+.dateInput {
+  border: none;
+  background: transparent;
+  color: #667289;
+  font-size: 0.65rem;
+  font-family: inherit;
+  outline: none;
+
+  &::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.6;
+    transition: opacity 0.2s;
+    &:hover {
+      opacity: 1;
+    }
   }
 }
 
@@ -860,7 +864,7 @@
     flex-direction: column;
   }
 
-  .dateButton,
+  .dateFilter,
   .documentSearch {
     width: 100%;
   }
@@ -872,4 +876,15 @@
 
     padding-block: 14px;
   }
+}
+
+.activePage {
+  background-color: $color-blue-600 !important;
+  color: white !important;
+  border-color: $color-blue-600 !important;
+}
+
+.pageNumbers {
+  display: flex;
+  gap: 4px;
 }

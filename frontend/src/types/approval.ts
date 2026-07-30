@@ -50,3 +50,41 @@ export interface ApprovalInboxData {
   documents: ApprovalDocument[];
   comments: ApprovalComment[];
 }
+
+export interface DraftSummary {
+  totalDrafts: number;
+  pendingDrafts: number;
+  approvedThisMonth: number;
+  rejectedDrafts: number;
+  temporaryDrafts: number;
+}
+
+export interface DraftTabs {
+  inProgress: number;
+  rejected: number;
+  approved: number;
+  temporary: number;
+}
+
+export interface DraftDocument {
+  id: number;
+  number: string;
+  title: string;
+  attachment: string;
+  kind: string;
+  kindLabel: string;
+  createdAt: string;
+  approverInitial: string;
+  approver: string;
+  status: string;
+  statusLabel: string;
+  deadline: string;
+  deadlineWarning: boolean;
+  temporary: boolean;
+}
+
+export interface ApprovalDraftData {
+  summary: DraftSummary;
+  tabs: DraftTabs;
+  documents: DraftDocument[];
+}

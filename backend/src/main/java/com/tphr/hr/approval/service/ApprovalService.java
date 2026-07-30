@@ -167,6 +167,87 @@ public class ApprovalService {
                 .build();
     }
 
+    @Transactional(readOnly = true)
+    public ApprovalDraftResponse getDraftApprovals(Long drafterId, String status) {
+        List<ApprovalDocument> documents = approvalDocumentRepository.findByDraftedByIdOrderByCreatedAtDesc(drafterId);
+        
+        int inProgress = 0;
+        int rejected = 0;
+        int approved = 0;
+        int temporary = 0;
+
+        List<ApprovalDraftResponse.DraftDocumentDto> docDtos = new ArrayList<>();
+        
+        for (ApprovalDocument doc : documents) {
+            String currentStatus = doc.getStatus();
+            if (currentStatus == null) currentStatus = "IN_PROGRESS";
+            String statusLabel;
+            switch(currentStatus) {
+                case "IN_PROGRESS": statusLabel = "결재중"; inProgress++; break;
+                case "REJECTED": statusLabel = "반려"; rejected++; break;
+                case "COMPLETED": statusLabel = "결재완료"; approved++; break;
+                case "DRAFT": statusLabel = "임시저장"; temporary++; break;
+                default: statusLabel = currentStatus;
+            }
+
+            // If status filter is applied
+            if (status != null && !status.isEmpty() && !"ALL".equalsIgnoreCase(status)) {
+                if (!status.equalsIgnoreCase(currentStatus)) {
+                    continue;
+                }
+            }
+
+            String approverName = "";
+            String approverInitial = "";
+            List<ApprovalLine> lines = approvalLineRepository.findByDocumentIdOrderBySequenceAsc(doc.getId());
+            for (ApprovalLine line : lines) {
+                if ("WAITING".equals(line.getStatus()) || "PENDING".equals(line.getStatus())) {
+                    approverName = line.getApprover().getName() + (line.getApprover().getPosition() != null ? "(" + line.getApprover().getPosition().getName() + ")" : "");
+                    approverInitial = line.getApprover().getName().substring(0, 1);
+                    break;
+                }
+            }
+
+            docDtos.add(ApprovalDraftResponse.DraftDocumentDto.builder()
+                    .id(doc.getId())
+                    .number(doc.getDocNumber() != null ? doc.getDocNumber() : "DOC-" + doc.getId())
+                    .title(doc.getTitle())
+                    .attachment(approvalAttachmentRepository.findByDocumentId(doc.getId()).isEmpty() ? "" : "첨부파일")
+                    .kind(doc.getDocType() != null ? doc.getDocType().getCode() : "approval")
+                    .kindLabel(doc.getDocType() != null ? doc.getDocType().getName() : "일반기안")
+                    .createdAt(doc.getCreatedAt() != null ? doc.getCreatedAt().format(FORMATTER) : "")
+                    .approverInitial(approverInitial)
+                    .approver(approverName)
+                    .status(currentStatus)
+                    .statusLabel(statusLabel)
+                    .deadline("")
+                    .deadlineWarning(false)
+                    .temporary("DRAFT".equals(currentStatus))
+                    .build());
+        }
+
+        ApprovalDraftResponse.DraftSummaryDto summary = ApprovalDraftResponse.DraftSummaryDto.builder()
+                .totalDrafts(documents.size())
+                .pendingDrafts(inProgress)
+                .approvedThisMonth(approved)
+                .rejectedDrafts(rejected)
+                .temporaryDrafts(temporary)
+                .build();
+
+        ApprovalDraftResponse.DraftTabsDto tabs = ApprovalDraftResponse.DraftTabsDto.builder()
+                .inProgress(inProgress)
+                .rejected(rejected)
+                .approved(approved)
+                .temporary(temporary)
+                .build();
+
+        return ApprovalDraftResponse.builder()
+                .summary(summary)
+                .tabs(tabs)
+                .documents(docDtos)
+                .build();
+    }
+
     private String calculateDDay(LocalDateTime targetDate) {
         if (targetDate == null) return "D-0";
         long days = ChronoUnit.DAYS.between(LocalDateTime.now().toLocalDate(), targetDate.toLocalDate());
