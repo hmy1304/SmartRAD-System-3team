@@ -121,8 +121,8 @@ public class Employee extends BaseEntity {
     }
 
     // 계정 잠금/해제 (LOCKED <-> ACTIVE)
-    public void changeAccountStatus(String accountStatus) {
-        this.accountStatus = accountStatus;
+    public void changeAccountStatus(String status) {
+        this.accountStatus = status;
     }
 
     // PATCH /employees/{id} 부분 수정 - null인 항목은 변경하지 않는다

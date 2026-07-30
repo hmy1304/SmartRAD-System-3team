@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import styles from "./DraftRegisterModal.module.scss";
 import { createDocument } from "@/services/approvalService";
 import { getEmployees } from "@/services/employeeService";
+import { useCommonCodes } from "@/hooks/useCommonCodes";
 
 interface DraftRegisterModalProps {
   onClose: () => void;
@@ -23,6 +24,8 @@ export default function DraftRegisterModal({ onClose, onSuccess }: DraftRegister
   const [approverId, setApproverId] = useState(""); 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [employees, setEmployees] = useState<any[]>([]);
+
+  const { codes } = useCommonCodes(["DOC_TYPE"]);
 
   useEffect(() => {
     async function loadEmployees() {
@@ -109,9 +112,15 @@ export default function DraftRegisterModal({ onClose, onSuccess }: DraftRegister
           <div className={styles.formGroup}>
             <label>문서 종류<b>*</b></label>
             <select value={docType} onChange={(e) => setDocType(e.target.value)}>
-              <option value="DOC_VACATION">휴가 신청서</option>
-              <option value="DOC_WELFARE">복리후생 신청서</option>
-              <option value="DOC_CERT">제증명 신청서</option>
+              {codes.DOC_TYPE ? codes.DOC_TYPE.map(c => (
+                <option key={c.code} value={c.code}>{c.name}</option>
+              )) : (
+                <>
+                  <option value="DOC_VACATION">휴가 신청서</option>
+                  <option value="DOC_WELFARE">복리후생 신청서</option>
+                  <option value="DOC_CERT">제증명 신청서</option>
+                </>
+              )}
             </select>
           </div>
 

@@ -8,6 +8,7 @@ import {
   CreateEmployeeRequest,
   createEmployeeDetailed,
 } from "@/services/employeeService";
+import { useCommonCodes } from "@/hooks/useCommonCodes";
 import styles from "./EmployeeCreatePage.module.scss";
 
 type FormState = {
@@ -79,6 +80,16 @@ export default function EmployeeCreatePage() {
       router.push("/dashboard/employees");
     }
   }, [userProfile, canEdit, router]);
+
+  const { codes, isLoading: codesLoading } = useCommonCodes([
+    "POS",
+    "JOB",
+    "EMP_TYPE",
+    "WORK_TYPE",
+    "HIRE_ROUTE",
+    "PAY_TYPE",
+    "TAX_TYPE",
+  ]);
 
   const [form, setForm] = useState<FormState>(initialForm);
   const [submitting, setSubmitting] = useState(false);
@@ -301,10 +312,11 @@ export default function EmployeeCreatePage() {
                       onChange={onChange}
                     >
                       <option value="">직위 선택</option>
-                      <option value="POS_01">수석</option>
-                      <option value="POS_02">수간호사</option>
-                      <option value="POS_03">과장</option>
-                      <option value="POS_04">대리</option>
+                      {codes.POS?.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.name}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <label className={styles.field}>
@@ -315,9 +327,11 @@ export default function EmployeeCreatePage() {
                       onChange={onChange}
                     >
                       <option value="">직군 선택</option>
-                      <option value="JOB_01">전문의</option>
-                      <option value="JOB_02">간호사</option>
-                      <option value="JOB_03">행정직</option>
+                      {codes.JOB?.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.name}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 </div>
@@ -331,9 +345,11 @@ export default function EmployeeCreatePage() {
                       onChange={onChange}
                     >
                       <option value="">고용 형태 선택</option>
-                      <option value="EMP_FULL">정규직</option>
-                      <option value="EMP_CONTRACT">계약직</option>
-                      <option value="EMP_INTERN">인턴</option>
+                      {codes.EMP_TYPE?.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.name}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <label className={styles.field}>
@@ -354,9 +370,12 @@ export default function EmployeeCreatePage() {
                       value={form.hireRouteCode}
                       onChange={onChange}
                     >
-                      <option value="">입사 경로 선택</option>
-                      <option value="HIRE_OPEN">공개채용</option>
-                      <option value="HIRE_REF">추천</option>
+                      <option value="">채용 경로 선택</option>
+                      {codes.HIRE_ROUTE?.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.name}
+                        </option>
+                      ))}
                     </select>
                   </label>
                 </div>
@@ -369,9 +388,12 @@ export default function EmployeeCreatePage() {
                       value={form.workTypeCode}
                       onChange={onChange}
                     >
-                      <option value="">근무 형태 선택</option>
-                      <option value="WORK_DAY">상근</option>
-                      <option value="WORK_SHIFT">교대</option>
+                      <option value="">근무 유형 선택</option>
+                      {codes.WORK_TYPE?.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.name}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <label className={styles.field}>
@@ -421,9 +443,12 @@ export default function EmployeeCreatePage() {
                       value={form.payrollTypeCode}
                       onChange={onChange}
                     >
-                      <option value="">급여 유형 선택</option>
-                      <option value="PAY_ANNUAL">연봉</option>
-                      <option value="PAY_STEP">호봉제</option>
+                      <option value="">급여 형태 선택</option>
+                      {codes.PAY_TYPE?.map((c) => (
+                        <option key={c.code} value={c.code}>
+                          {c.name}
+                        </option>
+                      ))}
                     </select>
                   </label>
                   <label className={styles.field}>

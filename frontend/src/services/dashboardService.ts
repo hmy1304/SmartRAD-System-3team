@@ -84,7 +84,7 @@ function createEmptyDashboard(): DashboardData {
         icon: "check",
       },
       {
-        label: "휴가 중",
+        label: "금일 부서 휴가자",
         value: "0",
         unit: "명",
         status: "-",
@@ -410,16 +410,32 @@ export async function getDashboardData(): Promise<DashboardData> {
     data.approvalItems = [];
   }
 
-  // 5) 나의 결재함
+  // 5) 내 최근 기안
   try {
-    const draft = await fetchDraftSummary(employeeId);
+    const draftRes = await fetchDraftSummary(employeeId);
     data.approvalCounts = {
-      waiting: draft.waiting,
-      approved: draft.approved,
-      rejected: draft.rejected,
+      waiting: draftRes.waiting,
+      approved: draftRes.approved,
+      rejected: draftRes.rejected,
     };
-    data.myApprovals = draft.docs;
-  } catch {
+    data.myApprovals = draftRes.docs;
+
+    // 6) 법정 교육 미이수자 (경고 알림용)
+    if (isServer) {
+      try {
+        const now = new Date();
+        const statRes = await fetch(`${getBaseUrl()}/api/v1/statutory/schedules/dashboard-summary?year=${now.getFullYear()}&month=${now.getMonth() + 1}`, { headers: getHeaders(), cache: "no-store" });
+        if (statRes.ok) {
+          const statJson = await statRes.json();
+          data.urgentStatutory = statJson.urgentCount || 0;
+        }
+      } catch (e) {
+        console.error("Failed to fetch statutory summary", e);
+      }
+    }
+
+    return data;
+  } catch (error) {
     data.approvalCounts = { waiting: 0, approved: 0, rejected: 0 };
     data.myApprovals = [];
   }

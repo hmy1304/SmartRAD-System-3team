@@ -123,10 +123,10 @@ export default function CommonCodePage({ initialData }: CommonCodePageProps) {
                 <div className={styles.breadcrumbs}>
                   <span>공통코드 관리</span> &gt; <strong>{selectedGroup}</strong>
                 </div>
-                <div className={styles.tableHeaderActions}>
+                <div className={styles.rightHeaderAction}>
                   <h2>{selectedGroup ? `${selectedGroup} 코드 목록` : "코드 목록"}</h2>
                   <button 
-                    className={styles.btnPrimary} 
+                    className={styles.btnAdd} 
                     onClick={() => { setEditingCode(null); setIsModalOpen(true); }}
                     disabled={!canEdit}
                     title={!canEdit ? "수정 권한이 없습니다" : undefined}

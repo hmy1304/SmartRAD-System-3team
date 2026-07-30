@@ -4,10 +4,11 @@ import { useEffect, useState, useMemo, type ChangeEvent, type FormEvent } from "
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/authStore";
 import {
-  getEmployeeById,
+  getEmployeeProfile,
   updateEmployee,
 } from "@/services/employeeService";
-import type { EmployeeUpdateRequest } from "@/types/employee";
+import { useCommonCodes } from "@/hooks/useCommonCodes";
+import type { EmployeeUpdateRequest, EmployeeProfileResponse } from "@/types/employee";
 import AddressSearchModal from "./AddressSearchModal";
 import BankAccountVerifyModal from "./BankAccountVerifyModal";
 import styles from "./EmployeeCreatePage.module.scss";
@@ -88,6 +89,16 @@ export default function EmployeeEditPage({ employeeId }: Props) {
     }
   }, [userProfile, canEdit, router]);
 
+  const { codes, isLoading: codesLoading } = useCommonCodes([
+    "POS",
+    "JOB",
+    "EMP_TYPE",
+    "WORK_TYPE",
+    "HIRE_ROUTE",
+    "PAY_TYPE",
+    "TAX_TYPE",
+  ]);
+
   const [form, setForm] = useState<FormState>(emptyForm);
   const [original, setOriginal] = useState<FormState>(emptyForm);
   const [loading, setLoading] = useState(true);
@@ -96,6 +107,9 @@ export default function EmployeeEditPage({ employeeId }: Props) {
   const [addressOpen, setAddressOpen] = useState(false);
   const [bankVerifyOpen, setBankVerifyOpen] = useState(false);
   const [bankVerified, setBankVerified] = useState(true);
+  
+  const [activeTab, setActiveTab] = useState<"basic" | "appointments" | "leave" | "education">("basic");
+  const [profileData, setProfileData] = useState<EmployeeProfileResponse | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -103,40 +117,42 @@ export default function EmployeeEditPage({ employeeId }: Props) {
     (async () => {
       try {
         setLoading(true);
-        const data = await getEmployeeById(employeeId);
+        const data = await getEmployeeProfile(employeeId);
+        const basic = data.basicInfo;
 
         const mapped: FormState = {
-          name: data.name ?? "",
-          birthDate: data.birthDate ? String(data.birthDate).slice(0, 10) : "",
-          gender: data.gender ?? "",
-          phone: data.phone ?? "",
-          internalPhone: data.internalPhone ?? "",
-          email: data.email ?? "",
-          zipCode: data.zipCode ?? "",
-          address: data.address ?? "",
-          emergencyContact: data.emergencyContact ?? "",
-          emergencyRelation: data.emergencyRelation ?? "",
-          departmentId: data.departmentId != null ? String(data.departmentId) : "",
-          positionCode: data.positionCode ?? "",
-          jobCategoryCode: data.jobCategoryCode ?? "",
-          employmentTypeCode: data.employmentTypeCode ?? "",
-          joinDate: data.joinDate ? String(data.joinDate).slice(0, 10) : "",
-          hireRouteCode: data.hireRouteCode ?? "",
-          workTypeCode: data.workTypeCode ?? "",
-          workWard: data.workWard ?? "",
-          empNo: data.empNo ?? "",
-          payStep: data.payStep != null ? String(data.payStep) : "",
-          payrollTypeCode: data.payrollTypeCode ?? "",
-          payrollDate: data.payrollDate != null ? String(data.payrollDate) : "",
-          bankName: data.bankName ?? "",
-          bankAccount: data.bankAccount ?? "",
-          taxTypeCode: data.taxTypeCode ?? "",
+          name: basic.name ?? "",
+          birthDate: basic.birthDate ? String(basic.birthDate).slice(0, 10) : "",
+          gender: basic.gender ?? "",
+          phone: basic.phone ?? "",
+          internalPhone: basic.internalPhone ?? "",
+          email: basic.email ?? "",
+          zipCode: basic.zipCode ?? "",
+          address: basic.address ?? "",
+          emergencyContact: basic.emergencyContact ?? "",
+          emergencyRelation: basic.emergencyRelation ?? "",
+          departmentId: basic.departmentId != null ? String(basic.departmentId) : "",
+          positionCode: basic.positionCode ?? "",
+          jobCategoryCode: basic.jobCategoryCode ?? "",
+          employmentTypeCode: basic.employmentTypeCode ?? "",
+          joinDate: basic.joinDate ? String(basic.joinDate).slice(0, 10) : "",
+          hireRouteCode: basic.hireRouteCode ?? "",
+          workTypeCode: basic.workTypeCode ?? "",
+          workWard: basic.workWard ?? "",
+          empNo: basic.empNo ?? "",
+          payStep: basic.payStep != null ? String(basic.payStep) : "",
+          payrollTypeCode: basic.payrollTypeCode ?? "",
+          payrollDate: basic.payrollDate != null ? String(basic.payrollDate) : "",
+          bankName: basic.bankName ?? "",
+          bankAccount: basic.bankAccount ?? "",
+          taxTypeCode: basic.taxTypeCode ?? "",
         };
 
         if (!cancelled) {
           setForm(mapped);
           setOriginal(mapped);
           setBankVerified(true);
+          setProfileData(data);
         }
       } catch (err) {
         if (!cancelled) {
@@ -235,11 +251,39 @@ export default function EmployeeEditPage({ employeeId }: Props) {
 
       <div className={styles.editBanner}>
         <span>
-          ⚠ 수정 모드가 활성화되어 있습니다. 변경 내용을 입력한 후 &quot;변경사항 저장&quot;을 눌러주세요.
+          현재 수정 모드가 활성화되어 있습니다. 변경 내용이 발생하면 "변경사항 저장"을 눌러주세요.
         </span>
-        <em>{changedCount}개 항목 변경됨</em>
+        <em>{changedCount}건 변경됨</em>
       </div>
 
+      <div className={styles.tabs} style={{ display: 'flex', gap: '16px', marginBottom: '24px', borderBottom: '1px solid #eee', paddingBottom: '12px' }}>
+        <button 
+          type="button"
+          onClick={() => setActiveTab('basic')}
+          style={{ fontWeight: activeTab === 'basic' ? 'bold' : 'normal', border: 'none', background: 'none', cursor: 'pointer', color: activeTab === 'basic' ? '#0070f3' : '#666' }}>
+          기본 인적사항
+        </button>
+        <button 
+          type="button"
+          onClick={() => setActiveTab('appointments')}
+          style={{ fontWeight: activeTab === 'appointments' ? 'bold' : 'normal', border: 'none', background: 'none', cursor: 'pointer', color: activeTab === 'appointments' ? '#0070f3' : '#666' }}>
+          인사 발령 이력
+        </button>
+        <button 
+          type="button"
+          onClick={() => setActiveTab('leave')}
+          style={{ fontWeight: activeTab === 'leave' ? 'bold' : 'normal', border: 'none', background: 'none', cursor: 'pointer', color: activeTab === 'leave' ? '#0070f3' : '#666' }}>
+          휴가/연차
+        </button>
+        <button 
+          type="button"
+          onClick={() => setActiveTab('education')}
+          style={{ fontWeight: activeTab === 'education' ? 'bold' : 'normal', border: 'none', background: 'none', cursor: 'pointer', color: activeTab === 'education' ? '#0070f3' : '#666' }}>
+          법정 교육
+        </button>
+      </div>
+
+      {activeTab === 'basic' && (
       <form className={styles.form} onSubmit={onSubmit}>
         <div className={styles.formBody}>
           {/* 인적사항 */}
@@ -328,20 +372,22 @@ export default function EmployeeEditPage({ employeeId }: Props) {
                 <span>직위</span>
                 <select name="positionCode" value={form.positionCode} onChange={onChange}>
                   <option value="">직위 선택</option>
-                  <option value="POS_01">수석</option>
-                  <option value="POS_03">과장</option>
-                  <option value="POS_04">대리</option>
-                  <option value="POS_05">부장</option>
+                  {codes.POS?.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className={styles.field}>
                 <span>직군</span>
                 <select name="jobCategoryCode" value={form.jobCategoryCode} onChange={onChange}>
                   <option value="">직군 선택</option>
-                  <option value="JOB_01">전문의</option>
-                  <option value="JOB_02">간호사</option>
-                  <option value="JOB_03">행정직</option>
-                  <option value="JOB_04">의료기사</option>
+                  {codes.JOB?.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
                 </select>
               </label>
             </div>
@@ -351,9 +397,11 @@ export default function EmployeeEditPage({ employeeId }: Props) {
                 <span>고용 형태</span>
                 <select name="employmentTypeCode" value={form.employmentTypeCode} onChange={onChange}>
                   <option value="">선택</option>
-                  <option value="EMP_FULL">정규직</option>
-                  <option value="EMP_CONTRACT">계약직</option>
-                  <option value="EMP_INTERN">인턴</option>
+                  {codes.EMP_TYPE?.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className={styles.field}>
@@ -371,8 +419,11 @@ export default function EmployeeEditPage({ employeeId }: Props) {
                 <span>근무 형태</span>
                 <select name="workTypeCode" value={form.workTypeCode} onChange={onChange}>
                   <option value="">선택</option>
-                  <option value="WORK_DAY">주간 상근</option>
-                  <option value="WORK_SHIFT">교대</option>
+                  {codes.WORK_TYPE?.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className={styles.field}>
@@ -383,8 +434,11 @@ export default function EmployeeEditPage({ employeeId }: Props) {
                 <span>입사 경로</span>
                 <select name="hireRouteCode" value={form.hireRouteCode} onChange={onChange}>
                   <option value="">선택</option>
-                  <option value="HIRE_OPEN">공개채용</option>
-                  <option value="HIRE_REF">추천</option>
+                  {codes.HIRE_ROUTE?.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
                 </select>
               </label>
             </div>
@@ -400,9 +454,12 @@ export default function EmployeeEditPage({ employeeId }: Props) {
               <label className={styles.field}>
                 <span>직급</span>
                 <select name="positionCode" value={form.positionCode} onChange={onChange}>
-                  <option value="POS_05">부장</option>
-                  <option value="POS_03">과장</option>
-                  <option value="POS_04">대리</option>
+                  <option value="">선택</option>
+                  {codes.POS?.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className={styles.field}>
@@ -432,8 +489,11 @@ export default function EmployeeEditPage({ employeeId }: Props) {
                 <span>급여 유형</span>
                 <select name="payrollTypeCode" value={form.payrollTypeCode} onChange={onChange}>
                   <option value="">선택</option>
-                  <option value="PAY_STEP">월급제</option>
-                  <option value="PAY_ANNUAL">연봉</option>
+                  {codes.PAY_TYPE?.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.name}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className={styles.field}>
@@ -492,19 +552,105 @@ export default function EmployeeEditPage({ employeeId }: Props) {
           </section>
         </div>
 
-        <div className={styles.formFooter}>
-          {error && <p className={styles.error}>{error}</p>}
-          <p className={styles.note}>* 필수 항목은 반드시 입력해야 합니다. {changedCount}개 항목이 변경되었습니다.</p>
-          <div className={styles.actions}>
-            <button type="button" className={styles.cancelBtn} onClick={() => router.push("/dashboard/employees")}>
-              × 수정 취소
-            </button>
-            <button type="submit" className={styles.submitBtn} disabled={submitting || changedCount === 0}>
-              {submitting ? "저장 중..." : "변경사항 저장"}
-            </button>
-          </div>
+        {/* 에러 메시지 */}
+        {error && <div className={styles.errorAlert}>{error}</div>}
+
+        {/* 하단 버튼 */}
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className={styles.btnSecondary}
+            onClick={() => router.push(`/dashboard/employees/${employeeId}`)}
+          >
+            취소
+          </button>
+          <button
+            type="submit"
+            className={styles.btnPrimary}
+            disabled={submitting || (changedCount === 0 && bankVerified)}
+          >
+            {submitting ? "저장 중..." : "변경사항 저장"}
+          </button>
         </div>
       </form>
+      )}
+
+      {activeTab === 'appointments' && profileData?.appointmentHistory && (
+        <section className={styles.section}>
+          <h2>인사 발령 이력</h2>
+          <table className={styles.historyTable} style={{ width: '100%', borderCollapse: 'collapse', marginTop: '16px' }}>
+            <thead>
+              <tr style={{ background: '#f5f5f5', textAlign: 'left' }}>
+                <th style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>발령일</th>
+                <th style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>발령 종류</th>
+                <th style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>부서</th>
+                <th style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>직급</th>
+                <th style={{ padding: '12px', borderBottom: '1px solid #ddd' }}>사유</th>
+              </tr>
+            </thead>
+            <tbody>
+              {profileData.appointmentHistory.map((h, i) => (
+                <tr key={i}>
+                  <td style={{ padding: '12px', borderBottom: '1px solid #eee' }}>{h.effectiveDate}</td>
+                  <td style={{ padding: '12px', borderBottom: '1px solid #eee' }}>{h.type || '-'}</td>
+                  <td style={{ padding: '12px', borderBottom: '1px solid #eee' }}>{h.department || '-'}</td>
+                  <td style={{ padding: '12px', borderBottom: '1px solid #eee' }}>{h.position || '-'}</td>
+                  <td style={{ padding: '12px', borderBottom: '1px solid #eee' }}>{h.reason || '-'}</td>
+                </tr>
+              ))}
+              {profileData.appointmentHistory.length === 0 && (
+                <tr><td colSpan={5} style={{ padding: '24px', textAlign: 'center', color: '#999' }}>인사 발령 이력이 없습니다.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </section>
+      )}
+
+      {activeTab === 'leave' && profileData?.leaveQuota && (
+        <section className={styles.section}>
+          <h2>휴가/연차 현황</h2>
+          <div style={{ display: 'flex', gap: '24px', marginTop: '16px' }}>
+            <div style={{ flex: 1, padding: '24px', background: '#f8f9fa', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '14px', color: '#666' }}>총 연차</div>
+              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#333' }}>{profileData.leaveQuota.total || 0}일</div>
+            </div>
+            <div style={{ flex: 1, padding: '24px', background: '#f8f9fa', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '14px', color: '#666' }}>사용 연차</div>
+              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#0070f3' }}>{profileData.leaveQuota.used || 0}일</div>
+            </div>
+            <div style={{ flex: 1, padding: '24px', background: '#f8f9fa', borderRadius: '8px', textAlign: 'center' }}>
+              <div style={{ fontSize: '14px', color: '#666' }}>잔여 연차</div>
+              <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#10b981' }}>{profileData.leaveQuota.remaining || 0}일</div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {activeTab === 'education' && profileData?.statutoryEducations && (
+        <section className={styles.section}>
+          <h2>법정 의무 교육 이수 현황</h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
+            {profileData.statutoryEducations.map((edu, i) => (
+              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px', border: '1px solid #eee', borderRadius: '8px' }}>
+                <span style={{ fontWeight: '500' }}>{edu.title}</span>
+                <span style={{ 
+                  padding: '4px 12px', 
+                  borderRadius: '16px', 
+                  fontSize: '12px', 
+                  fontWeight: 'bold',
+                  background: edu.completed ? '#e6f4ea' : '#fce8e6',
+                  color: edu.completed ? '#137333' : '#c5221f'
+                }}>
+                  {edu.completed ? '이수 완료' : '미이수'}
+                </span>
+              </div>
+            ))}
+            {profileData.statutoryEducations.length === 0 && (
+              <div style={{ padding: '24px', textAlign: 'center', color: '#999' }}>등록된 법정 의무 교육이 없습니다.</div>
+            )}
+          </div>
+        </section>
+      )}
 
       <AddressSearchModal
         open={addressOpen}

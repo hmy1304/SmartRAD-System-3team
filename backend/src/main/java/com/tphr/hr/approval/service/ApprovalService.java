@@ -324,7 +324,9 @@ public class ApprovalService {
             Appointment appt = appointmentRepository.findById(apptId)
                     .orElseThrow(() -> new IllegalArgumentException("발령을 찾을 수 없습니다."));
             appt.markApplied();
-            return ApprovalResponse.builder().id(apptId).title("발령 승인됨").status("COMPLETED").build();
+            // 연동 5: 인사발령 결재 완료 시 Employee 엔티티 자동 업데이트
+            appt.getEmployee().applyAppointment(appt.getAfterDepartment(), appt.getAfterPosition(), appt.getAfterPayStep());
+            return ApprovalResponse.builder().id(apptId).title("발령 승인완료").status("COMPLETED").build();
         } else if (id.startsWith("DOC-")) {
             Long docId = Long.parseLong(id.split("-")[1]);
             return approveRegularDocument(docId, approverId);
