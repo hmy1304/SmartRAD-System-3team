@@ -446,21 +446,22 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
       )}
 
       <NoticeDetailModal
-        open={detailOpen}
-        noticeId={detailId}
-        fallback={detailFallback}
-        onClose={() => {
-          setDetailOpen(false);
-          setDetailFallback(null);
-        }}
-        onEdit={(n) => {
-          if (!isAdmin) return;
-          setDetailOpen(false);
-          setEditNotice(n);
-          setEditOpen(true);
-        }}
-        onDeleted={reloadNotices}
-      />
+      open={detailOpen}
+      noticeId={detailId}
+      fallback={detailFallback}
+      canManage={isAdmin}
+      onClose={() => {
+        setDetailOpen(false);
+        setDetailFallback(null);
+      }}
+      onEdit={(n) => {
+        if (!isAdmin) return;
+        setDetailOpen(false);
+        setEditNotice(n);
+        setEditOpen(true);
+      }}
+      onDeleted={reloadNotices}
+    />
 
       {isAdmin && (
         <NoticeEditModal
