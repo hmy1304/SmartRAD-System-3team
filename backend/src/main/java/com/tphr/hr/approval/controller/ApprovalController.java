@@ -10,7 +10,9 @@ import com.tphr.hr.approval.dto.ApprovalCommentCreateRequest;
 import com.tphr.hr.approval.service.ApprovalService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import com.tphr.hr.system.auth.security.CustomUserDetails;
 
 import java.util.List;
 
@@ -25,7 +27,8 @@ public class ApprovalController {
      * 0. 결재 대기함 조회
      */
     @GetMapping("/pending")
-    public ResponseEntity<ApprovalInboxResponse> getPendingApprovals(@RequestParam Long approverId) {
+    public ResponseEntity<ApprovalInboxResponse> getPendingApprovals(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        Long approverId = Long.valueOf(userDetails.getEmployee().getEmpNo());
         return ResponseEntity.ok(approvalService.getPendingApprovals(approverId));
     }
 
@@ -33,7 +36,8 @@ public class ApprovalController {
      * 0-0. 결재 완료함(처리 완료) 조회
      */
     @GetMapping("/approved")
-    public ResponseEntity<ApprovalInboxResponse> getApprovedApprovals(@RequestParam Long approverId) {
+    public ResponseEntity<ApprovalInboxResponse> getApprovedApprovals(@AuthenticationPrincipal CustomUserDetails userDetails) {
+        Long approverId = Long.valueOf(userDetails.getEmployee().getEmpNo());
         return ResponseEntity.ok(approvalService.getApprovedApprovals(approverId));
     }
 
@@ -52,8 +56,9 @@ public class ApprovalController {
      */
     @GetMapping("/drafts")
     public ResponseEntity<ApprovalDraftResponse> getDraftApprovals(
-            @RequestParam Long drafterId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false, defaultValue = "ALL") String status) {
+        Long drafterId = Long.valueOf(userDetails.getEmployee().getEmpNo());
         return ResponseEntity.ok(approvalService.getDraftApprovals(drafterId, status));
     }
 
@@ -69,13 +74,12 @@ public class ApprovalController {
     /**
      * 2. 결재 승인
      * @param id 문서 ID (접두어 포함)
-     * @param approverId 결재 승인하려는 사람의 사번 (실제로는 JWT Token에서 추출)
      */
     @PatchMapping("/{id}/approve")
     public ResponseEntity<ApprovalResponse> approveDocument(
             @PathVariable String id,
-            @RequestParam Long approverId) {
-        // TODO: 추후 Spring Security 적용 시 @RequestParam 대신 @AuthenticationPrincipal 등으로 인증 정보 사용
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        Long approverId = Long.valueOf(userDetails.getEmployee().getEmpNo());
         ApprovalResponse response = approvalService.approveDocument(id, approverId);
         return ResponseEntity.ok(response);
     }
@@ -89,8 +93,9 @@ public class ApprovalController {
     @PatchMapping("/{id}/reject")
     public ResponseEntity<ApprovalResponse> rejectDocument(
             @PathVariable String id,
-            @RequestParam Long approverId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam String reason) {
+        Long approverId = Long.valueOf(userDetails.getEmployee().getEmpNo());
         ApprovalResponse response = approvalService.rejectDocument(id, approverId, reason);
         return ResponseEntity.ok(response);
     }
@@ -120,8 +125,9 @@ public class ApprovalController {
     @PutMapping("/{id}")
     public ResponseEntity<ApprovalResponse> updateDocument(
             @PathVariable Long id,
-            @RequestParam Long drafterId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody ApprovalUpdateRequest request) {
+        Long drafterId = Long.valueOf(userDetails.getEmployee().getEmpNo());
         ApprovalResponse response = approvalService.updateDocument(id, drafterId, request);
         return ResponseEntity.ok(response);
     }

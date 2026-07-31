@@ -17,6 +17,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
 import java.util.stream.Collectors;
+import com.tphr.hr.system.auth.security.RoleMapper;
+import com.tphr.hr.system.auth.security.CustomUserDetailsService;
+import com.tphr.hr.system.auth.security.CustomUserDetails;
+import java.util.Collection;
+import java.util.Date;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -25,6 +31,12 @@ public class JwtTokenProvider {
     @Value("${jwt.secret}")
     private String secretKey;
 
+    private final CustomUserDetailsService customUserDetailsService;
+
+    public JwtTokenProvider(CustomUserDetailsService customUserDetailsService) {
+        this.customUserDetailsService = customUserDetailsService;
+    }
+
     @Value("${jwt.expiration}")
     private long tokenValidityInMilliseconds;
 
@@ -32,6 +44,9 @@ public class JwtTokenProvider {
 
     @PostConstruct
     public void init() {
+        if (secretKey == null || secretKey.getBytes().length < 32) {
+            throw new IllegalArgumentException("JWT_SECRET must be at least 32 bytes (256 bits) for HS256.");
+        }
         this.key = Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
@@ -60,19 +75,17 @@ public class JwtTokenProvider {
                 .parseClaimsJws(token)
                 .getBody();
 
+        Object authClaim = claims.get("auth");
+        String authString = (authClaim != null) ? authClaim.toString() : "일반직원";
+        
         Collection<? extends GrantedAuthority> authorities =
-                Arrays.stream(claims.get("auth").toString().split(","))
+                Arrays.stream(authString.split(","))
                         .filter(auth -> !auth.isBlank())
-                        .map(auth -> {
-                            if ("최고관리자".equals(auth)) return "ROLE_ADMIN";
-                            if ("인사관리자".equals(auth)) return "ROLE_HR";
-                            if ("부서장".equals(auth)) return "ROLE_MANAGER";
-                            return auth;
-                        })
+                        .map(RoleMapper::mapToRole)
                         .map(SimpleGrantedAuthority::new)
                         .collect(Collectors.toList());
 
-        User principal = new User(claims.getSubject(), "", authorities);
+        CustomUserDetails principal = (CustomUserDetails) customUserDetailsService.loadUserByUsername(claims.getSubject());
 
         return new UsernamePasswordAuthenticationToken(principal, token, authorities);
     }

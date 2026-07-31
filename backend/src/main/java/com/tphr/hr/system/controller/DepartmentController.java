@@ -47,7 +47,7 @@ public class DepartmentController {
     // PATCH /departments/{id} - 부서명/상위 부서 등 수정
     @PatchMapping("/{id}")
     public ResponseEntity<DepartmentResponse> updateDepartment(@PathVariable Long id,
-                                                                @RequestBody DepartmentUpdateRequest request) {
+                                                                @Valid @RequestBody DepartmentUpdateRequest request) {
         return ResponseEntity.ok(departmentService.updateDepartment(id, request));
     }
 

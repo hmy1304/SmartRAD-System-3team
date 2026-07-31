@@ -181,7 +181,6 @@ export default function DutyPage() {
   // 스케줄 생성
   const handleCreateSchedule = async () => {
     const token = localStorage.getItem("accessToken") || "";
-    const requesterId = localStorage.getItem("employeeId") || "1";
     
     try {
       setIsLoading(true);
@@ -194,8 +193,7 @@ export default function DutyPage() {
         body: JSON.stringify({
           departmentId,
           scheduleYear: currentYear,
-          scheduleMonth: currentMonth,
-          requesterId: parseInt(requesterId, 10)
+          scheduleMonth: currentMonth
         })
       });
       
@@ -218,7 +216,6 @@ export default function DutyPage() {
   const handleAutoGenerate = async () => {
     if (!schedule) return;
     const token = localStorage.getItem("accessToken") || "";
-    const requesterId = localStorage.getItem("employeeId") || "1";
     
     try {
       setIsLoading(true);
@@ -229,7 +226,6 @@ export default function DutyPage() {
           "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
-          requesterId: parseInt(requesterId, 10),
           requireSenior: true,
           maxNightPerMonth: 7
         })
@@ -254,7 +250,6 @@ export default function DutyPage() {
   const handleSaveDraft = async () => {
     if (!schedule) return;
     const token = localStorage.getItem("accessToken") || "";
-    const requesterId = localStorage.getItem("employeeId") || "1";
     
     const entriesToSave: any[] = [];
     Object.keys(draftShifts).forEach(empIdStr => {
@@ -274,7 +269,7 @@ export default function DutyPage() {
     
     try {
       setIsLoading(true);
-      const res = await fetch(`/api/v1/duty-schedules/${schedule.id}/entries?requesterId=${requesterId}`, {
+      const res = await fetch(`/api/v1/duty-schedules/${schedule.id}/entries`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -308,11 +303,10 @@ export default function DutyPage() {
       return;
     }
     const token = localStorage.getItem("accessToken") || "";
-    const requesterId = localStorage.getItem("employeeId") || "1";
     
     try {
       setIsLoading(true);
-      const res = await fetch(`/api/v1/duty-schedules/${schedule.id}/confirm?requesterId=${requesterId}`, {
+      const res = await fetch(`/api/v1/duty-schedules/${schedule.id}/confirm`, {
         method: "PATCH",
         headers: { "Authorization": `Bearer ${token}` }
       });

@@ -106,7 +106,7 @@ export function BaseSalaryEditModal({ isOpen, onClose, item, onSuccess }: { isOp
     if (!item?.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/payroll-settings/base-salaries/${item.id}`, {
+      const res = await fetch(`/payroll-settings/base-salaries/${item.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -265,7 +265,7 @@ export function DeductionAddModal({ isOpen, onClose, onSuccess }: { isOpen: bool
   const handleSave = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/payroll-settings/deductions`, {
+      const res = await fetch(`/payroll-settings/deductions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
@@ -372,7 +372,7 @@ export function DeductionEditModal({ isOpen, onClose, item, onSuccess }: { isOpe
     if (!item?.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/payroll-settings/deductions/${item.id}`, {
+      const res = await fetch(`/payroll-settings/deductions/${item.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
@@ -390,7 +390,7 @@ export function DeductionEditModal({ isOpen, onClose, item, onSuccess }: { isOpe
     if (!window.confirm("정말 삭제하시겠습니까?")) return;
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/payroll-settings/deductions/${item.id}`, {
+      const res = await fetch(`/payroll-settings/deductions/${item.id}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -491,7 +491,7 @@ export function AllowanceAddModal({ isOpen, onClose, onSuccess }: { isOpen: bool
   const handleSave = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/payroll-settings/allowances`, {
+      const res = await fetch(`/payroll-settings/allowances`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
@@ -618,7 +618,7 @@ export function AllowanceEditModal({ isOpen, onClose, item, onSuccess }: { isOpe
     if (!item?.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/payroll-settings/allowances/${item.id}`, {
+      const res = await fetch(`/payroll-settings/allowances/${item.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
@@ -636,7 +636,7 @@ export function AllowanceEditModal({ isOpen, onClose, item, onSuccess }: { isOpe
     if (!window.confirm("정말 삭제하시겠습니까?")) return;
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/payroll-settings/allowances/${item.id}`, {
+      const res = await fetch(`/payroll-settings/allowances/${item.id}`, {
         method: "DELETE",
       });
       if (res.ok) {

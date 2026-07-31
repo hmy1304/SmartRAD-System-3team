@@ -7,11 +7,14 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.tphr.hr.system.auth.security.CustomUserDetails;
 
 import java.net.MalformedURLException;
 import java.net.URLEncoder;
@@ -68,7 +71,7 @@ public class LeaveController {
      */
     @PostMapping("/applications")
     public ResponseEntity<LeaveApplicationResponse> createApplication(
-            @RequestParam Long employeeId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam String leaveType,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
@@ -77,6 +80,7 @@ public class LeaveController {
             @RequestParam(required = false) String approverName,
             @RequestParam(required = false) String note,
             @RequestParam(required = false) MultipartFile file) {
+        Long employeeId = Long.valueOf(userDetails.getEmployee().getEmpNo());
         LeaveApplicationResponse response = leaveService.createApplication(
                 employeeId, leaveType, startDate, endDate, days, proxyEmployeeName, approverName, note, file);
         return ResponseEntity.ok(response);
@@ -106,7 +110,14 @@ public class LeaveController {
     @GetMapping("/attachments/{fileName:.+}")
     public ResponseEntity<Resource> downloadAttachment(@PathVariable String fileName) {
         try {
-            Path file = Paths.get("uploads/leave/").resolve(fileName).normalize();
+            Path baseDir = Paths.get("uploads/leave/").toAbsolutePath().normalize();
+            Path file = baseDir.resolve(fileName).normalize();
+            
+            // Path Traversal 방어
+            if (!file.startsWith(baseDir)) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+            
             Resource resource = new UrlResource(file.toUri());
 
             if (resource.exists() && resource.isReadable()) {

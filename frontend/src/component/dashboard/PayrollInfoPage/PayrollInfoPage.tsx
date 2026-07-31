@@ -57,11 +57,11 @@ export default function PayrollInfoPage() {
       const headers = { "Content-Type": "application/json" };
       
       const [sumRes, bsRes, alRes, dedRes, mwRes] = await Promise.all([
-        fetch(`${backendUrl}/payroll-settings/summary`, { headers }),
-        fetch(`${backendUrl}/payroll-settings/base-salaries`, { headers }),
-        fetch(`${backendUrl}/payroll-settings/allowances`, { headers }),
-        fetch(`${backendUrl}/payroll-settings/deductions`, { headers }),
-        fetch(`${backendUrl}/payroll-settings/minimum-wage`, { headers }),
+        fetch(`/payroll-settings/summary`, { headers }),
+        fetch(`/payroll-settings/base-salaries`, { headers }),
+        fetch(`/payroll-settings/allowances`, { headers }),
+        fetch(`/payroll-settings/deductions`, { headers }),
+        fetch(`/payroll-settings/minimum-wage`, { headers }),
       ]);
 
       if (sumRes.ok) setSummary(await sumRes.json());
@@ -89,7 +89,7 @@ export default function PayrollInfoPage() {
   const handleToggleAllowance = async (id: number, currentActive: boolean) => {
     try {
       const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const res = await fetch(`${backendUrl}/payroll-settings/allowances/${id}/toggle-active`, {
+      const res = await fetch(`/payroll-settings/allowances/${id}/toggle-active`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !currentActive })
@@ -105,7 +105,7 @@ export default function PayrollInfoPage() {
   const handleToggleDeduction = async (id: number, currentActive: boolean) => {
     try {
       const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const res = await fetch(`${backendUrl}/payroll-settings/deductions/${id}/toggle-active`, {
+      const res = await fetch(`/payroll-settings/deductions/${id}/toggle-active`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !currentActive })

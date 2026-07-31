@@ -58,10 +58,9 @@ public class ApprovalService {
     public ApprovalInboxResponse getPendingApprovals(Long approverId) {
         List<ApprovalInboxResponse.ApprovalDocumentDto> docDtos = new ArrayList<>();
 
-        // 1. Leave Applications (status = "확인중")
-        // We will fetch all pending leaves for demonstration (in real app, map approverId)
+        // 1. Leave Applications (status = "승인대기")
         List<LeaveApplication> pendingLeaves = leaveApplicationRepository.findAll().stream()
-                .filter(l -> "확인중".equals(l.getStatus()))
+                .filter(l -> "승인대기".equals(l.getStatus()))
                 .collect(Collectors.toList());
 
         for (LeaveApplication leave : pendingLeaves) {
@@ -335,7 +334,7 @@ public class ApprovalService {
         }
 
         // Add Appointments
-        List<Appointment> appts = appointmentRepository.findAll();
+        List<Appointment> appts = appointmentRepository.findByEmployeeIdOrderByApplyDateDesc(drafterId);
         for (Appointment appt : appts) {
             String currentStatus = appt.getStatus();
             if (currentStatus == null) currentStatus = "WAITING";
@@ -425,9 +424,9 @@ public class ApprovalService {
             Long leaveId = Long.parseLong(id.split("-")[1]);
             LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
                     .orElseThrow(() -> new IllegalArgumentException("휴가신청을 찾을 수 없습니다."));
-            leave.changeStatus("승인완료", leave.getNote());
+            leaveService.updateStatus(java.util.List.of(leaveId), "승인완료", leave.getNote());
             // Need to return a mocked response
-            return ApprovalResponse.builder().id(leaveId).title("휴가 승인됨").status("COMPLETED").build();
+            return ApprovalResponse.builder().id(leaveId).title("휴가 승인완료").status("COMPLETED").build();
         } else if (id.startsWith("APPT-")) {
             Long apptId = Long.parseLong(id.split("-")[1]);
             Appointment appt = appointmentRepository.findById(apptId)
@@ -451,8 +450,8 @@ public class ApprovalService {
             Long leaveId = Long.parseLong(id.split("-")[1]);
             LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
                     .orElseThrow(() -> new IllegalArgumentException("휴가신청을 찾을 수 없습니다."));
-            leave.changeStatus("반려", reason);
-            return ApprovalResponse.builder().id(leaveId).title("휴가 반려됨").status("REJECTED").build();
+            leaveService.updateStatus(java.util.List.of(leaveId), "반려", reason);
+            return ApprovalResponse.builder().id(leaveId).title("휴가 반려완료").status("REJECTED").build();
         } else if (id.startsWith("APPT-")) {
             Long apptId = Long.parseLong(id.split("-")[1]);
             Appointment appt = appointmentRepository.findById(apptId)

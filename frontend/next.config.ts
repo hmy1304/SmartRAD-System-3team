@@ -23,6 +23,10 @@ const nextConfig: NextConfig = {
         source: "/api-system/:path*",
         destination: `${backendUrl}/:path*`,
       },
+      {
+        source: "/payroll-settings/:path*",
+        destination: `${backendUrl}/payroll-settings/:path*`,
+      },
     ];
   },
 };
