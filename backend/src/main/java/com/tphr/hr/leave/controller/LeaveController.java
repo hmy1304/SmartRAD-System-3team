@@ -80,7 +80,7 @@ public class LeaveController {
             @RequestParam(required = false) String approverName,
             @RequestParam(required = false) String note,
             @RequestParam(required = false) MultipartFile file) {
-        Long employeeId = Long.valueOf(userDetails.getEmployee().getEmpNo());
+        Long employeeId = userDetails.getEmployee().getId();
         LeaveApplicationResponse response = leaveService.createApplication(
                 employeeId, leaveType, startDate, endDate, days, proxyEmployeeName, approverName, note, file);
         return ResponseEntity.ok(response);

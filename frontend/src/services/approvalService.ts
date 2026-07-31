@@ -43,28 +43,13 @@ function isDataEnvelope(
   return "data" in value;
 }
 
-export async function getApprovalInboxData(
-  approverId?: number,
-): Promise<ApprovalInboxData> {
+/** 결재 대기함 조회. 결재자는 서버가 JWT 에서 판별하므로 별도 식별자를 보내지 않는다. */
+export async function getApprovalInboxData(): Promise<ApprovalInboxData> {
   if (useMockData) {
     return approvalMockData;
   }
 
-  let id = approverId;
-  if (id == null && !isServer) {
-    try {
-      const raw = localStorage.getItem("userProfile");
-      if (raw) {
-        const p = JSON.parse(raw) as { employeeId?: number };
-        if (p.employeeId) id = Number(p.employeeId);
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-  if (id == null) id = 1;
-
-  const requestUrl = `${getBaseUrl()}${approvalPendingPath}?approverId=${id}`;
+  const requestUrl = `${getBaseUrl()}${approvalPendingPath}`;
 
   const response = await fetch(requestUrl, {
     method: "GET",
@@ -85,7 +70,8 @@ export async function getApprovalInboxData(
   return isDataEnvelope(responseData) ? responseData.data : responseData;
 }
 
-export async function getDraftApprovals(drafterId: string, status: string = "ALL"): Promise<import("@/types/approval").ApprovalDraftData> {
+/** 기안 문서함 조회. 기안자는 서버가 JWT 에서 판별한다. */
+export async function getDraftApprovals(status: string = "ALL"): Promise<import("@/types/approval").ApprovalDraftData> {
   if (useMockData) {
     return {
       summary: { totalDrafts: 0, pendingDrafts: 0, approvedThisMonth: 0, rejectedDrafts: 0, temporaryDrafts: 0 },
@@ -95,7 +81,6 @@ export async function getDraftApprovals(drafterId: string, status: string = "ALL
   }
 
   const requestUrl = new URL(`${getBaseUrl()}/api/v1/approvals/drafts`, isServer ? undefined : window.location.origin);
-  requestUrl.searchParams.append("drafterId", drafterId);
   requestUrl.searchParams.append("status", status);
 
   const response = await fetch(isServer ? requestUrl.toString() : requestUrl.pathname + requestUrl.search, {

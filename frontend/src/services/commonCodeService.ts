@@ -22,25 +22,26 @@ export interface CommonCodeUpdateRequest {
   isActive: boolean;
 }
 
+import { customFetch } from "@/lib/api/customFetch";
+
 const API_BASE = "/common-codes"; // Next.js API proxy를 통해 호출
 
 export async function fetchGroupCodes(): Promise<string[]> {
-  const res = await fetch(`${API_BASE}/groups`);
+  const res = await customFetch(`${API_BASE}/groups`);
   if (!res.ok) throw new Error("Failed to fetch group codes");
   return res.json();
 }
 
 export async function fetchCommonCodes(groupCode?: string): Promise<CommonCode[]> {
   const url = groupCode ? `${API_BASE}?groupCode=${groupCode}&includeInactive=true` : `${API_BASE}?includeInactive=true`;
-  const res = await fetch(url);
+  const res = await customFetch(url);
   if (!res.ok) throw new Error("Failed to fetch common codes");
   return res.json();
 }
 
 export async function createCommonCode(data: CommonCodeCreateRequest): Promise<CommonCode> {
-  const res = await fetch(API_BASE, {
+  const res = await customFetch(API_BASE, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!res.ok) {
@@ -51,9 +52,8 @@ export async function createCommonCode(data: CommonCodeCreateRequest): Promise<C
 }
 
 export async function updateCommonCode(code: string, data: CommonCodeUpdateRequest): Promise<CommonCode> {
-  const res = await fetch(`${API_BASE}/${code}`, {
+  const res = await customFetch(`${API_BASE}/${code}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
   if (!res.ok) throw new Error("Failed to update code");

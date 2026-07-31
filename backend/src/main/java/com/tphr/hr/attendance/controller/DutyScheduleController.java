@@ -24,7 +24,7 @@ public class DutyScheduleController {
     public ResponseEntity<DutyScheduleResponse> createDutySchedule(
             @RequestBody DutyScheduleCreateRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        request.setRequesterId(Long.valueOf(userDetails.getEmployee().getEmpNo()));
+        request.setRequesterId(userDetails.getEmployee().getId());
         return ResponseEntity.ok(dutyScheduleService.createDutySchedule(request));
     }
 
@@ -33,7 +33,7 @@ public class DutyScheduleController {
             @PathVariable Long scheduleId,
             @RequestBody List<DutyScheduleEntryRequest> requests,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        Long requesterId = Long.valueOf(userDetails.getEmployee().getEmpNo());
+        Long requesterId = userDetails.getEmployee().getId();
         return ResponseEntity.ok(dutyScheduleService.assignEntries(scheduleId, requests, requesterId));
     }
 
@@ -41,7 +41,7 @@ public class DutyScheduleController {
     public ResponseEntity<DutyScheduleResponse> confirmDutySchedule(
             @PathVariable Long scheduleId,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        Long requesterId = Long.valueOf(userDetails.getEmployee().getEmpNo());
+        Long requesterId = userDetails.getEmployee().getId();
         DutyScheduleResponse response = dutyScheduleService.confirmDutySchedule(scheduleId, requesterId);
         return ResponseEntity.ok(response);
     }
@@ -51,7 +51,7 @@ public class DutyScheduleController {
             @PathVariable Long scheduleId,
             @RequestBody com.tphr.hr.attendance.dto.DutyScheduleAutoGenerateRequest request,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        request.setRequesterId(Long.valueOf(userDetails.getEmployee().getEmpNo()));
+        request.setRequesterId(userDetails.getEmployee().getId());
         DutyScheduleResponse response = dutyScheduleService.autoGenerate(scheduleId, request);
         return ResponseEntity.ok(response);
     }

@@ -28,7 +28,7 @@ public class ApprovalController {
      */
     @GetMapping("/pending")
     public ResponseEntity<ApprovalInboxResponse> getPendingApprovals(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        Long approverId = Long.valueOf(userDetails.getEmployee().getEmpNo());
+        Long approverId = userDetails.getEmployee().getId();
         return ResponseEntity.ok(approvalService.getPendingApprovals(approverId));
     }
 
@@ -37,7 +37,7 @@ public class ApprovalController {
      */
     @GetMapping("/approved")
     public ResponseEntity<ApprovalInboxResponse> getApprovedApprovals(@AuthenticationPrincipal CustomUserDetails userDetails) {
-        Long approverId = Long.valueOf(userDetails.getEmployee().getEmpNo());
+        Long approverId = userDetails.getEmployee().getId();
         return ResponseEntity.ok(approvalService.getApprovedApprovals(approverId));
     }
 
@@ -45,8 +45,12 @@ public class ApprovalController {
      * 0-1. 코멘트 추가
      */
     @PostMapping("/{id}/comments")
-    public ResponseEntity<Void> addComment(@PathVariable String id, @RequestBody ApprovalCommentCreateRequest request) {
-        approvalService.addComment(id, request);
+    public ResponseEntity<Void> addComment(
+            @PathVariable String id,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody ApprovalCommentCreateRequest request) {
+        // 작성자는 토큰에서만 정하고 바디의 employeeId 는 신뢰하지 않는다.
+        approvalService.addComment(id, userDetails.getEmployee().getId(), request);
         return ResponseEntity.ok().build();
     }
 
@@ -58,7 +62,7 @@ public class ApprovalController {
     public ResponseEntity<ApprovalDraftResponse> getDraftApprovals(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false, defaultValue = "ALL") String status) {
-        Long drafterId = Long.valueOf(userDetails.getEmployee().getEmpNo());
+        Long drafterId = userDetails.getEmployee().getId();
         return ResponseEntity.ok(approvalService.getDraftApprovals(drafterId, status));
     }
 
@@ -66,8 +70,11 @@ public class ApprovalController {
      * 1. 기안 문서 생성 (결재 올리기)
      */
     @PostMapping
-    public ResponseEntity<ApprovalResponse> createDocument(@RequestBody ApprovalCreateRequest request) {
-        ApprovalResponse response = approvalService.createDocument(request);
+    public ResponseEntity<ApprovalResponse> createDocument(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody ApprovalCreateRequest request) {
+        // 기안자는 토큰에서만 정한다. 바디의 draftedById 로 타인 명의 기안이 가능해서는 안 된다.
+        ApprovalResponse response = approvalService.createDocument(userDetails.getEmployee().getId(), request);
         return ResponseEntity.ok(response);
     }
 
@@ -79,7 +86,7 @@ public class ApprovalController {
     public ResponseEntity<ApprovalResponse> approveDocument(
             @PathVariable String id,
             @AuthenticationPrincipal CustomUserDetails userDetails) {
-        Long approverId = Long.valueOf(userDetails.getEmployee().getEmpNo());
+        Long approverId = userDetails.getEmployee().getId();
         ApprovalResponse response = approvalService.approveDocument(id, approverId);
         return ResponseEntity.ok(response);
     }
@@ -95,7 +102,7 @@ public class ApprovalController {
             @PathVariable String id,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam String reason) {
-        Long approverId = Long.valueOf(userDetails.getEmployee().getEmpNo());
+        Long approverId = userDetails.getEmployee().getId();
         ApprovalResponse response = approvalService.rejectDocument(id, approverId, reason);
         return ResponseEntity.ok(response);
     }
@@ -112,8 +119,10 @@ public class ApprovalController {
      * 5. 결재 문서 삭제 (통과된 문서는 삭제 불가)
      */
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteDocument(@PathVariable Long id) {
-        approvalService.deleteDocument(id);
+    public ResponseEntity<Void> deleteDocument(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails) {
+        approvalService.deleteDocument(id, userDetails.getEmployee().getId());
         return ResponseEntity.noContent().build();
     }
 
@@ -127,7 +136,7 @@ public class ApprovalController {
             @PathVariable Long id,
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestBody ApprovalUpdateRequest request) {
-        Long drafterId = Long.valueOf(userDetails.getEmployee().getEmpNo());
+        Long drafterId = userDetails.getEmployee().getId();
         ApprovalResponse response = approvalService.updateDocument(id, drafterId, request);
         return ResponseEntity.ok(response);
     }
