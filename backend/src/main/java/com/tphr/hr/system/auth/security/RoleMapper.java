@@ -48,16 +48,29 @@ public final class RoleMapper {
     /**
      * JWT auth 클레임 값 -> 권한 문자열. (요청 시점 전용)
      *
-     * 이미 ROLE_ 로 시작하면 변환 없이 그대로 통과시킨다.
-     * 구버전 토큰에는 권한 그룹명이 그대로 들어있을 수 있어 그 경우만 mapToRole 을 태운다.
+     * 클레임에는 createToken 이 담은 권한 문자열이 그대로 들어있다.
+     * ROLE_ADMIN 뿐 아니라 Spring Security 가 부여하는 FACTOR_PASSWORD 같은 값도
+     * 섞여 오므로, 이미 권한 토큰 형태면 변환하지 않고 통과시킨다.
+     * 구버전 토큰에는 한글 권한 그룹명이 들어있을 수 있어 그 경우만 mapToRole 을 태운다.
      */
     public static String fromClaim(String claim) {
         if (claim == null || claim.isBlank()) return ROLE_USER;
 
         String trimmed = claim.trim();
-        if (trimmed.startsWith(ROLE_PREFIX)) {
+        if (isAuthorityToken(trimmed)) {
             return trimmed;
         }
         return mapToRole(trimmed);
+    }
+
+    /** ROLE_ADMIN, FACTOR_PASSWORD 처럼 이미 변환이 끝난 권한 토큰인지 판별한다. */
+    private static boolean isAuthorityToken(String value) {
+        if (value.startsWith(ROLE_PREFIX)) return true;
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            boolean allowed = (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '_';
+            if (!allowed) return false;
+        }
+        return true;
     }
 }
