@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { usePageGuard, hasPermission } from "@/utils/permission";
+import { useAuthStore } from "@/store/authStore";
 
 import type {
   ApprovalComment,
@@ -162,18 +163,20 @@ export default function ApprovalInboxPage() {
   const [selectedId, setSelectedId] = useState("");
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
+  const { userProfile } = useAuthStore();
+  const currentUserId = userProfile?.employeeId || userProfile?.id || 1; // Fallback to 1 for safety
 
   useEffect(() => {
-    // In a real app, we'd get this from context or JWT decoding. Using a dummy/manager ID 1 for now.
-    setCurrentUserId(1); 
-    fetchData();
-  }, []);
+    if (currentUserId) {
+      fetchData();
+    }
+  }, [currentUserId, activeTab]);
 
   const fetchData = async () => {
     try {
-      // We assume user 1 for now, in a real system we'd extract this from the backend via token
-      const res = await fetch(`/api/v1/approvals/pending?approverId=1`, {
+      const endpoint = activeTab === "pending" ? "pending" : "approved";
+      const res = await fetch(`/api/v1/approvals/${endpoint}?approverId=${currentUserId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}`
         }
@@ -354,6 +357,27 @@ export default function ApprovalInboxPage() {
                 <span>내보내기</span>
               </button>
             </section>
+
+            <div className={styles.tabs} role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "pending"}
+                className={activeTab === "pending" ? styles.activeTab : ""}
+                onClick={() => setActiveTab("pending")}
+              >
+                대기 중
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "approved"}
+                className={activeTab === "approved" ? styles.activeTab : ""}
+                onClick={() => setActiveTab("approved")}
+              >
+                처리 완료
+              </button>
+            </div>
 
             <section className={styles.summaryGrid}>
               {summaryCards.map((card) => (

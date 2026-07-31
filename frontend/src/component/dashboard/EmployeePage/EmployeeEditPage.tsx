@@ -559,14 +559,14 @@ export default function EmployeeEditPage({ employeeId }: Props) {
         <div className={styles.actions}>
           <button
             type="button"
-            className={styles.btnSecondary}
+            className={styles.cancelBtn}
             onClick={() => router.push(`/dashboard/employees/${employeeId}`)}
           >
             취소
           </button>
           <button
             type="submit"
-            className={styles.btnPrimary}
+            className={styles.submitBtn}
             disabled={submitting || (changedCount === 0 && bankVerified)}
           >
             {submitting ? "저장 중..." : "변경사항 저장"}

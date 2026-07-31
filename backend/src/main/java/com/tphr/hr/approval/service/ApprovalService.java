@@ -49,6 +49,7 @@ public class ApprovalService {
     private final LeaveService leaveService;
     private final PayrollService payrollService;
     private final AppointmentRepository appointmentRepository;
+    private final com.tphr.hr.employee.service.AppointmentService appointmentService;
     private final EntityManager entityManager;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy. MM. dd HH:mm");
@@ -86,8 +87,8 @@ public class ApprovalService {
                     .build());
         }
 
-        // 2. Appointments (applied = false)
-        List<Appointment> pendingAppointments = appointmentRepository.findByAppliedFalse();
+        // 2. Appointments (status = "WAITING")
+        List<Appointment> pendingAppointments = appointmentRepository.findByStatus("WAITING");
         for (Appointment appt : pendingAppointments) {
             String contentHtml = String.format("<p><strong>발령일:</strong> %s</p><p><strong>발령유형:</strong> %s</p><p><strong>부서 변경:</strong> %s -> %s</p>",
                     appt.getApplyDate(),
@@ -161,12 +162,110 @@ public class ApprovalService {
         int urgentCount = (int) docDtos.stream().filter(d -> "urgent".equals(d.getPriority())).count();
         int dueTodayCount = (int) docDtos.stream().filter(d -> "D-0".equals(d.getDDay())).count();
 
+        LocalDateTime now = LocalDateTime.now();
+        long processedThisMonth = approvalLineRepository.findAll().stream()
+                .filter(l -> l.getApprover().getId().equals(approverId))
+                .filter(l -> ("APPROVED".equals(l.getStatus()) || "REJECTED".equals(l.getStatus()))
+                        && l.getUpdatedAt() != null
+                        && l.getUpdatedAt().getMonth() == now.getMonth()
+                        && l.getUpdatedAt().getYear() == now.getYear())
+                .count();
+
+        long approvedThisMonth = approvalLineRepository.findAll().stream()
+                .filter(l -> l.getApprover().getId().equals(approverId))
+                .filter(l -> "APPROVED".equals(l.getStatus())
+                        && l.getUpdatedAt() != null
+                        && l.getUpdatedAt().getMonth() == now.getMonth()
+                        && l.getUpdatedAt().getYear() == now.getYear())
+                .count();
+
+        int calculatedApprovalRate = processedThisMonth > 0 ? (int) ((approvedThisMonth * 100) / processedThisMonth) : 0;
+
         ApprovalInboxResponse.ApprovalSummaryDto summary = ApprovalInboxResponse.ApprovalSummaryDto.builder()
                 .totalPending(docDtos.size())
                 .urgentPending(urgentCount)
                 .dueToday(dueTodayCount)
-                .processedThisMonth(15) // mock
-                .approvalRate(95) // mock
+                .processedThisMonth((int) processedThisMonth)
+                .approvalRate(calculatedApprovalRate)
+                .build();
+
+        return ApprovalInboxResponse.builder()
+                .summary(summary)
+                .documents(docDtos)
+                .comments(commentDtos)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public ApprovalInboxResponse getApprovedApprovals(Long approverId) {
+        List<ApprovalInboxResponse.ApprovalDocumentDto> docDtos = new ArrayList<>();
+
+        List<ApprovalLine> approvedLines = approvalLineRepository.findAll().stream()
+                .filter(l -> l.getApprover().getId().equals(approverId) && 
+                        ("APPROVED".equals(l.getStatus()) || "REJECTED".equals(l.getStatus())))
+                .sorted((a, b) -> b.getUpdatedAt().compareTo(a.getUpdatedAt()))
+                .collect(Collectors.toList());
+
+        for (ApprovalLine line : approvedLines) {
+            ApprovalDocument doc = line.getDocument();
+            docDtos.add(ApprovalInboxResponse.ApprovalDocumentDto.builder()
+                    .id("DOC-" + doc.getId())
+                    .priority("normal")
+                    .priorityLabel("일반")
+                    .title(doc.getTitle())
+                    .attachment("")
+                    .drafter(doc.getDraftedBy().getName())
+                    .drafterInitial(doc.getDraftedBy().getName().substring(0, 1))
+                    .drafterDepartment(doc.getDraftedBy().getDepartment() != null ? doc.getDraftedBy().getDepartment().getName() : "")
+                    .drafterRole(doc.getDraftedBy().getPosition() != null ? doc.getDraftedBy().getPosition().getName() : "")
+                    .avatarTone(line.getStatus().equals("REJECTED") ? "red" : "green")
+                    .requestedAt(doc.getCreatedAt() != null ? doc.getCreatedAt().format(FORMATTER) : "")
+                    .dDay(line.getStatus().equals("REJECTED") ? "반려" : "완료")
+                    .description(doc.getContent())
+                    .fileName("")
+                    .fileMeta("")
+                    .build());
+        }
+
+        List<ApprovalInboxResponse.ApprovalCommentDto> commentDtos = new ArrayList<>();
+        for (ApprovalInboxResponse.ApprovalDocumentDto doc : docDtos) {
+            List<ApprovalComment> comments = approvalCommentRepository.findByDocumentIdStrOrderByCreatedAtAsc(doc.getId());
+            for (ApprovalComment c : comments) {
+                commentDtos.add(ApprovalInboxResponse.ApprovalCommentDto.builder()
+                        .id(c.getId())
+                        .documentId(c.getDocumentIdStr())
+                        .initial(c.getEmployee().getName().substring(0, 1))
+                        .name(c.getEmployee().getName())
+                        .tag("결재자")
+                        .time(c.getCreatedAt() != null ? c.getCreatedAt().format(FORMATTER) : "")
+                        .content(c.getContent())
+                        .avatarTone("purple")
+                        .build());
+            }
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        long processedThisMonth = approvedLines.stream()
+                .filter(l -> l.getUpdatedAt() != null
+                        && l.getUpdatedAt().getMonth() == now.getMonth()
+                        && l.getUpdatedAt().getYear() == now.getYear())
+                .count();
+
+        long approvedThisMonth = approvedLines.stream()
+                .filter(l -> "APPROVED".equals(l.getStatus())
+                        && l.getUpdatedAt() != null
+                        && l.getUpdatedAt().getMonth() == now.getMonth()
+                        && l.getUpdatedAt().getYear() == now.getYear())
+                .count();
+
+        int calculatedApprovalRate = processedThisMonth > 0 ? (int) ((approvedThisMonth * 100) / processedThisMonth) : 0;
+
+        ApprovalInboxResponse.ApprovalSummaryDto summary = ApprovalInboxResponse.ApprovalSummaryDto.builder()
+                .totalPending(0)
+                .urgentPending(0)
+                .dueToday(0)
+                .processedThisMonth((int) processedThisMonth)
+                .approvalRate(calculatedApprovalRate)
                 .build();
 
         return ApprovalInboxResponse.builder()
@@ -272,6 +371,13 @@ public class ApprovalService {
                     .build());
         }
 
+        // Sort by createdAt descending
+        docDtos.sort((a, b) -> {
+            String dateA = a.getCreatedAt() != null ? a.getCreatedAt() : "";
+            String dateB = b.getCreatedAt() != null ? b.getCreatedAt() : "";
+            return dateB.compareTo(dateA);
+        });
+
         ApprovalDraftResponse.DraftSummaryDto summary = ApprovalDraftResponse.DraftSummaryDto.builder()
                 .totalDrafts(documents.size())
                 .pendingDrafts(inProgress)
@@ -326,9 +432,11 @@ public class ApprovalService {
             Long apptId = Long.parseLong(id.split("-")[1]);
             Appointment appt = appointmentRepository.findById(apptId)
                     .orElseThrow(() -> new IllegalArgumentException("발령을 찾을 수 없습니다."));
-            appt.markApplied();
-            // 연동 5: 인사발령 결재 완료 시 Employee 엔티티 자동 업데이트
-            appt.getEmployee().applyAppointment(appt.getAfterDepartment(), appt.getAfterPosition(), appt.getAfterPayStep());
+            appt.approve(); // Changes status to COMPLETED
+            
+            // Check if it's due today or earlier and apply
+            appointmentService.applyIfDue(appt);
+            
             return ApprovalResponse.builder().id(apptId).title("발령 승인완료").status("COMPLETED").build();
         } else if (id.startsWith("DOC-")) {
             Long docId = Long.parseLong(id.split("-")[1]);

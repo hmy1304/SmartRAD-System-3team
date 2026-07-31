@@ -7,6 +7,7 @@ public record DepartmentCreateRequest(
         @NotBlank(message = "부서명은 필수입니다.")
         String name,
         String nameEn,
+        @NotBlank(message = "부서코드는 필수입니다.")
         String deptCode,
         Long managerId,
         String location,

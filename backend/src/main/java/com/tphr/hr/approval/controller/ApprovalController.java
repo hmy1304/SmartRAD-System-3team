@@ -30,6 +30,14 @@ public class ApprovalController {
     }
 
     /**
+     * 0-0. 결재 완료함(처리 완료) 조회
+     */
+    @GetMapping("/approved")
+    public ResponseEntity<ApprovalInboxResponse> getApprovedApprovals(@RequestParam Long approverId) {
+        return ResponseEntity.ok(approvalService.getApprovedApprovals(approverId));
+    }
+
+    /**
      * 0-1. 코멘트 추가
      */
     @PostMapping("/{id}/comments")

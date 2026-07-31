@@ -26,6 +26,9 @@ public class DepartmentService {
     // POST /departments - 새로운 부서 추가
     @Transactional
     public DepartmentResponse createDepartment(DepartmentCreateRequest request) {
+        if (departmentRepository.existsByDeptCode(request.deptCode())) {
+            throw new IllegalArgumentException("이미 사용중인 부서코드입니다.");
+        }
         Department parent = request.parentId() != null ? getDepartmentEntity(request.parentId()) : null;
         Employee manager = request.managerId() != null ? employeeRepository.findById(request.managerId()).orElse(null) : null;
 
@@ -67,6 +70,9 @@ public class DepartmentService {
     @Transactional
     public DepartmentResponse updateDepartment(Long id, DepartmentUpdateRequest request) {
         Department department = getDepartmentEntity(id);
+        if (!department.getDeptCode().equals(request.deptCode()) && departmentRepository.existsByDeptCode(request.deptCode())) {
+            throw new IllegalArgumentException("이미 사용중인 부서코드입니다.");
+        }
         Department parent = request.parentId() != null ? getDepartmentEntity(request.parentId()) : null;
         Employee manager = request.managerId() != null ? employeeRepository.findById(request.managerId()).orElse(null) : null;
 

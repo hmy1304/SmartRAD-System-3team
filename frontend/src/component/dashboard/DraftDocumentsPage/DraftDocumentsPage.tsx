@@ -44,14 +44,12 @@ export default function DraftDocumentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | number | null>(null);
   const { userProfile } = useAuthStore();
+  const drafterId = userProfile?.employeeId?.toString() || userProfile?.id?.toString() || "";
+
   const canEdit = useMemo(() => {
     const perm = userProfile?.perms?.find(p => p.menuCode === 'APPROVAL_DRAFT');
-    return perm ? perm.canWrite : false;
+    return perm?.canWrite ?? false;
   }, [userProfile]);
-
-  // In real app, fetch drafterId from context/session. 
-  // We use a mock ID for demo purposes.
-  const drafterId = "1"; 
 
   const fetchData = async () => {
     try {
@@ -63,8 +61,10 @@ export default function DraftDocumentsPage() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [activeTab]);
+    if (drafterId) {
+      fetchData();
+    }
+  }, [activeTab, drafterId]);
 
   // 필터가 변경되면 페이지를 1로 리셋
   useEffect(() => {
