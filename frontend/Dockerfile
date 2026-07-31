@@ -16,6 +16,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV BACKEND_URL=http://backend:8080
+ENV TZ=Asia/Seoul
 
 COPY --from=builder /app/package.json /app/package-lock.json ./
 COPY --from=builder /app/node_modules ./node_modules
