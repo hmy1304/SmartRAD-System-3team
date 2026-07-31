@@ -378,7 +378,7 @@ public class ApprovalService {
         });
 
         ApprovalDraftResponse.DraftSummaryDto summary = ApprovalDraftResponse.DraftSummaryDto.builder()
-                .totalDrafts(documents.size())
+                .totalDrafts(documents.size() + appts.size())
                 .pendingDrafts(inProgress)
                 .approvedThisMonth(approved)
                 .rejectedDrafts(rejected)
