@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import styles from "./PayrollModals.module.scss";
+import { customFetch } from "@/lib/api/customFetch";
 
 // SVG Icons
 const EditIcon = () => (
@@ -106,9 +107,8 @@ export function BaseSalaryEditModal({ isOpen, onClose, item, onSuccess }: { isOp
     if (!item?.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`/payroll-settings/base-salaries/${item.id}`, {
+      const res = await customFetch(`/payroll-settings/base-salaries/${item.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           ...item,
           minAmount: formData.minAmount ? parseInt(formData.minAmount) : null,
@@ -265,9 +265,8 @@ export function DeductionAddModal({ isOpen, onClose, onSuccess }: { isOpen: bool
   const handleSave = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/payroll-settings/deductions`, {
+      const res = await customFetch(`/payroll-settings/deductions`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
       });
       if (res.ok) {
@@ -372,9 +371,8 @@ export function DeductionEditModal({ isOpen, onClose, item, onSuccess }: { isOpe
     if (!item?.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`/payroll-settings/deductions/${item.id}`, {
+      const res = await customFetch(`/payroll-settings/deductions/${item.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
       });
       if (res.ok) {
@@ -390,7 +388,7 @@ export function DeductionEditModal({ isOpen, onClose, item, onSuccess }: { isOpe
     if (!window.confirm("정말 삭제하시겠습니까?")) return;
     setLoading(true);
     try {
-      const res = await fetch(`/payroll-settings/deductions/${item.id}`, {
+      const res = await customFetch(`/payroll-settings/deductions/${item.id}`, {
         method: "DELETE",
       });
       if (res.ok) {
@@ -491,9 +489,8 @@ export function AllowanceAddModal({ isOpen, onClose, onSuccess }: { isOpen: bool
   const handleSave = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/payroll-settings/allowances`, {
+      const res = await customFetch(`/payroll-settings/allowances`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
       });
       if (res.ok) {
@@ -618,9 +615,8 @@ export function AllowanceEditModal({ isOpen, onClose, item, onSuccess }: { isOpe
     if (!item?.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`/payroll-settings/allowances/${item.id}`, {
+      const res = await customFetch(`/payroll-settings/allowances/${item.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
       });
       if (res.ok) {
@@ -636,7 +632,7 @@ export function AllowanceEditModal({ isOpen, onClose, item, onSuccess }: { isOpe
     if (!window.confirm("정말 삭제하시겠습니까?")) return;
     setLoading(true);
     try {
-      const res = await fetch(`/payroll-settings/allowances/${item.id}`, {
+      const res = await customFetch(`/payroll-settings/allowances/${item.id}`, {
         method: "DELETE",
       });
       if (res.ok) {

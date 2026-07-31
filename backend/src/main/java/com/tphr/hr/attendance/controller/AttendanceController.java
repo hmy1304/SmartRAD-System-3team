@@ -38,7 +38,7 @@ public class AttendanceController {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        Long employeeId = Long.valueOf(userDetails.getEmployee().getEmpNo());
+        Long employeeId = userDetails.getEmployee().getId();
         return ResponseEntity.ok(attendanceService.getMyAttendances(employeeId, startDate, endDate));
     }
 

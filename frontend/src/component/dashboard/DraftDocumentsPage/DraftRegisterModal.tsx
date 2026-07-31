@@ -82,7 +82,6 @@ export default function DraftRegisterModal({ onClose, onSuccess }: DraftRegister
         title: title,
         content: finalContent,
         docTypeCode: docType, // Send string, e.g. "DOC_GENERAL"
-        draftedById: 1, // Mock current user
         approverIds: [parseInt(approverId)],
         attachmentFileNames: []
       };

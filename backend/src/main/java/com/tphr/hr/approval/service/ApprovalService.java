@@ -408,8 +408,8 @@ public class ApprovalService {
     }
 
     @Transactional
-    public void addComment(String documentIdStr, ApprovalCommentCreateRequest request) {
-        Employee emp = entityManager.getReference(Employee.class, request.getEmployeeId());
+    public void addComment(String documentIdStr, Long authorId, ApprovalCommentCreateRequest request) {
+        Employee emp = entityManager.getReference(Employee.class, authorId);
         ApprovalComment comment = ApprovalComment.builder()
                 .documentIdStr(documentIdStr)
                 .employee(emp)
@@ -544,8 +544,8 @@ public class ApprovalService {
     // Other original methods (createDocument, getApprovalDetail, deleteDocument, updateDocument) ...
 
     @Transactional
-    public ApprovalResponse createDocument(ApprovalCreateRequest request) {
-        Employee drafter = entityManager.getReference(Employee.class, request.getDraftedById());
+    public ApprovalResponse createDocument(Long drafterId, ApprovalCreateRequest request) {
+        Employee drafter = entityManager.getReference(Employee.class, drafterId);
         CommonCode docType = entityManager.getReference(CommonCode.class, request.getDocTypeCode());
 
         String docNumber = "APP-" + LocalDateTime.now().getYear() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
@@ -659,9 +659,13 @@ public class ApprovalService {
     }
 
     @Transactional
-    public void deleteDocument(Long documentId) {
+    public void deleteDocument(Long documentId, Long requesterId) {
         ApprovalDocument document = approvalDocumentRepository.findById(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다."));
+
+        if (!document.getDraftedBy().getId().equals(requesterId)) {
+            throw new IllegalStateException("기안자 본인만 문서를 삭제할 수 있습니다.");
+        }
 
         if ("COMPLETED".equals(document.getStatus())) {
             throw new IllegalStateException("이미 최종 승인 완료된 문서는 삭제할 수 없습니다.");
