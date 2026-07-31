@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import styles from "./PayrollInfoPage.module.scss";
 import { DeductionAddModal, DeductionEditModal, BaseSalaryEditModal, AllowanceAddModal, AllowanceEditModal } from "./PayrollModals";
-
+import { customFetch } from "@/lib/api/customFetch";
 
 // SVG Icons (Inline for immediate styling)
 const SaveIcon = () => <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>;
@@ -53,15 +53,14 @@ export default function PayrollInfoPage() {
 
   const fetchData = async () => {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
       const headers = { "Content-Type": "application/json" };
       
       const [sumRes, bsRes, alRes, dedRes, mwRes] = await Promise.all([
-        fetch(`${backendUrl}/payroll-settings/summary`, { headers }),
-        fetch(`${backendUrl}/payroll-settings/base-salaries`, { headers }),
-        fetch(`${backendUrl}/payroll-settings/allowances`, { headers }),
-        fetch(`${backendUrl}/payroll-settings/deductions`, { headers }),
-        fetch(`${backendUrl}/payroll-settings/minimum-wage`, { headers }),
+        customFetch(`/payroll-settings/summary`, { headers }),
+        customFetch(`/payroll-settings/base-salaries`, { headers }),
+        customFetch(`/payroll-settings/allowances`, { headers }),
+        customFetch(`/payroll-settings/deductions`, { headers }),
+        customFetch(`/payroll-settings/minimum-wage`, { headers }),
       ]);
 
       if (sumRes.ok) setSummary(await sumRes.json());
@@ -88,8 +87,7 @@ export default function PayrollInfoPage() {
 
   const handleToggleAllowance = async (id: number, currentActive: boolean) => {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const res = await fetch(`${backendUrl}/payroll-settings/allowances/${id}/toggle-active`, {
+      const res = await customFetch(`/payroll-settings/allowances/${id}/toggle-active`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !currentActive })
@@ -104,8 +102,7 @@ export default function PayrollInfoPage() {
 
   const handleToggleDeduction = async (id: number, currentActive: boolean) => {
     try {
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
-      const res = await fetch(`${backendUrl}/payroll-settings/deductions/${id}/toggle-active`, {
+      const res = await customFetch(`/payroll-settings/deductions/${id}/toggle-active`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: !currentActive })

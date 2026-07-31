@@ -43,6 +43,8 @@ function isDataEnvelope(
   return "data" in value;
 }
 
+import { customFetch } from "@/lib/api/customFetch";
+
 export async function getApprovalInboxData(
   approverId?: number,
 ): Promise<ApprovalInboxData> {
@@ -66,7 +68,7 @@ export async function getApprovalInboxData(
 
   const requestUrl = `${getBaseUrl()}${approvalPendingPath}?approverId=${id}`;
 
-  const response = await fetch(requestUrl, {
+  const response = await customFetch(requestUrl, {
     method: "GET",
     headers: getHeaders(),
     cache: "no-store",
@@ -98,7 +100,7 @@ export async function getDraftApprovals(drafterId: string, status: string = "ALL
   requestUrl.searchParams.append("drafterId", drafterId);
   requestUrl.searchParams.append("status", status);
 
-  const response = await fetch(isServer ? requestUrl.toString() : requestUrl.pathname + requestUrl.search, {
+  const response = await customFetch(isServer ? requestUrl.toString() : requestUrl.pathname + requestUrl.search, {
     method: "GET",
     headers: getHeaders(),
     cache: "no-store",
@@ -115,7 +117,7 @@ export async function createDocument(data: any): Promise<any> {
   if (useMockData) return {};
   
   const requestUrl = `${getBaseUrl()}/api/v1/approvals`;
-  const response = await fetch(requestUrl, {
+  const response = await customFetch(requestUrl, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify(data),
@@ -131,7 +133,7 @@ export async function createDocument(data: any): Promise<any> {
 export async function getApprovalDetail(id: number | string): Promise<any> {
   if (useMockData) return {};
   const requestUrl = `${getBaseUrl()}/api/v1/approvals/${id}`;
-  const response = await fetch(requestUrl, {
+  const response = await customFetch(requestUrl, {
     method: "GET",
     headers: getHeaders(),
     cache: "no-store",

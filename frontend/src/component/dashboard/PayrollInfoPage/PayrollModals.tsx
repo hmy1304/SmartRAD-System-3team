@@ -106,7 +106,7 @@ export function BaseSalaryEditModal({ isOpen, onClose, item, onSuccess }: { isOp
     if (!item?.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/payroll-settings/base-salaries/${item.id}`, {
+      const res = await customFetch(`/payroll-settings/base-salaries/${item.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -119,9 +119,14 @@ export function BaseSalaryEditModal({ isOpen, onClose, item, onSuccess }: { isOp
       if (res.ok) {
         if (onSuccess) onSuccess();
         onClose();
+      } else {
+        alert("수정에 실패했습니다.");
       }
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    } catch (e) {
+      alert("오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -244,7 +249,7 @@ const CustomSelect = ({ value, onChange }: { value: string, onChange: (val: stri
 
 
 // 2. Deduction Add Modal (Red)
-export function DeductionAddModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, onClose: () => void, onSuccess?: () => void }) {
+export function DeductionAddModal({ isOpen, onClose, onSuccess }: { isOpen: boolean, onClose: () => void, onSuccess: () => void }) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -265,17 +270,22 @@ export function DeductionAddModal({ isOpen, onClose, onSuccess }: { isOpen: bool
   const handleSave = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/payroll-settings/deductions`, {
+      const res = await customFetch(`/payroll-settings/deductions`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
       });
       if (res.ok) {
-        if (onSuccess) onSuccess();
+        onSuccess();
         onClose();
+      } else {
+        alert("저장에 실패했습니다.");
       }
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    } catch (e) {
+      alert("오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -372,7 +382,7 @@ export function DeductionEditModal({ isOpen, onClose, item, onSuccess }: { isOpe
     if (!item?.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/payroll-settings/deductions/${item.id}`, {
+      const res = await customFetch(`/payroll-settings/deductions/${item.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
@@ -380,9 +390,14 @@ export function DeductionEditModal({ isOpen, onClose, item, onSuccess }: { isOpe
       if (res.ok) {
         if (onSuccess) onSuccess();
         onClose();
+      } else {
+        alert("수정에 실패했습니다.");
       }
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    } catch (e) {
+      alert("오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -390,15 +405,20 @@ export function DeductionEditModal({ isOpen, onClose, item, onSuccess }: { isOpe
     if (!window.confirm("정말 삭제하시겠습니까?")) return;
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/payroll-settings/deductions/${item.id}`, {
+      const res = await customFetch(`/payroll-settings/deductions/${item.id}`, {
         method: "DELETE",
       });
       if (res.ok) {
         if (onSuccess) onSuccess();
         onClose();
+      } else {
+        alert("삭제에 실패했습니다.");
       }
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    } catch (e) {
+      alert("오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -491,7 +511,7 @@ export function AllowanceAddModal({ isOpen, onClose, onSuccess }: { isOpen: bool
   const handleSave = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/payroll-settings/allowances`, {
+      const res = await customFetch(`/payroll-settings/allowances`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
@@ -499,9 +519,14 @@ export function AllowanceAddModal({ isOpen, onClose, onSuccess }: { isOpen: bool
       if (res.ok) {
         if (onSuccess) onSuccess();
         onClose();
+      } else {
+        alert("저장에 실패했습니다.");
       }
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    } catch (e) {
+      alert("오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -618,7 +643,7 @@ export function AllowanceEditModal({ isOpen, onClose, item, onSuccess }: { isOpe
     if (!item?.id) return;
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/payroll-settings/allowances/${item.id}`, {
+      const res = await customFetch(`/payroll-settings/allowances/${item.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData)
@@ -626,9 +651,14 @@ export function AllowanceEditModal({ isOpen, onClose, item, onSuccess }: { isOpe
       if (res.ok) {
         if (onSuccess) onSuccess();
         onClose();
+      } else {
+        alert("수정에 실패했습니다.");
       }
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    } catch (e) {
+      alert("오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -636,15 +666,20 @@ export function AllowanceEditModal({ isOpen, onClose, item, onSuccess }: { isOpe
     if (!window.confirm("정말 삭제하시겠습니까?")) return;
     setLoading(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/payroll-settings/allowances/${item.id}`, {
+      const res = await customFetch(`/payroll-settings/allowances/${item.id}`, {
         method: "DELETE",
       });
       if (res.ok) {
         if (onSuccess) onSuccess();
         onClose();
+      } else {
+        alert("삭제에 실패했습니다.");
       }
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+    } catch (e) {
+      alert("오류가 발생했습니다.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
