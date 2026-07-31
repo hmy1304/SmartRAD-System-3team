@@ -42,9 +42,7 @@ services:
       - smartrad-network
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: hmy1304/smartrad-backend:1.0.0
     container_name: smartrad-backend
     restart: always
     depends_on:
@@ -60,9 +58,7 @@ services:
       - smartrad-network
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: hmy1304/smartrad-frontend:1.0.0
     container_name: smartrad-frontend
     restart: always
     depends_on:
