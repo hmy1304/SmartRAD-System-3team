@@ -216,6 +216,9 @@ public class AttendanceService {
                 } else if ("LEAVE".equalsIgnoreCase(status)) {
                     days.set(dayIndex, "leave");
                     leave++;
+                } else if ("EARLY_LEAVE".equalsIgnoreCase(status)) {
+                    days.set(dayIndex, "late");
+                    late++;
                 }
             }
 

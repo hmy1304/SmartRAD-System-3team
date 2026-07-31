@@ -1,0 +1,63 @@
+@use "../../../styles/variables" as *;
+
+.checkCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 12px;
+  padding: 14px 20px;
+  border: 1px solid $color-border;
+  border-radius: $radius-md;
+  background: $color-surface;
+  box-shadow: $shadow-card;
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  color: $color-muted;
+  font-size: 0.68rem;
+}
+
+.state {
+  color: $color-text;
+  font-size: 0.85rem;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.checkInBtn,
+.checkOutBtn {
+  padding: 9px 18px;
+  border: none;
+  border-radius: $radius-sm;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity $transition;
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.checkInBtn {
+  color: $color-surface;
+  background: $color-blue-600;
+}
+
+.checkOutBtn {
+  color: $color-blue-700;
+  background: $color-blue-50;
+  border: 1px solid $color-blue-100;
+}

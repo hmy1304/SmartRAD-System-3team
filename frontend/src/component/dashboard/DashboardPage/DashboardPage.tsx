@@ -12,6 +12,7 @@ import NoticeDetailModal, {
   type NoticeDetailFallback,
 } from "./NoticeDetailModal";
 import NoticeEditModal from "./NoticeEditModal";
+import AttendanceCheckCard from "./AttendanceCheckCard";
 import {
   getNotices,
   type NoticeResponse,
@@ -204,6 +205,8 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
           <strong>{todayText || "…"}</strong>
         </div>
       </section>
+
+      <AttendanceCheckCard />
 
       {isAdmin && (data.urgentStatutory ?? 0) > 0 && (
         <div style={{

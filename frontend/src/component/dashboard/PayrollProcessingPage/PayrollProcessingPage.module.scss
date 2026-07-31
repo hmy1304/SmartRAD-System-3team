@@ -232,6 +232,10 @@
 .actionIcon {
   color: #9ca3af;
   cursor: pointer;
+  background: none;
+  border: none;
+  font-size: 1rem;
+  padding: 0.25rem 0.5rem;
   &:hover {
     color: #4b5563;
   }
@@ -240,4 +244,109 @@
 .chartContainer {
   height: 300px;
   margin-top: 2rem;
+}
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  padding: 2rem;
+}
+
+.modalContent {
+  background: #fff;
+  border-radius: 0.75rem;
+  width: 100%;
+  max-width: 420px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+
+  h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: #111827;
+  }
+}
+
+.modalClose {
+  background: none;
+  border: none;
+  font-size: 1.4rem;
+  line-height: 1;
+  color: #9ca3af;
+  cursor: pointer;
+  &:hover {
+    color: #4b5563;
+  }
+}
+
+.modalBody {
+  padding: 1.5rem;
+}
+
+.modalSummary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.25rem;
+
+  strong {
+    display: block;
+    font-size: 1rem;
+    color: #111827;
+  }
+  span {
+    font-size: 0.8rem;
+    color: #6b7280;
+  }
+}
+
+.modalGroupTitle {
+  margin: 1.25rem 0 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #6b7280;
+}
+
+.modalRow {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+  font-size: 0.875rem;
+  color: #374151;
+}
+
+.modalEmpty {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin: 0.25rem 0;
+}
+
+.modalNetPay {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.95rem;
+  color: #111827;
+
+  strong {
+    font-size: 1.1rem;
+  }
 }

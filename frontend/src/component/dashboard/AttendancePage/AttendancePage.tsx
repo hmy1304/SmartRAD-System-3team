@@ -6,6 +6,14 @@ import styles from "./AttendancePage.module.scss";
 
 type Status = "정상" | "지각" | "결근" | "조기퇴근" | string;
 
+// 화면 표시용 한글 상태값 -> 백엔드 저장용 영문 토큰
+const STATUS_TO_API: Record<string, string> = {
+  "정상": "NORMAL",
+  "지각": "LATE",
+  "결근": "ABSENT",
+  "조기퇴근": "EARLY_LEAVE",
+};
+
 interface AttendanceApiDto {
   id: number;
   employeeId: number;
@@ -369,7 +377,7 @@ export default function AttendancePage() {
             body: JSON.stringify({
               checkInTime: (row.checkIn || "08:50") + ":00",
               checkOutTime: row.checkOut && row.checkOut !== "퇴근 전" ? row.checkOut + ":00" : null,
-              status: "정상",
+              status: "NORMAL",
               note: `[일괄정정] ${reason}`,
               correctionReason: reason,
               correctedBy: "ADMIN-001 (최고관리자)",
@@ -430,59 +438,7 @@ export default function AttendancePage() {
   const userTimelineRecords = useMemo(() => {
     if (!selectedUserForTimeline) return [];
     const empId = selectedUserForTimeline.employeeId;
-    const userRows = records.filter(r => (empId && r.employeeId === empId) || r.name === selectedUserForTimeline.name);
-    
-    // 만약 DB 기록이 1건뿐이면 시각적 감사 리포트 연출을 위해 과거 근태를 자연스럽게 포함
-    if (userRows.length <= 1) {
-      return [
-        selectedUserForTimeline,
-        {
-          ...selectedUserForTimeline,
-          id: "sub-1",
-          workDate: "2026-07-10",
-          checkIn: "06:50",
-          checkOut: "15:05",
-          workTime: "8h 15m",
-          status: "정상" as Status,
-          note: "D-Shift (07~15) 완료",
-          isCorrected: false,
-        },
-        {
-          ...selectedUserForTimeline,
-          id: "sub-2",
-          workDate: "2026-07-09",
-          checkIn: "06:55",
-          checkOut: "15:30",
-          workTime: "8h 35m",
-          status: "정상" as Status,
-          note: "초과 근로 30분",
-          isCorrected: false,
-        },
-        {
-          ...selectedUserForTimeline,
-          id: "sub-3",
-          workDate: "2026-07-08",
-          checkIn: "07:25",
-          checkOut: "15:10",
-          workTime: "7h 45m",
-          status: "정상" as Status,
-          note: "[관리자정정] 응급실 파견 지원 소급",
-          isCorrected: true,
-        },
-        {
-          ...selectedUserForTimeline,
-          id: "sub-4",
-          workDate: "2026-07-07",
-          checkIn: "22:50",
-          checkOut: "07:15",
-          workTime: "8h 25m",
-          status: "정상" as Status,
-          note: "N-Shift (Night 23~07) 완료",
-          isCorrected: false,
-        },
-      ];
-    }
-    return userRows;
+    return records.filter(r => (empId && r.employeeId === empId) || r.name === selectedUserForTimeline.name);
   }, [selectedUserForTimeline, records]);
 
   // 4. 모달 액션 핸들러 (수동 등록 POST /api/v1/attendance/admin)
@@ -499,7 +455,7 @@ export default function AttendancePage() {
         workDate: addForm.workDate || "2026-07-11",
         checkInTime: addForm.checkIn ? (addForm.checkIn.length === 5 ? addForm.checkIn + ":00" : addForm.checkIn) : null,
         checkOutTime: addForm.checkOut ? (addForm.checkOut.length === 5 ? addForm.checkOut + ":00" : addForm.checkOut) : null,
-        status: addForm.status,
+        status: STATUS_TO_API[addForm.status] ?? "NORMAL",
         note: `[수동등록] ${addForm.reason}`,
         correctionReason: addForm.reason,
         correctedBy: "ADMIN-001 (최고관리자)",
@@ -567,7 +523,7 @@ export default function AttendancePage() {
         const payload = {
           checkInTime: editForm.checkIn ? (editForm.checkIn.length === 5 ? editForm.checkIn + ":00" : editForm.checkIn) : null,
           checkOutTime: editForm.checkOut ? (editForm.checkOut.length === 5 ? editForm.checkOut + ":00" : editForm.checkOut) : null,
-          status: editForm.status,
+          status: STATUS_TO_API[editForm.status] ?? "NORMAL",
           note: `[관리자정정] ${editForm.reason}`,
           correctionReason: editForm.reason,
           correctedBy: "ADMIN-001 (최고관리자)",
@@ -1199,7 +1155,14 @@ export default function AttendancePage() {
               <div className={styles.monthSummaryBox}>
                 <label>정상 출현 횟수</label>
                 <strong style={{ color: "#0f9f6e" }}>
-                  {userTimelineRecords.filter(r => r.status === "정상").length}회 <span>(달성률 95%)</span>
+                  {userTimelineRecords.filter(r => r.status === "정상").length}회{" "}
+                  <span>
+                    (달성률{" "}
+                    {userTimelineRecords.length > 0
+                      ? ((userTimelineRecords.filter(r => r.status === "정상").length / userTimelineRecords.length) * 100).toFixed(1)
+                      : "0.0"}
+                    %)
+                  </span>
                 </strong>
               </div>
               <div className={styles.monthSummaryBox}>
@@ -1218,6 +1181,11 @@ export default function AttendancePage() {
 
             <div className={styles.timelineBody}>
               <h3 style={{ fontSize: "14px", fontWeight: 700, margin: "0 0 4px", color: "#334155" }}>📆 일별 출퇴근 타임라인 (최신순)</h3>
+              {userTimelineRecords.length === 0 && (
+                <div style={{ textAlign: "center", padding: "40px 0", color: "#94a3b8" }}>
+                  이번 조회 기간에 등록된 근태 기록이 없습니다.
+                </div>
+              )}
               {userTimelineRecords.map((t, idx) => (
                 <div key={t.id || idx} className={styles.timelineItem}>
                   <div className={styles.timelineDate}>

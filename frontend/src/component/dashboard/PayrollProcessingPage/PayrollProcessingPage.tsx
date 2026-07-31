@@ -32,6 +32,16 @@ export default function PayrollProcessingPage() {
   // Checkbox states
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
+  // Department filter
+  const [selectedDept, setSelectedDept] = useState("부서 전체");
+
+  // Detail modal states
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailRecord, setDetailRecord] = useState<any | null>(null);
+  const [detailItems, setDetailItems] = useState<any[]>([]);
+
   const fetchSummary = async () => {
     try {
       const token = localStorage.getItem("accessToken");
@@ -115,11 +125,27 @@ export default function PayrollProcessingPage() {
     return new Intl.NumberFormat('ko-KR').format(amount || 0);
   };
 
+  // Department filter options (derived from loaded payroll data)
+  const departments = useMemo(() => {
+    const depts = new Set(payrollList.map(p => p.departmentName || "부서없음"));
+    return ["부서 전체", ...Array.from(depts)];
+  }, [payrollList]);
+
+  const filteredPayrollList = useMemo(() => {
+    if (selectedDept === "부서 전체") return payrollList;
+    return payrollList.filter(p => (p.departmentName || "부서없음") === selectedDept);
+  }, [payrollList, selectedDept]);
+
+  useEffect(() => {
+    setCalcPage(1);
+    setTransferPage(1);
+  }, [selectedDept]);
+
   // Pagination Logic
-  const calcTotalPages = Math.ceil(payrollList.length / ITEMS_PER_PAGE) || 1;
-  const transferTotalPages = Math.ceil(payrollList.length / ITEMS_PER_PAGE) || 1;
-  const paginatedCalcList = payrollList.slice((calcPage - 1) * ITEMS_PER_PAGE, calcPage * ITEMS_PER_PAGE);
-  const paginatedTransferList = payrollList.slice((transferPage - 1) * ITEMS_PER_PAGE, transferPage * ITEMS_PER_PAGE);
+  const calcTotalPages = Math.ceil(filteredPayrollList.length / ITEMS_PER_PAGE) || 1;
+  const transferTotalPages = Math.ceil(filteredPayrollList.length / ITEMS_PER_PAGE) || 1;
+  const paginatedCalcList = filteredPayrollList.slice((calcPage - 1) * ITEMS_PER_PAGE, calcPage * ITEMS_PER_PAGE);
+  const paginatedTransferList = filteredPayrollList.slice((transferPage - 1) * ITEMS_PER_PAGE, transferPage * ITEMS_PER_PAGE);
 
   // Checkbox Logic
   const isAllSelected = paginatedCalcList.length > 0 && paginatedCalcList.every(p => selectedIds.includes(p.id));
@@ -137,6 +163,41 @@ export default function PayrollProcessingPage() {
 
   const handleSelectOne = (id: number) => {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+  };
+
+  const openDetail = async (employeeId: number) => {
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setDetailError(null);
+    setDetailRecord(null);
+    setDetailItems([]);
+    try {
+      const token = localStorage.getItem("accessToken");
+      const res = await fetch(`/api/v1/payroll/${employeeId}/${targetYear}/${targetMonth}`, {
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {})
+        }
+      });
+      if (res.ok) {
+        const body = await res.json();
+        setDetailRecord(body.record);
+        setDetailItems(body.details || []);
+      } else {
+        setDetailError("급여 계산이 아직 실행되지 않은 직원입니다. 먼저 급여 계산을 실행해주세요.");
+      }
+    } catch (e) {
+      setDetailError("상세 정보를 불러오는 중 오류가 발생했습니다.");
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeDetail = () => {
+    setDetailOpen(false);
+    setDetailRecord(null);
+    setDetailItems([]);
+    setDetailError(null);
   };
 
   return (
@@ -178,9 +239,9 @@ export default function PayrollProcessingPage() {
         <div className={styles.card}>
           <div className={`${styles.iconBox} ${styles.yellow}`}>⚠</div>
           <div className={styles.cardContent}>
-            <h3>계산 대기 인원</h3>
+            <h3>확정 대기 인원</h3>
             <p className={styles.value}>{summary.pendingCount} <span>명</span></p>
-            {summary.pendingCount > 0 && <span className={`${styles.subtext} ${styles.yellow}`}>검토 필요</span>}
+            {summary.pendingCount > 0 && <span className={`${styles.subtext} ${styles.yellow}`}>확정 필요</span>}
           </div>
         </div>
         <div className={styles.card}>
@@ -209,7 +270,11 @@ export default function PayrollProcessingPage() {
                 <option key={m} value={m}>{targetYear}년 {m}월</option>
               ))}
             </select>
-            <select><option>부서 전체</option></select>
+            <select value={selectedDept} onChange={(e) => setSelectedDept(e.target.value)}>
+              {departments.map(d => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
             <button className={styles.calcBtn} onClick={handleCalculate} disabled={!canWrite || selectedIds.length === 0} style={{ padding: '0.5rem 1rem', backgroundColor: '#2563eb', color: '#fff', border: 'none', borderRadius: '0.375rem', cursor: canWrite ? 'pointer' : 'not-allowed', opacity: canWrite ? 1 : 0.5 }}>선택 계산 실행</button>
           </div>
         </div>
@@ -256,13 +321,25 @@ export default function PayrollProcessingPage() {
                   <td style={{ color: '#dc2626' }}>- {formatMoney(p.totalDeduction)}</td>
                   <td style={{ fontWeight: 600 }}>{formatMoney(p.netPay)}</td>
                   <td>
-                    {p.status === 'CONFIRMED' || p.status === 'MANUAL' ? (
+                    {p.status === 'CONFIRMED' ? (
+                      <span className={`${styles.badge} ${styles.success}`}><IconCheck /> 확정 완료</span>
+                    ) : p.status === 'MANUAL' ? (
+                      <span className={`${styles.badge} ${styles.success}`}><IconCheck /> 수동 입력</span>
+                    ) : p.status === 'PENDING' ? (
                       <span className={`${styles.badge} ${styles.success}`}><IconCheck /> 계산 완료</span>
                     ) : (
                       <span className={`${styles.badge} ${styles.default}`}>계산 전</span>
                     )}
                   </td>
-                  <td><span className={styles.actionIcon}>⋯</span></td>
+                  <td>
+                    <button
+                      type="button"
+                      className={styles.actionIcon}
+                      onClick={() => openDetail(p.employeeId)}
+                    >
+                      ⋯
+                    </button>
+                  </td>
                 </tr>
               ))}
               {paginatedCalcList.length === 0 && (
@@ -425,6 +502,68 @@ export default function PayrollProcessingPage() {
           </ResponsiveContainer>
         </div>
       </section>
+
+      {detailOpen && (
+        <div className={styles.modalOverlay} onClick={closeDetail}>
+          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>급여 상세 내역</h3>
+              <button type="button" className={styles.modalClose} onClick={closeDetail}>×</button>
+            </div>
+            <div className={styles.modalBody}>
+              {detailLoading && <p style={{ textAlign: "center", color: "#6b7280" }}>불러오는 중...</p>}
+              {!detailLoading && detailError && (
+                <p style={{ textAlign: "center", color: "#dc2626" }}>{detailError}</p>
+              )}
+              {!detailLoading && !detailError && detailRecord && (
+                <>
+                  <div className={styles.modalSummary}>
+                    <div>
+                      <strong>{detailRecord.employeeName}</strong>
+                      <span>{detailRecord.empNo} · {detailRecord.departmentName || "부서없음"}</span>
+                    </div>
+                    <span>{detailRecord.payrollYear}년 {detailRecord.payrollMonth}월 귀속</span>
+                  </div>
+
+                  <div className={styles.modalRow}>
+                    <span>기본급</span>
+                    <span>{formatMoney(detailRecord.baseSalary)}원</span>
+                  </div>
+
+                  <h4 className={styles.modalGroupTitle}>수당</h4>
+                  {detailItems.filter(d => d.itemType === "ALLOWANCE").length === 0 ? (
+                    <p className={styles.modalEmpty}>지급된 수당이 없습니다.</p>
+                  ) : (
+                    detailItems.filter(d => d.itemType === "ALLOWANCE").map(d => (
+                      <div key={d.id} className={styles.modalRow}>
+                        <span>{d.itemName}</span>
+                        <span style={{ color: "#059669" }}>+ {formatMoney(d.amount)}원</span>
+                      </div>
+                    ))
+                  )}
+
+                  <h4 className={styles.modalGroupTitle}>공제</h4>
+                  {detailItems.filter(d => d.itemType === "DEDUCTION").length === 0 ? (
+                    <p className={styles.modalEmpty}>공제 내역이 없습니다.</p>
+                  ) : (
+                    detailItems.filter(d => d.itemType === "DEDUCTION").map(d => (
+                      <div key={d.id} className={styles.modalRow}>
+                        <span>{d.itemName}</span>
+                        <span style={{ color: "#dc2626" }}>- {formatMoney(d.amount)}원</span>
+                      </div>
+                    ))
+                  )}
+
+                  <div className={styles.modalNetPay}>
+                    <span>실지급액</span>
+                    <strong>{formatMoney(detailRecord.netPay)}원</strong>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );
