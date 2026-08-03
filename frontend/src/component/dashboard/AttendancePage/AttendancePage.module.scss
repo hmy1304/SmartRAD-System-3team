@@ -119,6 +119,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .dateSelect {
@@ -493,6 +494,8 @@
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(33, 85, 217, 0.25);
   transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
   &:hover {
     transform: translateY(-1px);
     box-shadow: 0 6px 14px rgba(33, 85, 217, 0.35);
@@ -513,6 +516,8 @@
   gap: 6px;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
+  flex-shrink: 0;
   &:hover {
     background: #d1fae5;
   }
