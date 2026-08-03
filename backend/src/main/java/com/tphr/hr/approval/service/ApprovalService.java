@@ -15,9 +15,11 @@ import com.tphr.hr.employee.repository.AppointmentRepository;
 import com.tphr.hr.leave.entity.LeaveApplication;
 import com.tphr.hr.leave.repository.LeaveApplicationRepository;
 import com.tphr.hr.leave.service.LeaveService;
+import com.tphr.hr.payroll.service.PayrollService;
 import com.tphr.hr.system.entity.CommonCode;
 import jakarta.persistence.EntityManager;
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -45,7 +47,9 @@ public class ApprovalService {
     private final ApprovalCommentRepository approvalCommentRepository;
     private final LeaveApplicationRepository leaveApplicationRepository;
     private final LeaveService leaveService;
+    private final PayrollService payrollService;
     private final AppointmentRepository appointmentRepository;
+    private final com.tphr.hr.employee.service.AppointmentService appointmentService;
     private final EntityManager entityManager;
 
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy. MM. dd HH:mm");
@@ -54,10 +58,9 @@ public class ApprovalService {
     public ApprovalInboxResponse getPendingApprovals(Long approverId) {
         List<ApprovalInboxResponse.ApprovalDocumentDto> docDtos = new ArrayList<>();
 
-        // 1. Leave Applications (status = "확인중")
-        // We will fetch all pending leaves for demonstration (in real app, map approverId)
+        // 1. Leave Applications (status = "승인대기")
         List<LeaveApplication> pendingLeaves = leaveApplicationRepository.findAll().stream()
-                .filter(l -> "확인중".equals(l.getStatus()))
+                .filter(l -> "승인대기".equals(l.getStatus()))
                 .collect(Collectors.toList());
 
         for (LeaveApplication leave : pendingLeaves) {
@@ -83,8 +86,8 @@ public class ApprovalService {
                     .build());
         }
 
-        // 2. Appointments (applied = false)
-        List<Appointment> pendingAppointments = appointmentRepository.findByAppliedFalse();
+        // 2. Appointments (status = "WAITING")
+        List<Appointment> pendingAppointments = appointmentRepository.findByStatus("WAITING");
         for (Appointment appt : pendingAppointments) {
             String contentHtml = String.format("<p><strong>발령일:</strong> %s</p><p><strong>발령유형:</strong> %s</p><p><strong>부서 변경:</strong> %s -> %s</p>",
                     appt.getApplyDate(),
@@ -158,12 +161,110 @@ public class ApprovalService {
         int urgentCount = (int) docDtos.stream().filter(d -> "urgent".equals(d.getPriority())).count();
         int dueTodayCount = (int) docDtos.stream().filter(d -> "D-0".equals(d.getDDay())).count();
 
+        LocalDateTime now = LocalDateTime.now();
+        long processedThisMonth = approvalLineRepository.findAll().stream()
+                .filter(l -> l.getApprover().getId().equals(approverId))
+                .filter(l -> ("APPROVED".equals(l.getStatus()) || "REJECTED".equals(l.getStatus()))
+                        && l.getUpdatedAt() != null
+                        && l.getUpdatedAt().getMonth() == now.getMonth()
+                        && l.getUpdatedAt().getYear() == now.getYear())
+                .count();
+
+        long approvedThisMonth = approvalLineRepository.findAll().stream()
+                .filter(l -> l.getApprover().getId().equals(approverId))
+                .filter(l -> "APPROVED".equals(l.getStatus())
+                        && l.getUpdatedAt() != null
+                        && l.getUpdatedAt().getMonth() == now.getMonth()
+                        && l.getUpdatedAt().getYear() == now.getYear())
+                .count();
+
+        int calculatedApprovalRate = processedThisMonth > 0 ? (int) ((approvedThisMonth * 100) / processedThisMonth) : 0;
+
         ApprovalInboxResponse.ApprovalSummaryDto summary = ApprovalInboxResponse.ApprovalSummaryDto.builder()
                 .totalPending(docDtos.size())
                 .urgentPending(urgentCount)
                 .dueToday(dueTodayCount)
-                .processedThisMonth(15) // mock
-                .approvalRate(95) // mock
+                .processedThisMonth((int) processedThisMonth)
+                .approvalRate(calculatedApprovalRate)
+                .build();
+
+        return ApprovalInboxResponse.builder()
+                .summary(summary)
+                .documents(docDtos)
+                .comments(commentDtos)
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public ApprovalInboxResponse getApprovedApprovals(Long approverId) {
+        List<ApprovalInboxResponse.ApprovalDocumentDto> docDtos = new ArrayList<>();
+
+        List<ApprovalLine> approvedLines = approvalLineRepository.findAll().stream()
+                .filter(l -> l.getApprover().getId().equals(approverId) && 
+                        ("APPROVED".equals(l.getStatus()) || "REJECTED".equals(l.getStatus())))
+                .sorted((a, b) -> b.getUpdatedAt().compareTo(a.getUpdatedAt()))
+                .collect(Collectors.toList());
+
+        for (ApprovalLine line : approvedLines) {
+            ApprovalDocument doc = line.getDocument();
+            docDtos.add(ApprovalInboxResponse.ApprovalDocumentDto.builder()
+                    .id("DOC-" + doc.getId())
+                    .priority("normal")
+                    .priorityLabel("일반")
+                    .title(doc.getTitle())
+                    .attachment("")
+                    .drafter(doc.getDraftedBy().getName())
+                    .drafterInitial(doc.getDraftedBy().getName().substring(0, 1))
+                    .drafterDepartment(doc.getDraftedBy().getDepartment() != null ? doc.getDraftedBy().getDepartment().getName() : "")
+                    .drafterRole(doc.getDraftedBy().getPosition() != null ? doc.getDraftedBy().getPosition().getName() : "")
+                    .avatarTone(line.getStatus().equals("REJECTED") ? "red" : "green")
+                    .requestedAt(doc.getCreatedAt() != null ? doc.getCreatedAt().format(FORMATTER) : "")
+                    .dDay(line.getStatus().equals("REJECTED") ? "반려" : "완료")
+                    .description(doc.getContent())
+                    .fileName("")
+                    .fileMeta("")
+                    .build());
+        }
+
+        List<ApprovalInboxResponse.ApprovalCommentDto> commentDtos = new ArrayList<>();
+        for (ApprovalInboxResponse.ApprovalDocumentDto doc : docDtos) {
+            List<ApprovalComment> comments = approvalCommentRepository.findByDocumentIdStrOrderByCreatedAtAsc(doc.getId());
+            for (ApprovalComment c : comments) {
+                commentDtos.add(ApprovalInboxResponse.ApprovalCommentDto.builder()
+                        .id(c.getId())
+                        .documentId(c.getDocumentIdStr())
+                        .initial(c.getEmployee().getName().substring(0, 1))
+                        .name(c.getEmployee().getName())
+                        .tag("결재자")
+                        .time(c.getCreatedAt() != null ? c.getCreatedAt().format(FORMATTER) : "")
+                        .content(c.getContent())
+                        .avatarTone("purple")
+                        .build());
+            }
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        long processedThisMonth = approvedLines.stream()
+                .filter(l -> l.getUpdatedAt() != null
+                        && l.getUpdatedAt().getMonth() == now.getMonth()
+                        && l.getUpdatedAt().getYear() == now.getYear())
+                .count();
+
+        long approvedThisMonth = approvedLines.stream()
+                .filter(l -> "APPROVED".equals(l.getStatus())
+                        && l.getUpdatedAt() != null
+                        && l.getUpdatedAt().getMonth() == now.getMonth()
+                        && l.getUpdatedAt().getYear() == now.getYear())
+                .count();
+
+        int calculatedApprovalRate = processedThisMonth > 0 ? (int) ((approvedThisMonth * 100) / processedThisMonth) : 0;
+
+        ApprovalInboxResponse.ApprovalSummaryDto summary = ApprovalInboxResponse.ApprovalSummaryDto.builder()
+                .totalPending(0)
+                .urgentPending(0)
+                .dueToday(0)
+                .processedThisMonth((int) processedThisMonth)
+                .approvalRate(calculatedApprovalRate)
                 .build();
 
         return ApprovalInboxResponse.builder()
@@ -233,7 +334,7 @@ public class ApprovalService {
         }
 
         // Add Appointments
-        List<Appointment> appts = appointmentRepository.findAll();
+        List<Appointment> appts = appointmentRepository.findByEmployeeIdOrderByApplyDateDesc(drafterId);
         for (Appointment appt : appts) {
             String currentStatus = appt.getStatus();
             if (currentStatus == null) currentStatus = "WAITING";
@@ -269,8 +370,15 @@ public class ApprovalService {
                     .build());
         }
 
+        // Sort by createdAt descending
+        docDtos.sort((a, b) -> {
+            String dateA = a.getCreatedAt() != null ? a.getCreatedAt() : "";
+            String dateB = b.getCreatedAt() != null ? b.getCreatedAt() : "";
+            return dateB.compareTo(dateA);
+        });
+
         ApprovalDraftResponse.DraftSummaryDto summary = ApprovalDraftResponse.DraftSummaryDto.builder()
-                .totalDrafts(documents.size())
+                .totalDrafts(documents.size() + appts.size())
                 .pendingDrafts(inProgress)
                 .approvedThisMonth(approved)
                 .rejectedDrafts(rejected)
@@ -300,8 +408,8 @@ public class ApprovalService {
     }
 
     @Transactional
-    public void addComment(String documentIdStr, ApprovalCommentCreateRequest request) {
-        Employee emp = entityManager.getReference(Employee.class, request.getEmployeeId());
+    public void addComment(String documentIdStr, Long authorId, ApprovalCommentCreateRequest request) {
+        Employee emp = entityManager.getReference(Employee.class, authorId);
         ApprovalComment comment = ApprovalComment.builder()
                 .documentIdStr(documentIdStr)
                 .employee(emp)
@@ -316,15 +424,19 @@ public class ApprovalService {
             Long leaveId = Long.parseLong(id.split("-")[1]);
             LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
                     .orElseThrow(() -> new IllegalArgumentException("휴가신청을 찾을 수 없습니다."));
-            leave.changeStatus("승인완료", leave.getNote());
+            leaveService.updateStatus(java.util.List.of(leaveId), "승인완료", leave.getNote());
             // Need to return a mocked response
-            return ApprovalResponse.builder().id(leaveId).title("휴가 승인됨").status("COMPLETED").build();
+            return ApprovalResponse.builder().id(leaveId).title("휴가 승인완료").status("COMPLETED").build();
         } else if (id.startsWith("APPT-")) {
             Long apptId = Long.parseLong(id.split("-")[1]);
             Appointment appt = appointmentRepository.findById(apptId)
                     .orElseThrow(() -> new IllegalArgumentException("발령을 찾을 수 없습니다."));
-            appt.markApplied();
-            return ApprovalResponse.builder().id(apptId).title("발령 승인됨").status("COMPLETED").build();
+            appt.approve(); // Changes status to COMPLETED
+            
+            // Check if it's due today or earlier and apply
+            appointmentService.applyIfDue(appt);
+            
+            return ApprovalResponse.builder().id(apptId).title("발령 승인완료").status("COMPLETED").build();
         } else if (id.startsWith("DOC-")) {
             Long docId = Long.parseLong(id.split("-")[1]);
             return approveRegularDocument(docId, approverId);
@@ -338,8 +450,8 @@ public class ApprovalService {
             Long leaveId = Long.parseLong(id.split("-")[1]);
             LeaveApplication leave = leaveApplicationRepository.findById(leaveId)
                     .orElseThrow(() -> new IllegalArgumentException("휴가신청을 찾을 수 없습니다."));
-            leave.changeStatus("반려", reason);
-            return ApprovalResponse.builder().id(leaveId).title("휴가 반려됨").status("REJECTED").build();
+            leaveService.updateStatus(java.util.List.of(leaveId), "반려", reason);
+            return ApprovalResponse.builder().id(leaveId).title("휴가 반려완료").status("REJECTED").build();
         } else if (id.startsWith("APPT-")) {
             Long apptId = Long.parseLong(id.split("-")[1]);
             Appointment appt = appointmentRepository.findById(apptId)
@@ -392,6 +504,20 @@ public class ApprovalService {
                 } catch (Exception e) {
                     log.error("휴가 데이터 파싱 및 연동 실패: {}", e.getMessage());
                 }
+            } 
+            // 경조사비 신청서일 경우 PayrollService 연동
+            else if ("DOC_WELFARE".equals(document.getDocType().getCode())) {
+                try {
+                    JsonParser parser = JsonParserFactory.getJsonParser();
+                    Map<String, Object> map = parser.parseMap(document.getContent());
+                    if (map.containsKey("welfareAmount")) {
+                        BigDecimal amount = new BigDecimal(map.get("welfareAmount").toString());
+                        payrollService.addApprovalAllowance(document.getDraftedBy().getId(), "경조사비 (결재)", amount);
+                        log.info("경조사비 {}원이 {}번 직원에게 지급 예약되었습니다.", amount, document.getDraftedBy().getId());
+                    }
+                } catch (Exception e) {
+                    log.error("경조사비 데이터 파싱 및 급여 연동 실패: {}", e.getMessage());
+                }
             }
         }
 
@@ -418,8 +544,8 @@ public class ApprovalService {
     // Other original methods (createDocument, getApprovalDetail, deleteDocument, updateDocument) ...
 
     @Transactional
-    public ApprovalResponse createDocument(ApprovalCreateRequest request) {
-        Employee drafter = entityManager.getReference(Employee.class, request.getDraftedById());
+    public ApprovalResponse createDocument(Long drafterId, ApprovalCreateRequest request) {
+        Employee drafter = entityManager.getReference(Employee.class, drafterId);
         CommonCode docType = entityManager.getReference(CommonCode.class, request.getDocTypeCode());
 
         String docNumber = "APP-" + LocalDateTime.now().getYear() + "-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
@@ -533,9 +659,13 @@ public class ApprovalService {
     }
 
     @Transactional
-    public void deleteDocument(Long documentId) {
+    public void deleteDocument(Long documentId, Long requesterId) {
         ApprovalDocument document = approvalDocumentRepository.findById(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다."));
+
+        if (!document.getDraftedBy().getId().equals(requesterId)) {
+            throw new IllegalStateException("기안자 본인만 문서를 삭제할 수 있습니다.");
+        }
 
         if ("COMPLETED".equals(document.getStatus())) {
             throw new IllegalStateException("이미 최종 승인 완료된 문서는 삭제할 수 없습니다.");

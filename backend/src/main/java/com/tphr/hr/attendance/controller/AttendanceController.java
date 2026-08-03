@@ -5,7 +5,9 @@ import com.tphr.hr.attendance.service.AttendanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import com.tphr.hr.system.auth.security.CustomUserDetails;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,9 +35,10 @@ public class AttendanceController {
 
     @GetMapping("/me")
     public ResponseEntity<List<AttendanceResponse>> getMyAttendances(
-            @RequestParam Long employeeId,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        Long employeeId = userDetails.getEmployee().getId();
         return ResponseEntity.ok(attendanceService.getMyAttendances(employeeId, startDate, endDate));
     }
 

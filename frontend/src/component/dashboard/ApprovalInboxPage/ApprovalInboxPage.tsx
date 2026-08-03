@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { usePageGuard, hasPermission } from "@/utils/permission";
+import { useAuthStore } from "@/store/authStore";
 
 import type {
   ApprovalComment,
@@ -162,18 +163,21 @@ export default function ApprovalInboxPage() {
   const [selectedId, setSelectedId] = useState("");
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [commentText, setCommentText] = useState("");
-  const [currentUserId, setCurrentUserId] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<"pending" | "approved">("pending");
+  const { userProfile } = useAuthStore();
+  // 서버가 JWT 에서 사용자를 판별하므로 화면은 표시 용도로만 사용한다.
+  const currentUserId = userProfile?.employeeId ?? null;
 
   useEffect(() => {
-    // In a real app, we'd get this from context or JWT decoding. Using a dummy/manager ID 1 for now.
-    setCurrentUserId(1); 
-    fetchData();
-  }, []);
+    if (currentUserId) {
+      fetchData();
+    }
+  }, [currentUserId, activeTab]);
 
   const fetchData = async () => {
     try {
-      // We assume user 1 for now, in a real system we'd extract this from the backend via token
-      const res = await fetch(`/api/v1/approvals/pending?approverId=1`, {
+      const endpoint = activeTab === "pending" ? "pending" : "approved";
+      const res = await fetch(`/api/v1/approvals/${endpoint}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}`
         }
@@ -271,7 +275,6 @@ export default function ApprovalInboxPage() {
             },
             body: JSON.stringify({
                 content: trimmedComment,
-                employeeId: currentUserId || 1
             })
         });
 
@@ -293,7 +296,7 @@ export default function ApprovalInboxPage() {
         return;
     }
     try {
-        const res = await fetch(`/api/v1/approvals/${selectedDocument.id}/approve?approverId=${currentUserId || 1}`, {
+        const res = await fetch(`/api/v1/approvals/${selectedDocument.id}/approve`, {
             method: 'PATCH',
             headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}` }
         });
@@ -318,7 +321,7 @@ export default function ApprovalInboxPage() {
     if (reason === null) return;
 
     try {
-        const res = await fetch(`/api/v1/approvals/${selectedDocument.id}/reject?approverId=${currentUserId || 1}&reason=${encodeURIComponent(reason)}`, {
+        const res = await fetch(`/api/v1/approvals/${selectedDocument.id}/reject?reason=${encodeURIComponent(reason)}`, {
             method: 'PATCH',
             headers: { 'Authorization': `Bearer ${localStorage.getItem('accessToken') || ''}` }
         });
@@ -354,6 +357,27 @@ export default function ApprovalInboxPage() {
                 <span>내보내기</span>
               </button>
             </section>
+
+            <div className={styles.tabs} role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "pending"}
+                className={activeTab === "pending" ? styles.activeTab : ""}
+                onClick={() => setActiveTab("pending")}
+              >
+                대기 중
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeTab === "approved"}
+                className={activeTab === "approved" ? styles.activeTab : ""}
+                onClick={() => setActiveTab("approved")}
+              >
+                처리 완료
+              </button>
+            </div>
 
             <section className={styles.summaryGrid}>
               {summaryCards.map((card) => (

@@ -26,13 +26,19 @@ public class DepartmentService {
     // POST /departments - 새로운 부서 추가
     @Transactional
     public DepartmentResponse createDepartment(DepartmentCreateRequest request) {
+        if (request.deptCode() == null || request.deptCode().trim().isEmpty()) {
+            throw new IllegalArgumentException("부서코드는 필수입니다.");
+        }
+        if (departmentRepository.existsByDeptCode(request.deptCode().trim())) {
+            throw new IllegalArgumentException("이미 사용중인 부서코드입니다.");
+        }
         Department parent = request.parentId() != null ? getDepartmentEntity(request.parentId()) : null;
         Employee manager = request.managerId() != null ? employeeRepository.findById(request.managerId()).orElse(null) : null;
 
         Department department = Department.builder()
                 .name(request.name())
                 .nameEn(request.nameEn())
-                .deptCode(request.deptCode())
+                .deptCode(request.deptCode().trim())
                 .manager(manager)
                 .location(request.location())
                 .phone(request.phone())
@@ -66,7 +72,14 @@ public class DepartmentService {
     // PATCH /departments/{id} - 부서명/상위 부서 등 수정
     @Transactional
     public DepartmentResponse updateDepartment(Long id, DepartmentUpdateRequest request) {
+        if (request.deptCode() == null || request.deptCode().trim().isEmpty()) {
+            throw new IllegalArgumentException("부서코드는 필수입니다.");
+        }
         Department department = getDepartmentEntity(id);
+        String newDeptCode = request.deptCode().trim();
+        if (!department.getDeptCode().equals(newDeptCode) && departmentRepository.existsByDeptCode(newDeptCode)) {
+            throw new IllegalArgumentException("이미 사용중인 부서코드입니다.");
+        }
         Department parent = request.parentId() != null ? getDepartmentEntity(request.parentId()) : null;
         Employee manager = request.managerId() != null ? employeeRepository.findById(request.managerId()).orElse(null) : null;
 

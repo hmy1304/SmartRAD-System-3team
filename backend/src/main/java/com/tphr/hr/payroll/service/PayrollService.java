@@ -7,6 +7,8 @@ import com.tphr.hr.payroll.entity.PayrollDetail;
 import com.tphr.hr.payroll.entity.PayrollRecord;
 import com.tphr.hr.payroll.repository.PayrollDetailRepository;
 import com.tphr.hr.payroll.repository.PayrollRecordRepository;
+import com.tphr.hr.attendance.service.AttendanceService;
+import com.tphr.hr.attendance.dto.AttendanceSummaryDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -37,6 +40,7 @@ public class PayrollService {
     private final BaseSalaryRepository baseSalaryRepository;
     private final AllowanceItemRepository allowanceItemRepository;
     private final DeductionItemRepository deductionItemRepository;
+    private final AttendanceService attendanceService;
 
     // 가상의 공제율 (실무에서는 DB 관리)
     private static final BigDecimal NATIONAL_PENSION_RATE = new BigDecimal("0.045"); // 국민연금 4.5%
@@ -58,6 +62,8 @@ public class PayrollService {
         List<DeductionItem> activeDeductions = deductionItemRepository.findAll().stream()
                 .filter(d -> Boolean.TRUE.equals(d.getIsActive()))
                 .collect(Collectors.toList());
+
+        List<AttendanceSummaryDto> attendanceSummaries = attendanceService.getMonthlySummary(year, month, null);
 
         for (Employee employee : activeEmployees) {
             // 1. 기본급 계산
@@ -104,6 +110,22 @@ public class PayrollService {
                 }
             }
 
+            // --- 근태 기반 수당 계산 로직 추가 ---
+            AttendanceSummaryDto attSummary = attendanceSummaries.stream()
+                    .filter(s -> s.getId().equals(String.valueOf(employee.getId())))
+                    .findFirst().orElse(null);
+            
+            if (attSummary != null) {
+                // 야간/휴일/연장 등 실제로는 상세 시간을 계산해야 하나, 데모 시스템이므로 단순히 지각/조퇴가 없는 정상 출근일에 대해 랜덤 혹은 더미 수당 부여 가능
+                // 또는 당직(Duty)을 연동할 수 있음. 우선 야간근무수당을 임의로 1일당 2만원으로 추가 (출근 횟수 기반)
+                if (attSummary.getAttend() > 20) { // 출근일수가 20일 초과시 연장근무 수당 추가
+                    BigDecimal overtimeAmt = new BigDecimal((attSummary.getAttend() - 20) * 50000);
+                    totalAllowance = totalAllowance.add(overtimeAmt);
+                    details.add(PayrollDetail.builder().itemType("ALLOWANCE").itemName("자동_연장근무수당").amount(overtimeAmt).build());
+                }
+            }
+            // -----------------------------
+
             // 3. 공제 계산
             BigDecimal grossSalary = baseSalaryAmt.add(totalAllowance);
             BigDecimal totalDeduction = BigDecimal.ZERO;
@@ -149,6 +171,15 @@ public class PayrollService {
                 }
             }
 
+            // --- 근태 기반 결근 공제 로직 추가 ---
+            if (attSummary != null && attSummary.getAbsent() > 0) {
+                // 결근 1일당 기본급의 1/30 공제
+                BigDecimal absentDeduction = baseSalaryAmt.divide(new BigDecimal("30"), 0, RoundingMode.HALF_UP).multiply(new BigDecimal(attSummary.getAbsent()));
+                totalDeduction = totalDeduction.add(absentDeduction);
+                details.add(PayrollDetail.builder().itemType("DEDUCTION").itemName("자동_결근공제").amount(absentDeduction).build());
+            }
+            // -----------------------------
+
             // 4. 실수령액
             BigDecimal netPay = grossSalary.subtract(totalDeduction);
 
@@ -162,6 +193,24 @@ public class PayrollService {
                     calculatedRecords.add(existingRecord);
                     continue;
                 }
+
+                // Preserve manual/approval details
+                List<PayrollDetail> existingDetails = payrollDetailRepository.findByPayrollRecordId(existingRecord.getId());
+                for (PayrollDetail ed : existingDetails) {
+                    if (ed.getItemName().contains("(결재)")) {
+                        totalAllowance = totalAllowance.add(ed.getAmount());
+                        details.add(PayrollDetail.builder()
+                                .itemType(ed.getItemType())
+                                .itemName(ed.getItemName())
+                                .amount(ed.getAmount())
+                                .build());
+                    }
+                }
+                
+                // Recalculate net pay after adding manual details back
+                grossSalary = baseSalaryAmt.add(totalAllowance);
+                netPay = grossSalary.subtract(totalDeduction);
+
                 existingRecord.updateCalculation(baseSalaryAmt, totalAllowance, totalDeduction, netPay);
                 savedRecord = payrollRecordRepository.save(existingRecord);
                 
@@ -218,6 +267,52 @@ public class PayrollService {
         record.confirm(); // 상태 변경 (JPA 더티 체킹으로 자동 업데이트됨)
         
         return mapToResponse(record);
+    }
+
+    /**
+     * 전자결재(경조사비 등) 최종 승인 시 수당을 급여에 추가합니다.
+     */
+    @Transactional
+    public void addApprovalAllowance(Long employeeId, String itemName, BigDecimal amount) {
+        LocalDate today = LocalDate.now();
+        int year = today.getYear();
+        int month = today.getMonthValue();
+
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new IllegalArgumentException("Employee not found"));
+
+        PayrollRecord record = payrollRecordRepository.findByEmployeeIdAndPayrollYearAndPayrollMonth(employeeId, year, month)
+                .orElseGet(() -> {
+                    PayrollRecord newRecord = PayrollRecord.builder()
+                            .employee(employee)
+                            .payrollYear(year)
+                            .payrollMonth(month)
+                            .baseSalary(BigDecimal.ZERO)
+                            .totalAllowance(BigDecimal.ZERO)
+                            .totalDeduction(BigDecimal.ZERO)
+                            .netPay(BigDecimal.ZERO)
+                            .status("PENDING")
+                            .build();
+                    return payrollRecordRepository.save(newRecord);
+                });
+
+        if ("CONFIRMED".equals(record.getStatus())) {
+            log.warn("급여가 이미 확정되었습니다. 수당 지급이 누락될 수 있습니다.");
+            return;
+        }
+
+        PayrollDetail detail = PayrollDetail.builder()
+                .payrollRecord(record)
+                .itemType("ALLOWANCE")
+                .itemName(itemName)
+                .amount(amount)
+                .build();
+        payrollDetailRepository.save(detail);
+
+        BigDecimal newTotal = record.getTotalAllowance().add(amount);
+        BigDecimal newNet = record.getNetPay().add(amount);
+        record.updateCalculation(record.getBaseSalary(), newTotal, record.getTotalDeduction(), newNet);
+        payrollRecordRepository.save(record);
     }
 
     /**

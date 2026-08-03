@@ -10,9 +10,16 @@ import com.tphr.hr.system.entity.CommonCode;
 import com.tphr.hr.system.entity.RoleGroup;
 import com.tphr.hr.system.repository.CommonCodeRepository;
 import com.tphr.hr.system.repository.RoleGroupRepository;
+import com.tphr.hr.employee.repository.EmploymentHistoryRepository;
+import com.tphr.hr.employee.entity.EmploymentHistory;
+import com.tphr.hr.leave.repository.EmployeeLeaveQuotaRepository;
+import com.tphr.hr.leave.entity.EmployeeLeaveQuota;
+import com.tphr.hr.statutory.repository.StatutoryScheduleRepository;
+import com.tphr.hr.statutory.entity.StatutorySchedule;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import java.util.List;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -34,6 +41,9 @@ public class EmployeeService {
     private final CommonCodeRepository commonCodeRepository;
     private final RoleGroupRepository roleGroupRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmploymentHistoryRepository employmentHistoryRepository;
+    private final EmployeeLeaveQuotaRepository employeeLeaveQuotaRepository;
+    private final StatutoryScheduleRepository statutoryScheduleRepository;
 
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -80,6 +90,44 @@ public class EmployeeService {
         Employee saved = employeeRepository.save(employee);
 
         return new EmployeeCreateResponse(saved.getId(), saved.getEmpNo(), saved.getName(), rawPassword);
+    }
+
+    public EmployeeProfileResponse getEmployeeProfile(Long id) {
+        EmployeeResponse basicInfo = getEmployee(id);
+        
+        List<EmploymentHistory> histories = employmentHistoryRepository.findByEmployeeIdOrderByStartDateDesc(id);
+        List<java.util.Map<String, Object>> appointmentHistory = histories.stream().map(h -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("effectiveDate", h.getStartDate());
+            map.put("department", h.getEmployee().getDepartment() != null ? h.getEmployee().getDepartment().getName() : null);
+            map.put("position", h.getEmployee().getPosition() != null ? h.getEmployee().getPosition().getName() : null);
+            map.put("reason", h.getReason());
+            map.put("type", h.getType() != null ? h.getType().getName() : null);
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+
+        EmployeeLeaveQuota quota = employeeLeaveQuotaRepository.findByEmployeeIdAndYear(id, java.time.LocalDate.now().getYear()).orElse(null);
+        java.util.Map<String, Object> leaveQuotaMap = new java.util.HashMap<>();
+        if (quota != null) {
+            leaveQuotaMap.put("total", quota.getTotalDays());
+            leaveQuotaMap.put("used", quota.getUsedDays());
+            leaveQuotaMap.put("remaining", quota.getRemainingDays());
+        }
+
+        List<StatutorySchedule> schedules = statutoryScheduleRepository.findAll(); // simplified for demo
+        List<java.util.Map<String, Object>> educationList = schedules.stream().map(s -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("title", s.getTitle());
+            map.put("completed", "COMPLETED".equals(s.getStatus()));
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+
+        return EmployeeProfileResponse.builder()
+                .basicInfo(basicInfo)
+                .appointmentHistory(appointmentHistory)
+                .leaveQuota(leaveQuotaMap)
+                .statutoryEducations(educationList)
+                .build();
     }
 
     // GET /employees - 목록 조회 (부서별/직급별/재직상태별 검색·필터)

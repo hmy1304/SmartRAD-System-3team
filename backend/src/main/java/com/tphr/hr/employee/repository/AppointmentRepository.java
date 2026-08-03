@@ -12,10 +12,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     List<Appointment> findByEmployeeIdOrderByApplyDateDesc(Long employeeId);
 
     // 스케줄러/배치 처리 등을 위해 아직 반영되지 않은 발령 전체 조회
-    List<Appointment> findByAppliedFalse();
+    List<Appointment> findByStatus(String status);
 
     // 스케줄러/배치 처리 등을 위해 아직 반영되지 않은 발령 중 적용일이 도래한 것
-    List<Appointment> findByAppliedFalseAndApplyDateLessThanEqual(LocalDate date);
+    List<Appointment> findByStatusAndAppliedFalseAndApplyDateLessThanEqual(String status, LocalDate date);
 
     // 특정 날짜 기준 일괄 적용 대상 조회
     List<Appointment> findByApplyDateAndAppliedFalse(LocalDate applyDate);

@@ -1,0 +1,76 @@
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: smartrad-nginx
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    depends_on:
+      - frontend
+    networks:
+      - smartrad-network
+
+  certbot:
+    image: certbot/certbot
+    container_name: smartrad-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+
+  mysql:
+    image: mysql:8.0
+    container_name: smartrad-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - smartrad-network
+
+  backend:
+    image: hmy1304/smartrad-backend:1.0.0
+    container_name: smartrad-backend
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    networks:
+      - smartrad-network
+
+  frontend:
+    image: hmy1304/smartrad-frontend:1.0.0
+    container_name: smartrad-frontend
+    restart: always
+    depends_on:
+      - backend
+    environment:
+      - BACKEND_URL=http://backend:8080
+    networks:
+      - smartrad-network
+
+volumes:
+  mysql_data:
+
+networks:
+  smartrad-network:
+    driver: bridge

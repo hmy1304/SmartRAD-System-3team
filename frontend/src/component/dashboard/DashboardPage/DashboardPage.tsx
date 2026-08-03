@@ -12,6 +12,7 @@ import NoticeDetailModal, {
   type NoticeDetailFallback,
 } from "./NoticeDetailModal";
 import NoticeEditModal from "./NoticeEditModal";
+import AttendanceCheckCard from "./AttendanceCheckCard";
 import {
   getNotices,
   type NoticeResponse,
@@ -204,6 +205,34 @@ export default function DashboardPage({ initialData }: DashboardPageProps) {
           <strong>{todayText || "…"}</strong>
         </div>
       </section>
+
+      <AttendanceCheckCard />
+
+      {isAdmin && (data.urgentStatutory ?? 0) > 0 && (
+        <div style={{
+          backgroundColor: "#fff0f0",
+          color: "#d32f2f",
+          padding: "1rem 1.5rem",
+          borderRadius: "8px",
+          marginBottom: "1.5rem",
+          border: "1px solid #ffcdd2",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.75rem",
+          fontWeight: 600
+        }}>
+          <span style={{ fontSize: "1.2rem" }}>⚠️</span>
+          <span>
+            현재 기한이 임박한 법정 의무 교육 미이수자가 <strong>{data.urgentStatutory}명</strong> 있습니다. 과태료가 발생하지 않도록 확인해 주세요.
+          </span>
+          <Link 
+            href="/dashboard/statutory" 
+            style={{ marginLeft: "auto", textDecoration: "underline", color: "#d32f2f" }}
+          >
+            상세 보기
+          </Link>
+        </div>
+      )}
 
       <section
         className={styles.summaryGrid}

@@ -31,4 +31,7 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
     long countByStatusAndDateRange(@Param("status") String status, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 
     List<LeaveApplication> findByAttachmentPathIsNotNull();
+
+    @Query("SELECT l FROM LeaveApplication l WHERE l.employee.id = :employeeId AND l.status = '승인완료' AND l.startDate <= :endDate AND l.endDate >= :startDate")
+    List<LeaveApplication> findApprovedLeavesForEmployeeInMonth(@Param("employeeId") Long employeeId, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);
 }

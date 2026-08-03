@@ -48,7 +48,6 @@ public class AppointmentService {
         );
 
         Appointment saved = appointmentRepository.save(appointment);
-        applyIfDue(saved);
         return AppointmentResponse.from(saved);
     }
 
@@ -68,7 +67,6 @@ public class AppointmentService {
                             item.note()
                     );
                     Appointment saved = appointmentRepository.save(appointment);
-                    applyIfDue(saved);
                     return AppointmentResponse.from(saved);
                 })
                 .toList();
@@ -93,7 +91,7 @@ public class AppointmentService {
     // AppointmentScheduler(@Scheduled) 에서 매일 호출된다.
     @Transactional
     public int applyDueAppointments() {
-        List<Appointment> due = appointmentRepository.findByAppliedFalseAndApplyDateLessThanEqual(LocalDate.now());
+        List<Appointment> due = appointmentRepository.findByStatusAndAppliedFalseAndApplyDateLessThanEqual("COMPLETED", LocalDate.now());
         due.forEach(this::applyEffects);
         if (!due.isEmpty()) {
             log.info("[Appointment] {}건의 발령을 실제 반영했습니다.", due.size());
@@ -131,7 +129,7 @@ public class AppointmentService {
                 .build();
     }
 
-    private void applyIfDue(Appointment appointment) {
+    public void applyIfDue(Appointment appointment) {
         if (!appointment.getApplyDate().isAfter(LocalDate.now())) {
             applyEffects(appointment);
         }

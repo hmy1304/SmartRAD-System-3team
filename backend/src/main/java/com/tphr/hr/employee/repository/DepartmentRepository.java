@@ -11,4 +11,6 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
     List<Department> findByParentIsNullOrderByName();
 
     List<Department> findAllByOrderByName();
+
+    boolean existsByDeptCode(String deptCode);
 }

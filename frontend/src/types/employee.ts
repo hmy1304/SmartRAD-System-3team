@@ -136,6 +136,25 @@ export interface EmployeeManagementData {
   selectedEmployee: EmployeeDetail | null;
 }
 
+export interface EmployeeProfileResponse {
+  basicInfo: any;
+  appointmentHistory: Array<{
+    effectiveDate: string;
+    department?: string;
+    position?: string;
+    reason?: string;
+    type?: string;
+  }>;
+  leaveQuota: {
+    total?: number;
+    used?: number;
+    remaining?: number;
+  } | null;
+  statutoryEducations: Array<{
+    title: string;
+    completed: boolean;
+  }>;
+}
 
 export interface AppointmentResponse {
   id: number;

@@ -6,6 +6,7 @@ import type {
   AppointmentResponse,
   AppointmentCreateRequest,
   EmployeeManagementData,
+  EmployeeProfileResponse,
 } from "@/types/employee";
 import { employeeMockData } from "@/data/dashboard/employeeMockData";
 
@@ -258,6 +259,22 @@ export async function getEmployeeById(id: number | string) {
   });
   if (!response.ok) {
     throw new Error(`직원 조회 실패: ${response.status}`);
+  }
+  return response.json();
+}
+
+/** 직원 종합 프로필 조회 (360도 뷰) */
+export async function getEmployeeProfile(
+  id: string | number,
+): Promise<EmployeeProfileResponse> {
+  const base = getBaseUrl();
+  const response = await fetch(`${base}/employees/${id}/profile`, {
+    method: "GET",
+    headers: getHeaders(),
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`직원 종합 프로필 조회 실패: ${response.status}`);
   }
   return response.json();
 }

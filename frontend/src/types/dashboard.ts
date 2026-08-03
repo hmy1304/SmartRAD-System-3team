@@ -69,4 +69,5 @@ export interface DashboardData {
   notices: DashboardNotice[];
   myApprovals: DashboardMyApproval[];
   approvalCounts: DashboardApprovalCounts;
+  urgentStatutory?: number;
 }

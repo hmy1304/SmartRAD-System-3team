@@ -46,6 +46,12 @@ public class EmployeeController {
         return ResponseEntity.ok(employeeService.getEmployee(id));
     }
 
+    // GET /employees/{id}/profile - 종합 프로필 조회 (제안 3 구현)
+    @GetMapping("/{id}/profile")
+    public ResponseEntity<EmployeeProfileResponse> getEmployeeProfile(@PathVariable Long id) {
+        return ResponseEntity.ok(employeeService.getEmployeeProfile(id));
+    }
+
     // PATCH /employees/{id} - 인적사항 수정
     @PatchMapping("/{id}")
     public ResponseEntity<EmployeeResponse> updateEmployee(@PathVariable Long id,

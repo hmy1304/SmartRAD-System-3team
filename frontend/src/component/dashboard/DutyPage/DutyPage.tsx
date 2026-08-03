@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useAuthStore } from "@/store/authStore";
+import { getDepartments, type DepartmentResponse } from "@/services/departmentService";
 import styles from "./DutyPage.module.scss";
 
 type Shift = "D" | "E" | "N" | "OFF" | "AL" | "";
@@ -36,22 +37,12 @@ interface EmployeeDuty {
   summary: { d: number; e: number; n: number; off: number; al: number };
 }
 
-interface DeptInfo {
-  id: number;
-  name: string;
-}
-
-const DEPARTMENTS: DeptInfo[] = [
-  { id: 2, name: "간호부" },
-  { id: 3, name: "영상의학과" },
-  { id: 4, name: "진단검사의학과" },
-];
-
 export default function DutyPage() {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
   const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
-  const [departmentId, setDepartmentId] = useState(2); // 기본: 간호부
-  
+  const [departments, setDepartments] = useState<DepartmentResponse[]>([]);
+  const [departmentId, setDepartmentId] = useState<number | null>(null);
+
   const [schedule, setSchedule] = useState<DutyScheduleResponse | null>(null);
   const [employees, setEmployees] = useState<EmployeeDuty[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -78,8 +69,19 @@ export default function DutyPage() {
     });
   }, [currentYear, currentMonth, DAYS]);
 
+  // 부서 목록 로드
+  useEffect(() => {
+    getDepartments()
+      .then(list => {
+        setDepartments(list);
+        setDepartmentId(prev => prev ?? list[0]?.id ?? null);
+      })
+      .catch(err => console.error("부서 목록 조회 실패:", err));
+  }, []);
+
   // 데이터 로드
   const fetchSchedule = async (isAfterSave: boolean = false) => {
+    if (departmentId == null) return;
     setIsLoading(true);
     setMessage("");
     try {
@@ -179,7 +181,6 @@ export default function DutyPage() {
   // 스케줄 생성
   const handleCreateSchedule = async () => {
     const token = localStorage.getItem("accessToken") || "";
-    const requesterId = localStorage.getItem("employeeId") || "1";
     
     try {
       setIsLoading(true);
@@ -192,8 +193,7 @@ export default function DutyPage() {
         body: JSON.stringify({
           departmentId,
           scheduleYear: currentYear,
-          scheduleMonth: currentMonth,
-          requesterId: parseInt(requesterId, 10)
+          scheduleMonth: currentMonth
         })
       });
       
@@ -216,7 +216,6 @@ export default function DutyPage() {
   const handleAutoGenerate = async () => {
     if (!schedule) return;
     const token = localStorage.getItem("accessToken") || "";
-    const requesterId = localStorage.getItem("employeeId") || "1";
     
     try {
       setIsLoading(true);
@@ -227,7 +226,6 @@ export default function DutyPage() {
           "Authorization": `Bearer ${token}`
         },
         body: JSON.stringify({
-          requesterId: parseInt(requesterId, 10),
           requireSenior: true,
           maxNightPerMonth: 7
         })
@@ -252,7 +250,6 @@ export default function DutyPage() {
   const handleSaveDraft = async () => {
     if (!schedule) return;
     const token = localStorage.getItem("accessToken") || "";
-    const requesterId = localStorage.getItem("employeeId") || "1";
     
     const entriesToSave: any[] = [];
     Object.keys(draftShifts).forEach(empIdStr => {
@@ -272,7 +269,7 @@ export default function DutyPage() {
     
     try {
       setIsLoading(true);
-      const res = await fetch(`/api/v1/duty-schedules/${schedule.id}/entries?requesterId=${requesterId}`, {
+      const res = await fetch(`/api/v1/duty-schedules/${schedule.id}/entries`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -306,11 +303,10 @@ export default function DutyPage() {
       return;
     }
     const token = localStorage.getItem("accessToken") || "";
-    const requesterId = localStorage.getItem("employeeId") || "1";
     
     try {
       setIsLoading(true);
-      const res = await fetch(`/api/v1/duty-schedules/${schedule.id}/confirm?requesterId=${requesterId}`, {
+      const res = await fetch(`/api/v1/duty-schedules/${schedule.id}/confirm`, {
         method: "PATCH",
         headers: { "Authorization": `Bearer ${token}` }
       });
@@ -395,12 +391,12 @@ export default function DutyPage() {
             <span>{currentYear}년 {currentMonth}월</span>
             <button type="button" onClick={handleNextMonth}>›</button>
           </div>
-          <select 
-            className={styles.deptSelect} 
-            value={departmentId}
+          <select
+            className={styles.deptSelect}
+            value={departmentId ?? ""}
             onChange={(e) => setDepartmentId(parseInt(e.target.value, 10))}
           >
-            {DEPARTMENTS.map(d => (
+            {departments.map(d => (
               <option key={d.id} value={d.id}>{d.name}</option>
             ))}
           </select>
@@ -408,9 +404,9 @@ export default function DutyPage() {
           {!schedule && (
             <button 
               type="button" 
-              className={styles.primaryBtn} 
-              onClick={handleCreateSchedule} 
-              disabled={isLoading || !canEdit}
+              className={styles.primaryBtn}
+              onClick={handleCreateSchedule}
+              disabled={isLoading || !canEdit || departmentId == null}
               title={!canEdit ? "수정 권한이 없습니다" : undefined}
             >
               + 신규 스케줄 생성

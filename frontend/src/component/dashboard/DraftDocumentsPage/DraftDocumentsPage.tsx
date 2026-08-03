@@ -44,18 +44,17 @@ export default function DraftDocumentsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | number | null>(null);
   const { userProfile } = useAuthStore();
+  // 기안자는 서버가 JWT 에서 판별한다. 여기서는 프로필 로드 완료 여부를 판단하는 용도로만 쓴다.
+  const isProfileReady = userProfile?.employeeId != null;
+
   const canEdit = useMemo(() => {
     const perm = userProfile?.perms?.find(p => p.menuCode === 'APPROVAL_DRAFT');
-    return perm ? perm.canWrite : false;
+    return perm?.canWrite ?? false;
   }, [userProfile]);
-
-  // In real app, fetch drafterId from context/session. 
-  // We use a mock ID for demo purposes.
-  const drafterId = "1"; 
 
   const fetchData = async () => {
     try {
-      const res = await getDraftApprovals(drafterId, activeTab);
+      const res = await getDraftApprovals(activeTab);
       setData(res);
     } catch (error) {
       console.error(error);
@@ -63,8 +62,10 @@ export default function DraftDocumentsPage() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [activeTab]);
+    if (isProfileReady) {
+      fetchData();
+    }
+  }, [activeTab, isProfileReady]);
 
   // 필터가 변경되면 페이지를 1로 리셋
   useEffect(() => {

@@ -26,15 +26,7 @@ public class CustomUserDetails implements UserDetails {
                 ? employee.getRoleGroup().getName() 
                 : "일반직원";
         
-        String role = "ROLE_USER";
-        if ("최고관리자".equals(roleName)) {
-            role = "ROLE_ADMIN";
-        } else if ("인사관리자".equals(roleName)) {
-            role = "ROLE_HR";
-        } else if ("부서장".equals(roleName)) {
-            role = "ROLE_MANAGER";
-        }
-        
+        String role = RoleMapper.mapToRole(roleName);
         return Collections.singletonList(new SimpleGrantedAuthority(role));
     }
 
