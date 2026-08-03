@@ -560,7 +560,7 @@ export default function EmployeeEditPage({ employeeId }: Props) {
           <button
             type="button"
             className={styles.cancelBtn}
-            onClick={() => router.push(`/dashboard/employees/${employeeId}`)}
+            onClick={() => router.push("/dashboard/employees")}
           >
             취소
           </button>
