@@ -67,23 +67,16 @@ public class PayrollService {
 
         for (Employee employee : activeEmployees) {
             // 1. 기본급 계산
-            BigDecimal baseSalaryAmt = new BigDecimal("3000000"); // 기본값 300만원
             String empPosition = employee.getPosition() != null ? employee.getPosition().getName() : "";
-            String empJobCategory = employee.getJobCategory() != null ? employee.getJobCategory().getName() : "";
             
             Optional<BaseSalary> matchedBs = baseSalaries.stream()
-                    .filter(bs -> {
-                        String title = bs.getJobTitle();
-                        return title.equals(empPosition) || 
-                               title.equals(empJobCategory) ||
-                               (title.contains("간호") && empPosition.contains("간호")) ||
-                               (title.contains("의사") && empJobCategory.contains("전문"));
-                    })
+                    .filter(bs -> bs.getJobTitle().equals(empPosition))
                     .findFirst();
                     
-            if (matchedBs.isPresent() && matchedBs.get().getActualAmount() != null) {
-                baseSalaryAmt = BigDecimal.valueOf(matchedBs.get().getActualAmount());
+            if (matchedBs.isEmpty() || matchedBs.get().getActualAmount() == null) {
+                throw new IllegalArgumentException(String.format("직원 %s(%s)에 대한 BaseSalary 매칭 실패. 직급과 일치하는 기본급 설정이 없습니다.", employee.getName(), empPosition));
             }
+            BigDecimal baseSalaryAmt = BigDecimal.valueOf(matchedBs.get().getActualAmount());
 
             // 2. 수당 계산
             BigDecimal totalAllowance = BigDecimal.ZERO;
@@ -94,7 +87,7 @@ public class PayrollService {
                     try {
                         amt = new BigDecimal(allowance.getAmountOrRate().replaceAll("[^0-9.]", ""));
                     } catch (Exception e) {
-                        amt = new BigDecimal("100000"); // 파싱 실패시 임의 기본값
+                        throw new IllegalArgumentException("수당 정액 변환 실패: " + allowance.getName());
                     }
                 } else if ("비율".equals(allowance.getAmountType())) {
                     try {
@@ -118,10 +111,12 @@ public class PayrollService {
             if (attSummary != null) {
                 // 야간/휴일/연장 등 실제로는 상세 시간을 계산해야 하나, 데모 시스템이므로 단순히 지각/조퇴가 없는 정상 출근일에 대해 랜덤 혹은 더미 수당 부여 가능
                 // 또는 당직(Duty)을 연동할 수 있음. 우선 야간근무수당을 임의로 1일당 2만원으로 추가 (출근 횟수 기반)
-                if (attSummary.getAttend() > 20) { // 출근일수가 20일 초과시 연장근무 수당 추가
-                    BigDecimal overtimeAmt = new BigDecimal((attSummary.getAttend() - 20) * 50000);
+                if (attSummary.getAttend() > 20) { 
+                    // 출근일수가 20일 초과 시, 초과 1일당 기본급의 1/20의 1.5배(연장 가산) 지급으로 로직 현실화
+                    BigDecimal dailyRate = baseSalaryAmt.divide(new BigDecimal("20"), 0, RoundingMode.HALF_UP);
+                    BigDecimal overtimeAmt = dailyRate.multiply(new BigDecimal("1.5")).multiply(new BigDecimal(attSummary.getAttend() - 20)).setScale(0, RoundingMode.HALF_UP);
                     totalAllowance = totalAllowance.add(overtimeAmt);
-                    details.add(PayrollDetail.builder().itemType("ALLOWANCE").itemName("자동_연장근무수당").amount(overtimeAmt).build());
+                    details.add(PayrollDetail.builder().itemType("ALLOWANCE").itemName("연장근무수당").amount(overtimeAmt).build());
                 }
             }
             // -----------------------------
@@ -135,7 +130,7 @@ public class PayrollService {
                     try {
                         amt = new BigDecimal(deduction.getRateOrAmount().replaceAll("[^0-9.]", ""));
                     } catch (Exception e) {
-                        amt = new BigDecimal("30000");
+                        throw new IllegalArgumentException("공제 정액 변환 실패: " + deduction.getName());
                     }
                 } else if ("기본급*요율".equals(deduction.getDeductionType())) {
                     try {
@@ -154,9 +149,14 @@ public class PayrollService {
                     } catch (Exception e) {
                         amt = BigDecimal.ZERO;
                     }
-                } else if ("간이세액표".equals(deduction.getDeductionType())) {
-                    // 임의로 기본급의 5%를 소득세로 계산
-                    amt = baseSalaryAmt.multiply(new BigDecimal("0.05")).setScale(0, RoundingMode.HALF_UP);
+                    // 간이세액표 모방 (임의 소득 구간 적용)
+                    if (baseSalaryAmt.compareTo(new BigDecimal("2000000")) <= 0) {
+                        amt = baseSalaryAmt.multiply(new BigDecimal("0.03")).setScale(0, RoundingMode.HALF_UP);
+                    } else if (baseSalaryAmt.compareTo(new BigDecimal("4000000")) <= 0) {
+                        amt = baseSalaryAmt.multiply(new BigDecimal("0.05")).setScale(0, RoundingMode.HALF_UP);
+                    } else {
+                        amt = baseSalaryAmt.multiply(new BigDecimal("0.08")).setScale(0, RoundingMode.HALF_UP);
+                    }
                 } else if ("비율".equals(deduction.getDeductionType())) {
                     try {
                         BigDecimal rate = new BigDecimal(deduction.getRateOrAmount().replaceAll("[^0-9.]", "")).divide(new BigDecimal("100"));

@@ -1,4 +1,3 @@
-import { approvalMockData } from "@/data/dashboard/approvalMockData";
 import type { ApprovalInboxData } from "@/types/approval";
 
 interface ApprovalApiEnvelope {
@@ -19,7 +18,7 @@ function getBaseUrl() {
   return "/api-system";
 }
 
-const useMockData = process.env.NEXT_PUBLIC_USE_APPROVAL_MOCK_DATA === "true";
+
 const approvalPendingPath = process.env.APPROVAL_PENDING_API_PATH ?? "/api/v1/approvals/pending";
 
 function getHeaders(): HeadersInit {
@@ -45,9 +44,7 @@ function isDataEnvelope(
 
 /** 결재 대기함 조회. 결재자는 서버가 JWT 에서 판별하므로 별도 식별자를 보내지 않는다. */
 export async function getApprovalInboxData(): Promise<ApprovalInboxData> {
-  if (useMockData) {
-    return approvalMockData;
-  }
+
 
   const requestUrl = `${getBaseUrl()}${approvalPendingPath}`;
 
@@ -72,13 +69,7 @@ export async function getApprovalInboxData(): Promise<ApprovalInboxData> {
 
 /** 기안 문서함 조회. 기안자는 서버가 JWT 에서 판별한다. */
 export async function getDraftApprovals(status: string = "ALL"): Promise<import("@/types/approval").ApprovalDraftData> {
-  if (useMockData) {
-    return {
-      summary: { totalDrafts: 0, pendingDrafts: 0, approvedThisMonth: 0, rejectedDrafts: 0, temporaryDrafts: 0 },
-      tabs: { inProgress: 0, rejected: 0, approved: 0, temporary: 0 },
-      documents: []
-    };
-  }
+
 
   const requestUrl = new URL(`${getBaseUrl()}/api/v1/approvals/drafts`, isServer ? undefined : window.location.origin);
   requestUrl.searchParams.append("status", status);
@@ -97,7 +88,7 @@ export async function getDraftApprovals(status: string = "ALL"): Promise<import(
 }
 
 export async function createDocument(data: any): Promise<any> {
-  if (useMockData) return {};
+
   
   const requestUrl = `${getBaseUrl()}/api/v1/approvals`;
   const response = await fetch(requestUrl, {
@@ -114,7 +105,7 @@ export async function createDocument(data: any): Promise<any> {
 }
 
 export async function getApprovalDetail(id: number | string): Promise<any> {
-  if (useMockData) return {};
+
   const requestUrl = `${getBaseUrl()}/api/v1/approvals/${id}`;
   const response = await fetch(requestUrl, {
     method: "GET",

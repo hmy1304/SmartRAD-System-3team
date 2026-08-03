@@ -47,7 +47,14 @@ public class AppointmentService {
                 request.note()
         );
 
+        // HR 기안 시 즉시 승인되지 않고 결재함(대기함)으로 넘어가도록 수정
+        // appointment.approve();
+        
         Appointment saved = appointmentRepository.save(appointment);
+        
+        // 발령일이 오늘이거나 과거면 즉시 반영
+        applyIfDue(saved);
+        
         return AppointmentResponse.from(saved);
     }
 
@@ -66,7 +73,14 @@ public class AppointmentService {
                             request.applyDate(),
                             item.note()
                     );
+                    // HR 기안 시 즉시 승인되지 않고 결재함(대기함)으로 넘어가도록 수정
+                    // appointment.approve();
+                    
                     Appointment saved = appointmentRepository.save(appointment);
+                    
+                    // 발령일이 오늘이거나 과거면 즉시 반영
+                    applyIfDue(saved);
+                    
                     return AppointmentResponse.from(saved);
                 })
                 .toList();

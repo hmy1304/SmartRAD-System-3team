@@ -16,6 +16,12 @@ public interface ApprovalLineRepository extends JpaRepository<ApprovalLine, Long
     // 특정 문서에서 특정 결재자의 결재선 정보 조회
     Optional<ApprovalLine> findByDocumentIdAndApproverId(Long documentId, Long approverId);
 
+    // 결재자로 조회
+    List<ApprovalLine> findByApproverId(Long approverId);
+
+    // 결재자 및 상태로 조회
+    List<ApprovalLine> findByApproverIdAndStatus(Long approverId, String status);
+
     // 특정 문서의 전체 결재선 삭제
     void deleteByDocumentId(Long documentId);
 }

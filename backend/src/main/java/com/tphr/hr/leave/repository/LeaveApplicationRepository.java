@@ -26,6 +26,8 @@ public interface LeaveApplicationRepository extends JpaRepository<LeaveApplicati
                                            @Param("keyword") String keyword);
 
     long countByStatus(String status);
+    
+    List<LeaveApplication> findByStatus(String status);
 
     @Query("SELECT COUNT(l) FROM LeaveApplication l WHERE l.status = :status AND (:startDate IS NULL OR l.startDate >= :startDate) AND (:endDate IS NULL OR l.startDate <= :endDate)")
     long countByStatusAndDateRange(@Param("status") String status, @Param("startDate") LocalDate startDate, @Param("endDate") LocalDate endDate);

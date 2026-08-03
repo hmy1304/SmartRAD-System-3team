@@ -251,7 +251,23 @@ export default function RoleManagementPage() {
     value: boolean
   ) => {
     setPermissions((prev) =>
-      prev.map((p) => (p.menuId === menuId ? { ...p, [field]: value } : p))
+      prev.map((p) => {
+        if (p.menuId === menuId) {
+          const newP = { ...p, [field]: value };
+          // 다른 권한(Write, Delete, Approve)을 켤 때 조회 권한이 없으면 자동으로 켬
+          if (field !== "canRead" && value === true) {
+            newP.canRead = true;
+          }
+          // 조회 권한을 끌 때 다른 모든 권한도 함께 끔
+          if (field === "canRead" && value === false) {
+            newP.canWrite = false;
+            newP.canDelete = false;
+            newP.canApprove = false;
+          }
+          return newP;
+        }
+        return p;
+      })
     );
   };
 

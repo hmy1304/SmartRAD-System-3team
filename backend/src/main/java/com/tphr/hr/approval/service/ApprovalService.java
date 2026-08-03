@@ -59,9 +59,7 @@ public class ApprovalService {
         List<ApprovalInboxResponse.ApprovalDocumentDto> docDtos = new ArrayList<>();
 
         // 1. Leave Applications (status = "승인대기")
-        List<LeaveApplication> pendingLeaves = leaveApplicationRepository.findAll().stream()
-                .filter(l -> "승인대기".equals(l.getStatus()))
-                .collect(Collectors.toList());
+        List<LeaveApplication> pendingLeaves = leaveApplicationRepository.findByStatus("승인대기");
 
         for (LeaveApplication leave : pendingLeaves) {
             String contentHtml = String.format("<p><strong>휴가 종류:</strong> %s</p><p><strong>기간:</strong> %s ~ %s (%.1f일)</p><p><strong>사유:</strong> %s</p>",
@@ -115,9 +113,7 @@ public class ApprovalService {
         }
 
         // 3. Regular ApprovalDocuments (status = WAITING)
-        List<ApprovalLine> pendingLines = approvalLineRepository.findAll().stream()
-                .filter(l -> l.getApprover().getId().equals(approverId) && "WAITING".equals(l.getStatus()))
-                .collect(Collectors.toList());
+        List<ApprovalLine> pendingLines = approvalLineRepository.findByApproverIdAndStatus(approverId, "WAITING");
 
         for (ApprovalLine line : pendingLines) {
             ApprovalDocument doc = line.getDocument();
@@ -162,16 +158,15 @@ public class ApprovalService {
         int dueTodayCount = (int) docDtos.stream().filter(d -> "D-0".equals(d.getDDay())).count();
 
         LocalDateTime now = LocalDateTime.now();
-        long processedThisMonth = approvalLineRepository.findAll().stream()
-                .filter(l -> l.getApprover().getId().equals(approverId))
+        List<ApprovalLine> approverLines = approvalLineRepository.findByApproverId(approverId);
+        long processedThisMonth = approverLines.stream()
                 .filter(l -> ("APPROVED".equals(l.getStatus()) || "REJECTED".equals(l.getStatus()))
                         && l.getUpdatedAt() != null
                         && l.getUpdatedAt().getMonth() == now.getMonth()
                         && l.getUpdatedAt().getYear() == now.getYear())
                 .count();
 
-        long approvedThisMonth = approvalLineRepository.findAll().stream()
-                .filter(l -> l.getApprover().getId().equals(approverId))
+        long approvedThisMonth = approverLines.stream()
                 .filter(l -> "APPROVED".equals(l.getStatus())
                         && l.getUpdatedAt() != null
                         && l.getUpdatedAt().getMonth() == now.getMonth()
@@ -199,9 +194,8 @@ public class ApprovalService {
     public ApprovalInboxResponse getApprovedApprovals(Long approverId) {
         List<ApprovalInboxResponse.ApprovalDocumentDto> docDtos = new ArrayList<>();
 
-        List<ApprovalLine> approvedLines = approvalLineRepository.findAll().stream()
-                .filter(l -> l.getApprover().getId().equals(approverId) && 
-                        ("APPROVED".equals(l.getStatus()) || "REJECTED".equals(l.getStatus())))
+        List<ApprovalLine> approvedLines = approvalLineRepository.findByApproverId(approverId).stream()
+                .filter(l -> ("APPROVED".equals(l.getStatus()) || "REJECTED".equals(l.getStatus())))
                 .sorted((a, b) -> b.getUpdatedAt().compareTo(a.getUpdatedAt()))
                 .collect(Collectors.toList());
 
@@ -225,6 +219,68 @@ public class ApprovalService {
                     .fileMeta("")
                     .build());
         }
+
+        // 1. Leave Applications (status = "승인완료" or "반려")
+        List<LeaveApplication> approvedLeaves = leaveApplicationRepository.findAll().stream()
+                .filter(l -> "승인완료".equals(l.getStatus()) || "반려".equals(l.getStatus()))
+                .collect(Collectors.toList());
+
+        for (LeaveApplication leave : approvedLeaves) {
+            String contentHtml = String.format("<p><strong>휴가 종류:</strong> %s</p><p><strong>기간:</strong> %s ~ %s (%.1f일)</p><p><strong>사유:</strong> %s</p>",
+                    leave.getLeaveType(), leave.getStartDate(), leave.getEndDate(), leave.getDays(), leave.getNote() != null ? leave.getNote() : "없음");
+
+            docDtos.add(ApprovalInboxResponse.ApprovalDocumentDto.builder()
+                    .id("LEAVE-" + leave.getId())
+                    .priority("normal")
+                    .priorityLabel("일반")
+                    .title(leave.getEmployee().getName() + " 휴가 신청 (" + leave.getLeaveType() + ")")
+                    .attachment(leave.getAttachmentName() != null ? leave.getAttachmentName() : "")
+                    .drafter(leave.getEmployee().getName())
+                    .drafterInitial(leave.getEmployee().getName().substring(0, 1))
+                    .drafterDepartment(leave.getEmployee().getDepartment() != null ? leave.getEmployee().getDepartment().getName() : "")
+                    .drafterRole(leave.getEmployee().getPosition() != null ? leave.getEmployee().getPosition().getName() : "")
+                    .avatarTone("승인완료".equals(leave.getStatus()) ? "green" : "red")
+                    .requestedAt(leave.getCreatedAt() != null ? leave.getCreatedAt().format(FORMATTER) : "")
+                    .dDay("승인완료".equals(leave.getStatus()) ? "완료" : "반려")
+                    .description(contentHtml)
+                    .fileName(leave.getAttachmentName() != null ? leave.getAttachmentName() : "")
+                    .fileMeta(leave.getAttachmentName() != null ? "첨부파일" : "")
+                    .build());
+        }
+
+        // 2. Appointments (status = "COMPLETED" or "REJECTED")
+        List<Appointment> approvedAppointments = appointmentRepository.findAll().stream()
+                .filter(a -> "COMPLETED".equals(a.getStatus()) || "REJECTED".equals(a.getStatus()))
+                .collect(Collectors.toList());
+        
+        for (Appointment appt : approvedAppointments) {
+            String contentHtml = String.format("<p><strong>발령일:</strong> %s</p><p><strong>발령유형:</strong> %s</p><p><strong>부서 변경:</strong> %s -> %s</p>",
+                    appt.getApplyDate(),
+                    appt.getAppointmentType() != null ? appt.getAppointmentType().getName() : "",
+                    appt.getBeforeDepartment() != null ? appt.getBeforeDepartment().getName() : "-",
+                    appt.getAfterDepartment() != null ? appt.getAfterDepartment().getName() : "-");
+
+            docDtos.add(ApprovalInboxResponse.ApprovalDocumentDto.builder()
+                    .id("APPT-" + appt.getId())
+                    .priority("urgent")
+                    .priorityLabel("긴급")
+                    .title(appt.getEmployee().getName() + " 인사발령 기안")
+                    .attachment("")
+                    .drafter("시스템")
+                    .drafterInitial("시")
+                    .drafterDepartment("인사부")
+                    .drafterRole("관리자")
+                    .avatarTone("COMPLETED".equals(appt.getStatus()) ? "green" : "red")
+                    .requestedAt(appt.getCreatedAt() != null ? appt.getCreatedAt().format(FORMATTER) : "")
+                    .dDay("COMPLETED".equals(appt.getStatus()) ? "완료" : "반려")
+                    .description(contentHtml)
+                    .fileName("")
+                    .fileMeta("")
+                    .build());
+        }
+        
+        // Sort docs by requestedAt descending
+        docDtos.sort((a, b) -> b.getRequestedAt().compareTo(a.getRequestedAt()));
 
         List<ApprovalInboxResponse.ApprovalCommentDto> commentDtos = new ArrayList<>();
         for (ApprovalInboxResponse.ApprovalDocumentDto doc : docDtos) {
@@ -503,6 +559,7 @@ public class ApprovalService {
                     leaveService.createApprovedLeaveFromApproval(document.getDraftedBy().getId(), leaveType, startDate, endDate, days, reason);
                 } catch (Exception e) {
                     log.error("휴가 데이터 파싱 및 연동 실패: {}", e.getMessage());
+                    throw new IllegalStateException("휴가 데이터 연동에 실패하여 결재를 완료할 수 없습니다.", e);
                 }
             } 
             // 경조사비 신청서일 경우 PayrollService 연동
@@ -517,6 +574,7 @@ public class ApprovalService {
                     }
                 } catch (Exception e) {
                     log.error("경조사비 데이터 파싱 및 급여 연동 실패: {}", e.getMessage());
+                    throw new IllegalStateException("경조사비 데이터 급여 연동에 실패하여 결재를 완료할 수 없습니다.", e);
                 }
             }
         }
