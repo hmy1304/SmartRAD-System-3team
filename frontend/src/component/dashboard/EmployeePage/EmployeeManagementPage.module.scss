@@ -521,11 +521,20 @@
   }
 }
 
+/* ========== 다음 검진 일정 버튼 ========== */
 .cardTitleRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 12px;
   margin-bottom: 16px;
+  min-width: 0;
+}
+
+.cardTitleRow .cardTitle {
+  min-width: 0;
+  flex: 1;
+  margin-bottom: 0;
 }
 
 .cardIcon {
@@ -1321,19 +1330,28 @@
 
 .scheduleActions {
   display: flex;
+  flex-shrink: 0;
+  align-items: center;
   gap: 8px;
 }
 
-.scheduleBtn {
+.scheduleBtn,
+.scheduleBtnOutline {
   height: 32px;
   padding: 0 12px;
   border-radius: 8px;
-  border: none;
-  background: #fff4e5;
-  color: #c47a00;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;   /* 글자 줄바꿈·잘림 방지 */
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.scheduleBtn {
+  border: none;
+  background: #fff4e5;
+  color: #c47a00;
 
   &:hover {
     background: #ffecd2;
@@ -1341,15 +1359,9 @@
 }
 
 .scheduleBtnOutline {
-  height: 32px;
-  padding: 0 12px;
-  border-radius: 8px;
   border: 1px solid #e4eaf3;
   background: #fff;
-  color: #68748a;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
+  color: #3a5a8c;
 
   &:hover {
     background: #f5f8fc;
@@ -1812,34 +1824,7 @@
   border-radius: 999px;
 }
 
-.scheduleActions {
-  display: flex;
-  gap: 6px;
-}
 
-.scheduleBtn {
-  height: 30px;
-  padding: 0 10px;
-  border-radius: 8px;
-  border: none;
-  background: #c47a00;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.scheduleBtnOutline {
-  height: 30px;
-  padding: 0 10px;
-  border-radius: 8px;
-  border: 1px solid #e4eaf3;
-  background: #fff;
-  color: #3a5a8c;
-  font-size: 12px;
-  font-weight: 600;
-  cursor: pointer;
-}
 
 .nextSchedule {
   margin-top: 8px;
