@@ -43,6 +43,27 @@ export default function DraftRegisterModal({ onClose, onSuccess }: DraftRegister
     loadEmployees();
   }, []);
 
+  useEffect(() => {
+    if (docType === "DOC_VACATION" && startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+        if (start > end) {
+          setDays(0);
+        } else {
+          const diffTime = Math.abs(end.getTime() - start.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+          
+          if (leaveType.includes("반차")) {
+            setDays(0.5);
+          } else {
+            setDays(diffDays);
+          }
+        }
+      }
+    }
+  }, [startDate, endDate, leaveType, docType]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -208,7 +229,7 @@ export default function DraftRegisterModal({ onClose, onSuccess }: DraftRegister
                 </div>
                 <div className={styles.formGroup}>
                   <label>신청 일수<b>*</b></label>
-                  <input type="number" step="0.5" min="0" value={days} onChange={(e) => setDays(parseFloat(e.target.value))} />
+                  <input type="number" step="0.5" min="0" value={days} readOnly style={{ backgroundColor: '#f7fafc', color: '#718096', cursor: 'not-allowed' }} />
                 </div>
               </div>
               <div className={styles.formGroup}>
