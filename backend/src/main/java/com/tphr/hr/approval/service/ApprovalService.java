@@ -359,6 +359,18 @@ public class ApprovalService {
                     break;
                 }
             }
+            
+            if (approverName.isEmpty() && !lines.isEmpty()) {
+                ApprovalLine targetLine = lines.get(lines.size() - 1);
+                for (ApprovalLine line : lines) {
+                    if ("REJECTED".equals(line.getStatus())) {
+                        targetLine = line;
+                        break;
+                    }
+                }
+                approverName = targetLine.getApprover().getName() + (targetLine.getApprover().getPosition() != null ? "(" + targetLine.getApprover().getPosition().getName() + ")" : "");
+                approverInitial = targetLine.getApprover().getName().substring(0, 1);
+            }
 
             docDtos.add(ApprovalDraftResponse.DraftDocumentDto.builder()
                     .id("DOC-" + doc.getId())
