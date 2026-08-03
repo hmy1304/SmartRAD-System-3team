@@ -11,4 +11,5 @@ public class ApprovalDetailResponse {
     private String content;
     private List<ApprovalLineResponse> approvalLines;
     private List<ApprovalAttachmentResponse> attachments;
+    private List<ApprovalInboxResponse.ApprovalCommentDto> comments;
 }

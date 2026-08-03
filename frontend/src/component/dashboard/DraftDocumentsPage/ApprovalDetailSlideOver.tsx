@@ -4,10 +4,29 @@ import { useEffect, useState } from "react";
 import styles from "./ApprovalDetailSlideOver.module.scss";
 import { getApprovalDetail } from "@/services/approvalService";
 
+function ChatIcon() {
+  return (
+    <svg viewBox="0 0 24 24">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
 interface ApprovalDetailSlideOverProps {
   documentId: number | string;
   onClose: () => void;
 }
+
+const getAvatarClass = (tone: string) => {
+  switch (tone) {
+    case "blue": return styles.avatarBlue;
+    case "green": return styles.avatarGreen;
+    case "purple": return styles.avatarPurple;
+    case "yellow": return styles.avatarYellow;
+    case "red": return styles.avatarRed;
+    default: return "";
+  }
+};
 
 export default function ApprovalDetailSlideOver({ documentId, onClose }: ApprovalDetailSlideOverProps) {
   const [detail, setDetail] = useState<any>(null);
@@ -118,6 +137,40 @@ export default function ApprovalDetailSlideOver({ documentId, onClose }: Approva
                   </div>
                 ))}
               </div>
+
+              {detail.comments && detail.comments.length > 0 && (
+                <section className={styles.commentSection}>
+                  <div className={styles.commentHeader}>
+                    <div className={styles.commentTitle}>
+                      <ChatIcon />
+                      <h3>의견 및 코멘트</h3>
+                    </div>
+                    <span>{detail.comments.length}</span>
+                  </div>
+
+                  <div className={styles.commentList}>
+                    {detail.comments.map((comment: any) => (
+                      <article key={comment.id} className={styles.commentItem}>
+                        <span className={`${styles.commentAvatar} ${getAvatarClass(comment.avatarTone)}`}>
+                          {comment.initial}
+                        </span>
+
+                        <div className={styles.commentBody}>
+                          <header>
+                            <div className={styles.commentMeta}>
+                              <strong>{comment.name}</strong>
+                              {comment.tag && <em>{comment.tag}</em>}
+                            </div>
+                            <small>{comment.time}</small>
+                          </header>
+
+                          <p>{comment.content}</p>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </section>
+              )}
             </>
           ) : (
             <p>데이터를 불러오지 못했습니다.</p>

@@ -670,11 +670,26 @@ public class ApprovalService {
                     .docNumber("APPT-" + apptId)
                     .build();
 
+            List<ApprovalComment> dbComments = approvalCommentRepository.findByDocumentIdStrOrderByCreatedAtAsc("APPT-" + apptId);
+            List<ApprovalInboxResponse.ApprovalCommentDto> commentDtos = dbComments.stream().map(c -> 
+                ApprovalInboxResponse.ApprovalCommentDto.builder()
+                        .id(c.getId())
+                        .documentId(c.getDocumentIdStr())
+                        .initial(c.getEmployee().getName().substring(0, 1))
+                        .name(c.getEmployee().getName())
+                        .tag("결재자")
+                        .time(c.getCreatedAt() != null ? c.getCreatedAt().format(FORMATTER) : "")
+                        .content(c.getContent())
+                        .avatarTone("purple")
+                        .build()
+            ).collect(Collectors.toList());
+
             return ApprovalDetailResponse.builder()
                     .document(docResponse)
                     .content(contentHtml)
                     .approvalLines(new ArrayList<>())
                     .attachments(new ArrayList<>())
+                    .comments(commentDtos)
                     .build();
         }
 
@@ -711,11 +726,26 @@ public class ApprovalService {
                         .build()
         ).collect(Collectors.toList());
 
+        List<ApprovalComment> dbComments = approvalCommentRepository.findByDocumentIdStrOrderByCreatedAtAsc(id);
+        List<ApprovalInboxResponse.ApprovalCommentDto> commentDtos = dbComments.stream().map(c -> 
+            ApprovalInboxResponse.ApprovalCommentDto.builder()
+                    .id(c.getId())
+                    .documentId(c.getDocumentIdStr())
+                    .initial(c.getEmployee().getName().substring(0, 1))
+                    .name(c.getEmployee().getName())
+                    .tag("결재자")
+                    .time(c.getCreatedAt() != null ? c.getCreatedAt().format(FORMATTER) : "")
+                    .content(c.getContent())
+                    .avatarTone("purple")
+                    .build()
+        ).collect(Collectors.toList());
+
         return ApprovalDetailResponse.builder()
                 .document(mapToResponse(document))
                 .content(document.getContent())
                 .approvalLines(lineResponses)
                 .attachments(attachmentResponses)
+                .comments(commentDtos)
                 .build();
     }
 
