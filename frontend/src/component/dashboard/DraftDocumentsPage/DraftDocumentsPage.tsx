@@ -42,6 +42,7 @@ export default function DraftDocumentsPage() {
     return d.toISOString().split("T")[0];
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [resubmitData, setResubmitData] = useState<any>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | number | null>(null);
   const { userProfile } = useAuthStore();
   // 기안자는 서버가 JWT 에서 판별한다. 여기서는 프로필 로드 완료 여부를 판단하는 용도로만 쓴다.
@@ -59,6 +60,37 @@ export default function DraftDocumentsPage() {
     } catch (error) {
       console.error(error);
     }
+  };
+
+  const handleResubmit = (detail: any) => {
+    let parsedContent: any = detail.content;
+    try {
+      parsedContent = JSON.parse(detail.content);
+    } catch (e) {
+      // ignore
+    }
+
+    let docType = "DOC_GENERAL";
+    if (detail.document.docTypeName?.includes("휴가") || parsedContent.leaveType) docType = "DOC_VACATION";
+    else if (detail.document.docTypeName?.includes("경조") || parsedContent.welfareAmount !== undefined) docType = "DOC_WELFARE";
+    else if (detail.document.docTypeName?.includes("인사")) docType = "DOC_APPT";
+
+    const contentText = typeof parsedContent === "string" 
+      ? parsedContent 
+      : (parsedContent.text || parsedContent.reason || "");
+    
+    setResubmitData({
+      title: detail.document.title,
+      docType: docType,
+      content: contentText,
+      leaveType: parsedContent.leaveType,
+      startDate: parsedContent.startDate,
+      endDate: parsedContent.endDate,
+      days: parsedContent.days,
+      reason: parsedContent.reason,
+      welfareAmount: parsedContent.welfareAmount,
+    });
+    setIsModalOpen(true);
   };
 
   useEffect(() => {
@@ -142,7 +174,10 @@ export default function DraftDocumentsPage() {
             <button 
               type="button" 
               className={styles.newDocumentButton} 
-              onClick={() => setIsModalOpen(true)}
+              onClick={() => {
+                setResubmitData(null);
+                setIsModalOpen(true);
+              }}
               disabled={!canEdit}
               title={!canEdit ? "수정 권한이 없습니다" : undefined}
             >
@@ -336,19 +371,25 @@ export default function DraftDocumentsPage() {
       </main>
 
       {isModalOpen && (
-        <DraftRegisterModal 
-          onClose={() => setIsModalOpen(false)} 
+        <DraftRegisterModal
+          initialData={resubmitData}
+          onClose={() => {
+            setIsModalOpen(false);
+            setResubmitData(null);
+          }}
           onSuccess={() => {
             setIsModalOpen(false);
+            setResubmitData(null);
             fetchData();
-          }} 
+          }}
         />
       )}
 
       {selectedDocumentId && (
-        <ApprovalDetailSlideOver 
-          documentId={selectedDocumentId} 
-          onClose={() => setSelectedDocumentId(null)} 
+        <ApprovalDetailSlideOver
+          documentId={selectedDocumentId}
+          onClose={() => setSelectedDocumentId(null)}
+          onResubmit={handleResubmit}
         />
       )}
     </>

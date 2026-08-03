@@ -9,9 +9,10 @@ import { useCommonCodes } from "@/hooks/useCommonCodes";
 interface DraftRegisterModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  initialData?: any;
 }
 
-export default function DraftRegisterModal({ onClose, onSuccess }: DraftRegisterModalProps) {
+export default function DraftRegisterModal({ onClose, onSuccess, initialData }: DraftRegisterModalProps) {
   const [title, setTitle] = useState("");
   const [docType, setDocType] = useState("DOC_VACATION");
   const [content, setContent] = useState("");
@@ -42,6 +43,20 @@ export default function DraftRegisterModal({ onClose, onSuccess }: DraftRegister
     }
     loadEmployees();
   }, []);
+
+  useEffect(() => {
+    if (initialData) {
+      setTitle(`[재신청] ${initialData.title}`);
+      setDocType(initialData.docType || "DOC_VACATION");
+      setContent(initialData.content || "");
+      if (initialData.leaveType) setLeaveType(initialData.leaveType);
+      if (initialData.startDate) setStartDate(initialData.startDate);
+      if (initialData.endDate) setEndDate(initialData.endDate);
+      if (initialData.days) setDays(initialData.days);
+      if (initialData.reason) setReason(initialData.reason);
+      if (initialData.welfareAmount) setWelfareAmount(initialData.welfareAmount);
+    }
+  }, [initialData]);
 
   useEffect(() => {
     if (docType === "DOC_VACATION" && startDate && endDate) {

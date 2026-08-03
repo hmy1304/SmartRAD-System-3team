@@ -15,6 +15,7 @@ function ChatIcon() {
 interface ApprovalDetailSlideOverProps {
   documentId: number | string;
   onClose: () => void;
+  onResubmit?: (detail: any) => void;
 }
 
 const getAvatarClass = (tone: string) => {
@@ -28,7 +29,7 @@ const getAvatarClass = (tone: string) => {
   }
 };
 
-export default function ApprovalDetailSlideOver({ documentId, onClose }: ApprovalDetailSlideOverProps) {
+export default function ApprovalDetailSlideOver({ documentId, onClose, onResubmit }: ApprovalDetailSlideOverProps) {
   const [detail, setDetail] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -198,6 +199,29 @@ export default function ApprovalDetailSlideOver({ documentId, onClose }: Approva
                     ))}
                   </div>
                 </section>
+              )}
+
+              {detail.document?.status === 'REJECTED' && onResubmit && (
+                <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'center' }}>
+                  <button 
+                    onClick={() => {
+                      onResubmit(detail);
+                      onClose();
+                    }}
+                    style={{
+                      padding: '10px 24px',
+                      backgroundColor: '#4299e1',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      fontSize: '15px'
+                    }}
+                  >
+                    수정 후 재신청
+                  </button>
+                </div>
               )}
             </>
           ) : (
