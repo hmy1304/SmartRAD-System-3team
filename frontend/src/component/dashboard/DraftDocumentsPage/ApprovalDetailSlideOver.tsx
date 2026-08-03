@@ -86,6 +86,27 @@ export default function ApprovalDetailSlideOver({ documentId, onClose }: Approva
         return <div className={styles.documentBody} dangerouslySetInnerHTML={{ __html: detail.content }} />;
       }
     }
+    
+    // Check if it's welfare document
+    if (doc.docTypeName === "경조금 신청서" || doc.docTypeName === "DOC_WELFARE" || (detail.content && detail.content.includes("welfareAmount"))) {
+      try {
+        const welfareData = JSON.parse(detail.content);
+        return (
+          <div className={styles.leaveDetails}>
+            <div className={styles.row}>
+              <span className={styles.label}>신청 금액</span>
+              <span className={styles.value}>{Number(welfareData.welfareAmount).toLocaleString()} 원</span>
+            </div>
+            <div className={styles.row}>
+              <span className={styles.label}>상세 내용</span>
+              <span className={styles.value}>{welfareData.text}</span>
+            </div>
+          </div>
+        );
+      } catch (e) {
+        return <div className={styles.documentBody} dangerouslySetInnerHTML={{ __html: detail.content }} />;
+      }
+    }
 
     return <div className={styles.documentBody} dangerouslySetInnerHTML={{ __html: detail.content }} />;
   };

@@ -666,6 +666,19 @@ export default function ApprovalInboxPage() {
                         return <div className={styles.requestContent} dangerouslySetInnerHTML={{ __html: content }} />;
                       }
                     }
+                    if (content.includes("welfareAmount")) {
+                      try {
+                        const welfareData = JSON.parse(content);
+                        return (
+                          <div style={{ background: '#f0fff4', padding: '1rem', borderRadius: '8px', border: '1px solid #c6f6d5' }}>
+                            <p style={{ margin: '0 0 0.5rem 0' }}><strong>경조금 신청 금액:</strong> {Number(welfareData.welfareAmount).toLocaleString()} 원</p>
+                            <p style={{ margin: 0 }}><strong>상세 내용:</strong> {welfareData.text}</p>
+                          </div>
+                        );
+                      } catch (e) {
+                        return <div className={styles.requestContent} dangerouslySetInnerHTML={{ __html: content }} />;
+                      }
+                    }
                     return <div className={styles.requestContent} dangerouslySetInnerHTML={{ __html: content }} />;
                   })()}
                 </section>
