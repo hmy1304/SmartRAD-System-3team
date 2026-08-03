@@ -1,16 +1,15 @@
-#!/bin/bash
+﻿#!/bin/bash
 
-if ! [ -x "$(command -v docker-compose)" ]; then
-  echo 'Error: docker-compose is not installed.' >&2
+if ! [ -x "$(command -v docker)" ]; then
+  echo 'Error: docker is not installed.' >&2
   exit 1
 fi
 
-domains=(yourdomain.com) # 가비아 도메인으로 변경하세요
+domains=(hospitalmedic.store) # 가비아 도메인으로 변경하세요
 rsa_key_size=4096
 data_path="./certbot"
 email="your@email.com" # 알림 받을 이메일로 변경하세요
-staging=0 # 테스트용 발급이 필요하면 1로 설정하세요
-
+staging=0 # 테스트용 발급이 필요하면 1로 수정하세요
 if [ -d "$data_path" ]; then
   read -p "기존 인증서 데이터가 있습니다. 계속 진행하여 덮어쓰시겠습니까? (y/N) " decision
   if [ "$decision" != "Y" ] && [ "$decision" != "y" ]; then
@@ -29,7 +28,7 @@ fi
 echo "### Creating dummy certificate for $domains ..."
 path="/etc/letsencrypt/live/$domains"
 mkdir -p "$data_path/conf/live/$domains"
-docker-compose -f docker-compose.prod.yml run --rm --entrypoint "\
+docker compose -f docker-compose.prod.yml run --rm --entrypoint "\
   openssl req -x509 -nodes -newkey rsa:$rsa_key_size -days 1\
     -keyout '$path/privkey.pem' \
     -out '$path/fullchain.pem' \
@@ -37,11 +36,11 @@ docker-compose -f docker-compose.prod.yml run --rm --entrypoint "\
 echo
 
 echo "### Starting nginx ..."
-docker-compose -f docker-compose.prod.yml up --force-recreate -d nginx
+docker compose -f docker-compose.prod.yml up --force-recreate -d nginx
 echo
 
 echo "### Deleting dummy certificate for $domains ..."
-docker-compose -f docker-compose.prod.yml run --rm --entrypoint "\
+docker compose -f docker-compose.prod.yml run --rm --entrypoint "\
   rm -Rf /etc/letsencrypt/live/$domains && \
   rm -Rf /etc/letsencrypt/archive/$domains && \
   rm -Rf /etc/letsencrypt/renewal/$domains.conf" certbot
@@ -62,7 +61,7 @@ esac
 # Enable staging mode if needed
 if [ $staging != "0" ]; then staging_arg="--staging"; fi
 
-docker-compose -f docker-compose.prod.yml run --rm --entrypoint "\
+docker compose -f docker-compose.prod.yml run --rm --entrypoint "\
   certbot certonly --webroot -w /var/www/certbot \
     $staging_arg \
     $email_arg \
@@ -73,4 +72,4 @@ docker-compose -f docker-compose.prod.yml run --rm --entrypoint "\
 echo
 
 echo "### Reloading nginx ..."
-docker-compose -f docker-compose.prod.yml exec nginx nginx -s reload
+docker compose -f docker-compose.prod.yml exec nginx nginx -s reload
