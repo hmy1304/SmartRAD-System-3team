@@ -127,13 +127,20 @@ export default function ApprovalDetailSlideOver({ documentId, onClose }: Approva
               <h3 style={{ marginTop: '2rem', marginBottom: '1rem', fontSize: '1.1rem', color: '#2d3748', fontWeight: 'bold' }}>결재선</h3>
               <div className={styles.meta}>
                 {detail.approvalLines && detail.approvalLines.map((line: any, idx: number) => (
-                  <div key={idx} className={styles.metaRow} style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
-                    <span className={styles.label}>{idx + 1}차 결재 ({line.approverName})</span>
-                    <span className={styles.value}>
-                      {line.status === 'WAITING' ? '대기 중' :
-                       line.status === 'APPROVED' ? '승인' :
-                       line.status === 'REJECTED' ? '반려' : line.status}
-                    </span>
+                  <div key={idx} className={styles.metaRow} style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: '0.75rem', marginBottom: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%' }}>
+                      <span className={styles.label}>{idx + 1}차 결재 ({line.approverName})</span>
+                      <span className={styles.value} style={{ color: line.status === 'REJECTED' ? '#e53e3e' : line.status === 'APPROVED' ? '#38a169' : 'inherit' }}>
+                        {line.status === 'WAITING' ? '대기 중' :
+                         line.status === 'APPROVED' ? '승인' :
+                         line.status === 'REJECTED' ? '반려' : line.status}
+                      </span>
+                    </div>
+                    {line.status === 'REJECTED' && line.rejectReason && (
+                      <div style={{ marginTop: '0.75rem', padding: '0.5rem 0.75rem', background: '#fff5f5', borderLeft: '3px solid #fc8181', color: '#c53030', fontSize: '0.85rem', width: '100%', borderRadius: '0 4px 4px 0' }}>
+                        <strong>반려 사유:</strong> {line.rejectReason}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

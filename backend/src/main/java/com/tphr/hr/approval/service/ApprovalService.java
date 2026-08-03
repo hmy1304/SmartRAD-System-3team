@@ -690,6 +690,7 @@ public class ApprovalService {
                     .sequence(1)
                     .approverName("최고관리자")
                     .status("COMPLETED".equals(appt.getStatus()) ? "APPROVED" : appt.getStatus() != null ? appt.getStatus() : "WAITING")
+                    .rejectReason("REJECTED".equals(appt.getStatus()) ? appt.getNote() : null)
                     .build());
 
             return ApprovalDetailResponse.builder()
