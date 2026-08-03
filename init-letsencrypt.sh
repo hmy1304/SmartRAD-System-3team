@@ -1,17 +1,17 @@
-#!/bin/bash
+﻿#!/bin/bash
 
 if ! [ -x "$(command -v docker)" ]; then
-  echo 'Error: docker compose is not installed.' >&2
+  echo 'Error: docker is not installed.' >&2
   exit 1
 fi
 
-domains=(yourdomain.com) # 가비아 ?�메?�으�?변경하?�요
+domains=(hospitalmedic.store) # 가비아 도메인으로 변경하세요
 rsa_key_size=4096
 data_path="./certbot"
-email="your@email.com" # ?�림 받을 ?�메?�로 변경하?�요
-staging=0 # ?�스?�용 발급???�요?�면 1�??�정?�세??
+email="your@email.com" # 알림 받을 이메일로 변경하세요
+staging=0 # 테스트용 발급이 필요하면 1로 수정하세요
 if [ -d "$data_path" ]; then
-  read -p "기존 ?�증???�이?��? ?�습?�다. 계속 진행?�여 ??��?�시겠습?�까? (y/N) " decision
+  read -p "기존 인증서 데이터가 있습니다. 계속 진행하여 덮어쓰시겠습니까? (y/N) " decision
   if [ "$decision" != "Y" ] && [ "$decision" != "y" ]; then
     exit
   fi
