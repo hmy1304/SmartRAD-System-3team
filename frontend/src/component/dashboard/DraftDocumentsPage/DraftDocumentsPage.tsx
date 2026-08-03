@@ -90,6 +90,17 @@ export default function DraftDocumentsPage() {
     { id: "DRAFT", label: "임시저장", count: data.tabs.temporary },
   ];
 
+  const getStatusClass = (status: string) => {
+    switch(status) {
+      case "IN_PROGRESS": return styles.progress;
+      case "WAITING": return styles.progress;
+      case "COMPLETED": return styles.done;
+      case "REJECTED": return styles.rejected;
+      case "DRAFT": return styles.draft;
+      default: return styles.defaultStatus || "";
+    }
+  };
+
   const filteredDocuments = data.documents.filter(doc => {
     const matchesKeyword = doc.title.toLowerCase().includes(keyword.toLowerCase());
     const docDate = new Date(doc.createdAt).getTime();
@@ -238,7 +249,7 @@ export default function DraftDocumentsPage() {
                       </div>
                     </td>
                     <td>
-                      <span className={`${styles.statusBadge} ${styles[document.status] || styles.defaultStatus}`}>
+                      <span className={`${styles.statusBadge} ${getStatusClass(document.status)}`}>
                         <i />
                         {document.statusLabel}
                       </span>

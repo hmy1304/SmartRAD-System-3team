@@ -346,8 +346,12 @@ public class ApprovalService {
                 default: statusLabel = currentStatus;
             }
 
+            String filterStatus = currentStatus;
+            if ("WAITING".equals(currentStatus)) {
+                filterStatus = "IN_PROGRESS";
+            }
             if (status != null && !status.isEmpty() && !"ALL".equalsIgnoreCase(status)) {
-                if (!status.equalsIgnoreCase(currentStatus)) {
+                if (!status.equalsIgnoreCase(filterStatus)) {
                     continue;
                 }
             }
