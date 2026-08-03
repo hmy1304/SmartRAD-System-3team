@@ -177,8 +177,17 @@ export default function AttendancePage() {
   const [records, setRecords] = useState<AttendanceRow[]>([]);
   const [employeeList, setEmployeeList] = useState<EmployeeSummaryDto[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [startDate, setStartDate] = useState<string>("2026-07-01");
-  const [endDate, setEndDate] = useState<string>("2026-07-31");
+  const [startDate, setStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d.toISOString().split("T")[0];
+  });
+  const [endDate, setEndDate] = useState<string>(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() + 1);
+    d.setDate(0);
+    return d.toISOString().split("T")[0];
+  });
   const [page, setPage] = useState<number>(0);
   const [totalPages, setTotalPages] = useState<number>(1);
 
@@ -206,7 +215,7 @@ export default function AttendancePage() {
     name: "",
     position: "",
     department: "",
-    workDate: "2026-07-11",
+    workDate: new Date().toISOString().split("T")[0],
     checkIn: "08:50:00",
     checkOut: "18:00:00",
     status: "정상" as Status,
