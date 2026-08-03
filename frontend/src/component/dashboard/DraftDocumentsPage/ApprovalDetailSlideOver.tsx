@@ -83,11 +83,11 @@ export default function ApprovalDetailSlideOver({ documentId, onClose }: Approva
           </div>
         );
       } catch (e) {
-        return <div className={styles.documentBody}>{detail.content}</div>;
+        return <div className={styles.documentBody} dangerouslySetInnerHTML={{ __html: detail.content }} />;
       }
     }
 
-    return <div className={styles.documentBody}>{detail.content}</div>;
+    return <div className={styles.documentBody} dangerouslySetInnerHTML={{ __html: detail.content }} />;
   };
 
   return (
