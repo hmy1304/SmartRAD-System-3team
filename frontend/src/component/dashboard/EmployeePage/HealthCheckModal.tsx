@@ -187,6 +187,7 @@ export default function HealthCheckModal({
                 + 항목 추가
               </button>
             </div>
+            <div className={styles.itemList}>
             {items.map((item, idx) => (
               <div key={idx} className={styles.itemRow}>
                 <input
@@ -197,7 +198,7 @@ export default function HealthCheckModal({
                     next[idx] = { ...next[idx], name: e.target.value };
                     setItems(next);
                   }}
-                />
+                  />
                 <input
                   placeholder="결과값"
                   value={item.value}
@@ -223,7 +224,7 @@ export default function HealthCheckModal({
                     next[idx] = {
                       ...next[idx],
                       judgment: e.target
-                        .value as HealthCheckItemResult["judgment"],
+                      .value as HealthCheckItemResult["judgment"],
                     };
                     setItems(next);
                   }}
@@ -241,6 +242,7 @@ export default function HealthCheckModal({
                 </button>
               </div>
             ))}
+          </div>
           </div>
 
           <label className={styles.field}>

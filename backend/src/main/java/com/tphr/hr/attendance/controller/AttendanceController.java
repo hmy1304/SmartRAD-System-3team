@@ -60,7 +60,7 @@ public class AttendanceController {
 
     // ===== 관리자 전용 근태 수정 및 수동 보정 API =====
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', '최고관리자', '시스템 관리자')")
     @GetMapping("/admin")
     public ResponseEntity<Page<AttendanceResponse>> getAdminAttendances(
             @RequestParam(required = false) Long departmentId,
@@ -70,13 +70,13 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.getAdminAttendances(departmentId, startDate, endDate, pageable));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', '최고관리자', '시스템 관리자')")
     @PostMapping("/admin")
     public ResponseEntity<AttendanceResponse> createAttendanceByAdmin(@RequestBody AttendanceAdminCreateRequest request) {
         return ResponseEntity.ok(attendanceService.createAttendanceByAdmin(request));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', '최고관리자', '시스템 관리자')")
     @PutMapping("/admin/{id}")
     public ResponseEntity<AttendanceResponse> updateAttendanceByAdmin(
             @PathVariable Long id,
@@ -84,7 +84,7 @@ public class AttendanceController {
         return ResponseEntity.ok(attendanceService.updateAttendanceByAdmin(id, request));
     }
 
-    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', '최고관리자', '시스템 관리자')")
     @DeleteMapping("/admin/{id}")
     public ResponseEntity<Void> deleteAttendanceByAdmin(@PathVariable Long id) {
         attendanceService.deleteAttendanceByAdmin(id);

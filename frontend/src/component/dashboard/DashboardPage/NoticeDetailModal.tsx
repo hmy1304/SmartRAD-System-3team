@@ -25,12 +25,14 @@ type Props = {
   onClose: () => void;
   onEdit: (notice: NoticeResponse) => void;
   onDeleted?: () => void;
+  canManage?: boolean;
 };
 
 export default function NoticeDetailModal({
   open,
   noticeId,
   fallback,
+  canManage = false,
   onClose,
   onEdit,
   onDeleted,
@@ -158,8 +160,8 @@ export default function NoticeDetailModal({
             </div>
             <div className={styles.detailBody}>{data.content}</div>
             <div className={styles.detailFooter}>
-              <div style={{ display: "flex", gap: 8 }}>
-                {!isLocalOnly && (
+              <div className={styles.detailFooterLeft}>
+                {canManage && !isLocalOnly && (
                   <>
                     <button
                       type="button"
@@ -171,7 +173,7 @@ export default function NoticeDetailModal({
                     <button
                       type="button"
                       className={styles.ghostBtn}
-                      onClick={() => onEdit(data)}
+                      onClick={() => data && onEdit?.(data)}
                     >
                       수정
                     </button>
@@ -180,7 +182,7 @@ export default function NoticeDetailModal({
               </div>
               <button
                 type="button"
-                className={styles.submitBtn}
+                className={styles.ghostBtn}
                 onClick={onClose}
               >
                 닫기
