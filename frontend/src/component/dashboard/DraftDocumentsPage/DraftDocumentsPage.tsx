@@ -230,7 +230,15 @@ export default function DraftDocumentsPage() {
               </thead>
               <tbody>
                 {paginatedDocuments.map((document, index) => (
-                  <tr key={document.id}>
+                  <tr 
+                    key={document.id}
+                    onClick={() => {
+                      if (!document.temporary) {
+                        setSelectedDocumentId(document.id);
+                      }
+                    }}
+                    style={{ cursor: !document.temporary ? 'pointer' : 'default' }}
+                  >
                     <td className={styles.documentNumber}>{document.number}</td>
                     <td className={styles.documentTitle}>
                       <strong>{document.title}</strong>
@@ -276,9 +284,8 @@ export default function DraftDocumentsPage() {
                             ><TrashIcon /></button>
                           </>
                         ) : (
-                          <button type="button" aria-label="상세보기" onClick={() => setSelectedDocumentId(document.id)}>
-                            <EyeIcon />
-                          </button>
+                          // 상세보기(EyeIcon) 제거됨: 행(row)을 클릭하여 상세 정보를 엽니다.
+                          <span style={{ color: '#a0aec0', fontSize: '0.8rem' }}>클릭하여 보기</span>
                         )}
                       </div>
                     </td>
