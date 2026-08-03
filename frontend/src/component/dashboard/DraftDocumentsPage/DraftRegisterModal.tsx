@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import styles from "./DraftRegisterModal.module.scss";
-import { createDocument } from "@/services/approvalService";
+import { createDocument, resubmitDocument } from "@/services/approvalService";
 import { getEmployees } from "@/services/employeeService";
 import { useCommonCodes } from "@/hooks/useCommonCodes";
 
@@ -10,9 +10,10 @@ interface DraftRegisterModalProps {
   onClose: () => void;
   onSuccess: () => void;
   initialData?: any;
+  resubmitDocumentId?: string | number | null;
 }
 
-export default function DraftRegisterModal({ onClose, onSuccess, initialData }: DraftRegisterModalProps) {
+export default function DraftRegisterModal({ onClose, onSuccess, initialData, resubmitDocumentId }: DraftRegisterModalProps) {
   const [title, setTitle] = useState("");
   const [docType, setDocType] = useState("DOC_VACATION");
   const [content, setContent] = useState("");
@@ -122,7 +123,11 @@ export default function DraftRegisterModal({ onClose, onSuccess, initialData }: 
         attachmentFileNames: []
       };
 
-      await createDocument(payload);
+      if (resubmitDocumentId) {
+        await resubmitDocument(resubmitDocumentId, payload);
+      } else {
+        await createDocument(payload);
+      }
       onSuccess();
     } catch (error) {
       console.error(error);
@@ -139,8 +144,8 @@ export default function DraftRegisterModal({ onClose, onSuccess, initialData }: 
           <div className={styles.headerLeft}>
             <div className={styles.headerIcon}>📝</div>
             <div>
-              <h2>새 문서 기안</h2>
-              <p>새로운 결재 문서를 작성하여 상신합니다.</p>
+              <h2>{resubmitDocumentId ? "문서 재신청" : "새 문서 기안"}</h2>
+              <p>{resubmitDocumentId ? "기존 문서를 수정하여 재신청합니다." : "새로운 결재 문서를 작성하여 상신합니다."}</p>
             </div>
           </div>
           <button type="button" className={styles.closeButton} onClick={onClose}>

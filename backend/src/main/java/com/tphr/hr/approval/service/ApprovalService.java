@@ -532,9 +532,7 @@ public class ApprovalService {
         
         List<ApprovalLine> lines = approvalLineRepository.findByDocumentIdOrderBySequenceAsc(documentId);
         
-        ApprovalLine currentLine = lines.stream()
-                .filter(line -> line.getApprover().getId().equals(approverId))
-                .findFirst()
+        ApprovalLine currentLine = approvalLineRepository.findFirstByDocumentIdAndApproverIdOrderBySequenceDesc(documentId, approverId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 문서의 결재자가 아닙니다."));
 
         if (!"WAITING".equals(currentLine.getStatus())) {
@@ -589,7 +587,7 @@ public class ApprovalService {
         ApprovalDocument document = approvalDocumentRepository.findById(documentId)
                 .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다."));
 
-        ApprovalLine currentLine = approvalLineRepository.findByDocumentIdAndApproverId(documentId, approverId)
+        ApprovalLine currentLine = approvalLineRepository.findFirstByDocumentIdAndApproverIdOrderBySequenceDesc(documentId, approverId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 문서의 결재자가 아닙니다."));
 
         if (!"WAITING".equals(currentLine.getStatus())) {
@@ -598,6 +596,37 @@ public class ApprovalService {
 
         currentLine.reject(reason);
         document.updateStatus("REJECTED");
+
+        return mapToResponse(document);
+    }
+
+    @Transactional
+    public ApprovalResponse resubmitDocument(Long documentId, Long drafterId, ApprovalCreateRequest request) {
+        ApprovalDocument document = approvalDocumentRepository.findById(documentId)
+                .orElseThrow(() -> new IllegalArgumentException("문서를 찾을 수 없습니다."));
+
+        if (!document.getDraftedBy().getId().equals(drafterId)) {
+            throw new IllegalStateException("기안자 본인만 문서를 재신청할 수 있습니다.");
+        }
+        if (!"REJECTED".equals(document.getStatus())) {
+            throw new IllegalStateException("반려된 문서만 재신청할 수 있습니다.");
+        }
+
+        document.updateDocument(request.getTitle(), request.getContent());
+        document.updateStatus("IN_PROGRESS");
+
+        List<ApprovalLine> oldLines = approvalLineRepository.findByDocumentIdOrderBySequenceAsc(documentId);
+        int nextSequence = oldLines.size() + 1;
+
+        Employee approver = entityManager.getReference(Employee.class, request.getApproverIds().get(0));
+        ApprovalLine newLine = ApprovalLine.builder()
+                .document(document)
+                .sequence(nextSequence)
+                .approver(approver)
+                .status("WAITING")
+                .build();
+        
+        approvalLineRepository.save(newLine);
 
         return mapToResponse(document);
     }

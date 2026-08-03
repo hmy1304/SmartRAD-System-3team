@@ -43,6 +43,7 @@ export default function DraftDocumentsPage() {
   });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [resubmitData, setResubmitData] = useState<any>(null);
+  const [resubmitDocumentId, setResubmitDocumentId] = useState<string | number | null>(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string | number | null>(null);
   const { userProfile } = useAuthStore();
   // 기안자는 서버가 JWT 에서 판별한다. 여기서는 프로필 로드 완료 여부를 판단하는 용도로만 쓴다.
@@ -90,6 +91,7 @@ export default function DraftDocumentsPage() {
       reason: parsedContent.reason,
       welfareAmount: parsedContent.welfareAmount,
     });
+    setResubmitDocumentId(detail.document.id);
     setIsModalOpen(true);
   };
 
@@ -176,6 +178,7 @@ export default function DraftDocumentsPage() {
               className={styles.newDocumentButton} 
               onClick={() => {
                 setResubmitData(null);
+                setResubmitDocumentId(null);
                 setIsModalOpen(true);
               }}
               disabled={!canEdit}
@@ -373,13 +376,16 @@ export default function DraftDocumentsPage() {
       {isModalOpen && (
         <DraftRegisterModal
           initialData={resubmitData}
+          resubmitDocumentId={resubmitDocumentId}
           onClose={() => {
             setIsModalOpen(false);
             setResubmitData(null);
+            setResubmitDocumentId(null);
           }}
           onSuccess={() => {
             setIsModalOpen(false);
             setResubmitData(null);
+            setResubmitDocumentId(null);
             fetchData();
           }}
         />

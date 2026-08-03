@@ -140,4 +140,17 @@ public class ApprovalController {
         ApprovalResponse response = approvalService.updateDocument(id, drafterId, request);
         return ResponseEntity.ok(response);
     }
+
+    /**
+     * 7. 반려 문서 재신청 (기안자 본인만, 반려 상태인 경우만)
+     */
+    @PostMapping("/{id}/resubmit")
+    public ResponseEntity<ApprovalResponse> resubmitDocument(
+            @PathVariable Long id,
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @RequestBody ApprovalCreateRequest request) {
+        Long drafterId = userDetails.getEmployee().getId();
+        ApprovalResponse response = approvalService.resubmitDocument(id, drafterId, request);
+        return ResponseEntity.ok(response);
+    }
 }

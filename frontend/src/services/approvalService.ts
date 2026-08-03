@@ -99,15 +99,30 @@ export async function getDraftApprovals(status: string = "ALL"): Promise<import(
 export async function createDocument(data: any): Promise<any> {
   if (useMockData) return {};
   
-  const requestUrl = `${getBaseUrl()}/api/v1/approvals`;
-  const response = await fetch(requestUrl, {
+  const response = await fetch(`${getBaseUrl()}/api/v1/approvals`, {
     method: "POST",
     headers: getHeaders(),
     body: JSON.stringify(data),
   });
 
   if (!response.ok) {
-    throw new Error(`문서 기안 실패: ${response.status} ${response.statusText}`);
+    throw new Error(`기안 생성 실패: ${response.status} ${response.statusText}`);
+  }
+
+  return await response.json();
+}
+
+export async function resubmitDocument(documentId: string | number, data: any): Promise<any> {
+  if (useMockData) return {};
+
+  const response = await fetch(`${getBaseUrl()}/api/v1/approvals/${documentId}/resubmit`, {
+    method: "POST",
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+
+  if (!response.ok) {
+    throw new Error(`재신청 실패: ${response.status} ${response.statusText}`);
   }
 
   return await response.json();
