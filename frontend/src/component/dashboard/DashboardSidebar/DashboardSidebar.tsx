@@ -74,18 +74,18 @@ export default function DashboardSidebar() {
   const pathname = usePathname();
   const [isAdmin, setIsAdmin] = useState(false);
   const [perms, setPerms] = useState({
-    approvalInbox: true,
-    approvalDraft: true,
-    empList: true,
-    empOrg: true,
-    appointment: true,
-    dutySchedule: true,
-    attendAdmin: true,
-    attendCheck: true,
-    leaveStatus: true,
-    payrollInfo: true,
-    payrollProc: true,
-    statutoryReport: true,
+    approvalInbox: false,
+    approvalDraft: false,
+    empList: false,
+    empOrg: false,
+    appointment: false,
+    dutySchedule: false,
+    attendAdmin: false,
+    attendCheck: false,
+    leaveStatus: false,
+    payrollInfo: false,
+    payrollProc: false,
+    statutoryReport: false,
   });
 
   useEffect(() => {
@@ -102,7 +102,7 @@ export default function DashboardSidebar() {
             const p = user.permissions.find((perm: any) => perm.menuCode === code || perm.menuName === code);
             return p ? !!p.canRead : false;
           }
-          return true;
+          return false; // 권한 목록이 없으면 기본적으로 숨김
         };
 
         setPerms({

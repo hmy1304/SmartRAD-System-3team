@@ -401,6 +401,17 @@
   }
 }
 
+.sortButton {
+  margin-left: auto;
+  background: transparent !important;
+  color: #4f6486 !important;
+  border-color: #dce5f3 !important;
+
+  &:hover {
+    background: #f3f7fc !important;
+  }
+}
+
 .activeFilter {
   border-color: #4c84ff !important;
 
@@ -760,9 +771,9 @@
 /* 오른쪽 상세 패널 */
 .detailPanel {
   position: sticky;
-  top: 72px;
-
-  height: calc(100svh - 72px);
+  top: 0;
+  height: 100%;
+  min-height: calc(100svh - 40px);
 
   display: flex;
   flex-direction: column;

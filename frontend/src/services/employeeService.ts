@@ -8,7 +8,7 @@ import type {
   EmployeeManagementData,
   EmployeeProfileResponse,
 } from "@/types/employee";
-import { employeeMockData } from "@/data/dashboard/employeeMockData";
+
 
 export interface AccountIssueResponse {
   empNo: string;
@@ -32,9 +32,7 @@ function getBaseUrl() {
   return "/api-system";
 }
 
-/** mock은 명시적으로 true일 때만 */
-const useMockData =
-  process.env.NEXT_PUBLIC_USE_EMPLOYEE_MOCK_DATA === "true";
+
 
 function getHeaders(): HeadersInit {
   const headers: HeadersInit = {
@@ -142,12 +140,8 @@ function mapRowsToManagementData(data: any): EmployeeManagementData {
 
 /** 목록 조회 **/
 export async function getEmployeeManagementData(): Promise<EmployeeManagementData> {
-  // 디버그: mock 완전 차단
-  // if (useMockData) return employeeMockData;
-
   try {
     const base = getBaseUrl();
-    console.log("[getEmployeeManagementData] base =", base);
 
     const response = await fetch(`${base}/employees?size=50`, {
       method: "GET",
@@ -155,18 +149,11 @@ export async function getEmployeeManagementData(): Promise<EmployeeManagementDat
       cache: "no-store",
     });
 
-    console.log("[getEmployeeManagementData] status =", response.status);
-
     if (!response.ok) {
-      // mock 대신 빈 목록 → 화면에서 바로 구분 가능
       return { totalCount: 0, employees: [], selectedEmployee: null };
     }
 
     const data = await response.json();
-    console.log(
-      "[getEmployeeManagementData] rows =",
-      Array.isArray(data) ? data.length : data.content?.length,
-    );
     return mapRowsToManagementData(data);
   } catch (err) {
     console.error("[getEmployeeManagementData] error:", err);

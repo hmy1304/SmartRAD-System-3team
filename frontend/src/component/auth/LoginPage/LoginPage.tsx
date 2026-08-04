@@ -120,7 +120,7 @@ export default function LoginPage() {
                 <div className={styles.inputWrapper}>
                   <input
                     type="text"
-                    placeholder="hospital@example.com"
+                    placeholder="ADMIN-001 / RN-1004"
                     value={empNo}
                     onChange={(e) => setEmpNo(e.target.value)}
                     required
@@ -133,7 +133,7 @@ export default function LoginPage() {
                 <div className={styles.inputWrapper}>
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="••••••••••"
+                    placeholder="1234"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required

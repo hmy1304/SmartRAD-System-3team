@@ -155,6 +155,7 @@ export default function ApprovalInboxPage() {
   
   const [filter, setFilter] = useState<FilterType>("all");
   const [keyword, setKeyword] = useState("");
+  const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
 
   const [documents, setDocuments] = useState<ApprovalDocument[]>([]);
   const [comments, setComments] = useState<ApprovalComment[]>([]);
@@ -234,7 +235,7 @@ export default function ApprovalInboxPage() {
   const filteredDocuments = useMemo(() => {
     const normalizedKeyword = keyword.trim().toLowerCase();
 
-    return documents.filter((document) => {
+    const result = documents.filter((document) => {
       const matchesFilter = filter === "all" || document.priority === filter;
 
       const matchesKeyword =
@@ -245,7 +246,17 @@ export default function ApprovalInboxPage() {
 
       return matchesFilter && matchesKeyword;
     });
-  }, [documents, filter, keyword]);
+
+    result.sort((a, b) => {
+        if (sortOrder === "desc") {
+            return b.requestedAt.localeCompare(a.requestedAt);
+        } else {
+            return a.requestedAt.localeCompare(b.requestedAt);
+        }
+    });
+
+    return result;
+  }, [documents, filter, keyword, sortOrder]);
 
   const selectedDocument =
     documents.find((document) => document.id === selectedId) ?? documents[0];
@@ -427,6 +438,14 @@ export default function ApprovalInboxPage() {
                     onClick={() => setFilter("normal")}
                   >
                     일반
+                  </button>
+
+                  <button
+                    type="button"
+                    className={styles.sortButton}
+                    onClick={() => setSortOrder(prev => prev === "desc" ? "asc" : "desc")}
+                  >
+                    {sortOrder === "desc" ? "최신순 ↓" : "오래된순 ↑"}
                   </button>
                 </div>
 

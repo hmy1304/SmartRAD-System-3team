@@ -54,7 +54,11 @@ export default function AuthGuard({ children }: AuthGuardProps) {
 
         // 2. 현재 경로에 해당하는 필요 권한 찾기
         let requiredMenuCode: string | null = null;
-        for (const [route, code] of Object.entries(routePermissionMap)) {
+        
+        // 경로 길이가 긴 것부터 검사하여 /dashboard/attendance-link 가 /dashboard/attendance 에 먼저 매칭되는 것을 방지
+        const sortedRoutes = Object.entries(routePermissionMap).sort((a, b) => b[0].length - a[0].length);
+        
+        for (const [route, code] of sortedRoutes) {
           if (pathname.startsWith(route)) {
             requiredMenuCode = code;
             break;
