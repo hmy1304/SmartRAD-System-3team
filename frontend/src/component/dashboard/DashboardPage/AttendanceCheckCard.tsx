@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/authStore";
-import { hasPermission } from "@/utils/permission";
 import {
   checkIn,
   checkOut,
@@ -14,16 +13,11 @@ import styles from "./AttendanceCheckCard.module.scss";
 
 export default function AttendanceCheckCard() {
   const { userProfile } = useAuthStore();
-  const [canCheck, setCanCheck] = useState(false);
   const [today, setToday] = useState<AttendanceRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
 
   const employeeId = userProfile?.employeeId as number | undefined;
-
-  useEffect(() => {
-    setCanCheck(hasPermission("ATTEND_CHECK", "canWrite"));
-  }, [userProfile]);
 
   const reload = () => {
     if (!employeeId) {
@@ -70,7 +64,7 @@ export default function AttendanceCheckCard() {
     }
   };
 
-  if (!canCheck || !employeeId || loading) return null;
+  if (!employeeId || loading) return null;
 
   const checkInTime = formatAttendanceTime(today?.checkInTime);
   const checkOutTime = formatAttendanceTime(today?.checkOutTime);
