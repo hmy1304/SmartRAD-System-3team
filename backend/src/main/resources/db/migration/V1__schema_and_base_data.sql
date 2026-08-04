@@ -439,7 +439,7 @@ SELECT rg.id, m.id, TRUE, FALSE, FALSE, FALSE, NOW(), NOW()
 FROM role_group rg
 CROSS JOIN menu m
 WHERE rg.name = '일반직원'
-  AND m.menu_code IN ('EMP_MASTER', 'ATTENDANCE', 'LICENSE_EDU_HEALTH', 'PAYROLL', 'NOTICE', 'DUTY_SCHEDULE');
+  AND m.menu_code IN ('LICENSE_EDU_HEALTH', 'PAYROLL', 'NOTICE', 'DUTY_SCHEDULE');
 
 INSERT INTO role_permission (role_group_id, menu_id, can_read, can_write, can_delete, can_approve, created_at, updated_at)
 SELECT rg.id, m.id, TRUE, TRUE, FALSE, FALSE, NOW(), NOW()
@@ -663,27 +663,27 @@ CROSS JOIN menu m
 WHERE rg.name = '수간호사'
   AND m.menu_code IN ('EMP_LIST', 'APPOINTMENT', 'ATTEND_ADMIN', 'PAYROLL_PROC', 'STATUTORY_REPORT', 'SYSTEM_ROLES', 'SYSTEM_CODE');
 
--- (4) 일반직원: ESS 본인 화면(기안 작성, 출퇴근 체크, 명세서 조회, 연차 현황 등) 전용
+-- (4) 일반직원: ESS 본인 화면(기안 작성, 명세서 조회 등) 전용
 INSERT INTO role_permission (role_group_id, menu_id, can_read, can_write, can_delete, can_approve, created_at, updated_at)
 SELECT rg.id, m.id, TRUE, TRUE, FALSE, FALSE, NOW(), NOW()
 FROM role_group rg
 CROSS JOIN menu m
 WHERE rg.name = '일반직원'
-  AND m.menu_code IN ('APPROVAL_DRAFT', 'ATTEND_CHECK');
+  AND m.menu_code IN ('APPROVAL_DRAFT');
 
 INSERT INTO role_permission (role_group_id, menu_id, can_read, can_write, can_delete, can_approve, created_at, updated_at)
 SELECT rg.id, m.id, TRUE, FALSE, FALSE, FALSE, NOW(), NOW()
 FROM role_group rg
 CROSS JOIN menu m
 WHERE rg.name = '일반직원'
-  AND m.menu_code IN ('LEAVE_STATUS', 'PAYROLL_INFO', 'EMP_ORG', 'NOTICE', 'DUTY_SCHEDULE');
+  AND m.menu_code IN ('EMP_ORG', 'NOTICE', 'DUTY_SCHEDULE');
 
 INSERT INTO role_permission (role_group_id, menu_id, can_read, can_write, can_delete, can_approve, created_at, updated_at)
 SELECT rg.id, m.id, FALSE, FALSE, FALSE, FALSE, NOW(), NOW()
 FROM role_group rg
 CROSS JOIN menu m
 WHERE rg.name = '일반직원'
-  AND m.menu_code IN ('APPROVAL_INBOX', 'EMP_LIST', 'APPOINTMENT', 'ATTEND_ADMIN', 'PAYROLL_PROC', 'STATUTORY_REPORT', 'SYSTEM_ROLES', 'SYSTEM_CODE');
+  AND m.menu_code IN ('ATTEND_CHECK', 'ATTENDANCE', 'PAYROLL_INFO', 'EMP_MASTER', 'LEAVE_STATUS', 'APPROVAL_INBOX', 'EMP_LIST', 'APPOINTMENT', 'ATTEND_ADMIN', 'PAYROLL_PROC', 'STATUTORY_REPORT', 'SYSTEM_ROLES', 'SYSTEM_CODE');
 
 -- V16__create_leave_management_tables.sql
 -- 16. 휴가 관리(Leave Management) 전용 DB 테이블 및 풍부한 월별/연도별 시드 데이터 생성
