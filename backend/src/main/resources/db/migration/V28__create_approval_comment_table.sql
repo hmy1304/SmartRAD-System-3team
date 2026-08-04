@@ -1,9 +1,0 @@
-CREATE TABLE approval_comment (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    document_id_str VARCHAR(50) NOT NULL,
-    employee_id BIGINT NOT NULL,
-    content VARCHAR(1000) NOT NULL,
-    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    CONSTRAINT fk_approval_comment_employee FOREIGN KEY (employee_id) REFERENCES employee(id)
-);
