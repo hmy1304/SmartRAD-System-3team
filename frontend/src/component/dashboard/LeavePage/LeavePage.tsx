@@ -92,8 +92,8 @@ export default function LeavePage() {
   const [currentViewer, setCurrentViewer] = useState<EmpOption>(MOCK_EMPLOYEES[0]);
 
   // 상단 연도 및 월 실시간 조회 필터
-  const [selectedYear, setSelectedYear] = useState<number>(2026);
-  const [selectedMonth, setSelectedMonth] = useState<number | undefined>(7);
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number | undefined>(new Date().getMonth() + 1);
 
   // 테이블 제어 필터 상태
   const [filter, setFilter] = useState<(typeof FILTERS)[number]>("전체");
@@ -387,8 +387,8 @@ export default function LeavePage() {
               value={`${selectedYear}년`}
               onChange={(e) => setSelectedYear(parseInt(e.target.value))}
             >
-              <option value="2026년">2026년</option>
-              <option value="2025년">2025년</option>
+              <option value={`${new Date().getFullYear()}년`}>{new Date().getFullYear()}년</option>
+              <option value={`${new Date().getFullYear() - 1}년`}>{new Date().getFullYear() - 1}년</option>
             </select>
             <ChevronDown size={14} className={styles.arrowIcon} />
           </div>
@@ -402,9 +402,9 @@ export default function LeavePage() {
                 setSelectedMonth(val === "전체 월" ? undefined : parseInt(val));
               }}
             >
-              <option value="7월">7월</option>
-              <option value="6월">6월</option>
-              <option value="5월">5월</option>
+              {Array.from({ length: 12 }, (_, i) => i + 1).map(m => (
+                <option key={m} value={`${m}월`}>{m}월</option>
+              ))}
               <option value="전체 월">전체 월</option>
             </select>
             <ChevronDown size={14} className={styles.arrowIcon} />

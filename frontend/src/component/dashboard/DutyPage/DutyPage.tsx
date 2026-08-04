@@ -139,7 +139,7 @@ export default function DutyPage() {
         }
       });
       
-      const empList = Array.from(empMap.values());
+      const empList = Array.from(empMap.values()).sort((a, b) => a.id - b.id);
       
       // 요약 재계산
       empList.forEach(emp => {

@@ -26,8 +26,8 @@ const CAL_START_OFFSET = 3;
 const CAL_DAYS = Array.from({ length: DAYS_IN_MONTH }, (_, i) => i + 1);
 
 export default function AttendanceLinkPage() {
-  const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState(7);
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth() + 1);
   const [selectedDay, setSelectedDay] = useState(23);
   const [keyword, setKeyword] = useState("");
   const [selectedDept, setSelectedDept] = useState("부서 전체");
