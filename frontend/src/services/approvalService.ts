@@ -104,8 +104,6 @@ export async function createDocument(data: any): Promise<any> {
 }
 
 export async function resubmitDocument(documentId: string | number, data: any): Promise<any> {
-  if (useMockData) return {};
-
   const response = await fetch(`${getBaseUrl()}/api/v1/approvals/${documentId}/resubmit`, {
     method: "POST",
     headers: getHeaders(),
