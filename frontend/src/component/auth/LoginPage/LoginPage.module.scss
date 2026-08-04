@@ -331,6 +331,8 @@
 
 .footer {
   display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem 3rem;
@@ -371,16 +373,7 @@
   }
 
   .leftPanel {
-    padding: 3rem 0;
-  }
-
-  .leftContent {
-    margin-top: 0;
-    padding: 2rem;
-    
-    .title {
-      font-size: 2.5rem;
-    }
+    display: none;
   }
 
   .rightPanel {
@@ -398,3 +391,4 @@
     }
   }
 }
+
