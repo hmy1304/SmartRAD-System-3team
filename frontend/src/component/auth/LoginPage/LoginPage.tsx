@@ -133,7 +133,7 @@ export default function LoginPage() {
                 <div className={styles.inputWrapper}>
                   <input
                     type={showPassword ? 'text' : 'password'}
-                    placeholder="1234"
+                    placeholder="비밀번호를 입력하세요"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
