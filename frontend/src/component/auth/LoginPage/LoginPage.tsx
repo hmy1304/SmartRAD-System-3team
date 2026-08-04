@@ -4,13 +4,17 @@ import React, { useState } from 'react';
 import styles from './LoginPage.module.scss';
 import BrandLogo from '@/component/common/BrandLogo/BrandLogo';
 import { useRouter } from 'next/navigation';
+import { navItems } from "@/data/landingData";
 
 export default function LoginPage() {
   const [empNo, setEmpNo] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
   const router = useRouter();
+
+  const closeMenu = () => setIsOpen(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +54,27 @@ export default function LoginPage() {
           <BrandLogo inverse={true} />
         </div>
         <div className={styles.headerRight}>
-          {/* 회원가입 버튼 제거됨 */}
+          <button
+            type="button"
+            className={`${styles.menuButton} ${isOpen ? styles.active : ""}`}
+            onClick={() => setIsOpen((prev) => !prev)}
+            aria-label="메뉴 열기"
+            aria-expanded={isOpen}
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+
+          <div className={`${styles.menuArea} ${isOpen ? styles.open : ""}`}>
+            <nav className={styles.nav} aria-label="주요 메뉴">
+              {navItems.map((item) => (
+                <a key={item.href} href={`/${item.href}`} onClick={closeMenu}>
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+          </div>
         </div>
       </header>
 
