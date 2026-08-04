@@ -14,7 +14,7 @@ interface Employee { id: number; empNo: string; name: string; departmentName: st
 interface Department { id: number; name: string; }
 interface CommonCode { code: string; name: string; }
 
-type AppointmentStatus = "완료" | "처리중" | "대기" | "반려";
+type AppointmentStatus = "완료" | "대기" | "반려";
 
 interface AppointmentItem {
   id: string;
@@ -56,11 +56,9 @@ export default function AppointmentPage() {
       const mapped: AppointmentItem[] = data.map((a: AppointmentResponse) => {
         let status: AppointmentStatus = "대기";
         if (a.status === "REJECTED") {
-          status = "반려" as any; // Type override since we are adding a new status
+          status = "반려";
         } else if (a.applied || a.status === "COMPLETED") {
           status = "완료";
-        } else if (new Date(a.applyDate) <= new Date()) {
-          status = "처리중";
         }
         
         // Random tone based on id
@@ -360,10 +358,8 @@ export default function AppointmentPage() {
                             item.status === "완료"
                               ? styles.statusDone
                               : item.status === "반려"
-                                ? styles.statusWait // Use statusWait or statusReject if available, will just style as grey/red
-                                : item.status === "처리중"
-                                  ? styles.statusProgress
-                                  : styles.statusWait
+                                ? styles.statusReject
+                                : styles.statusWait
                           }`}
                         >
                           {item.status}
