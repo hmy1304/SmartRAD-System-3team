@@ -57,10 +57,6 @@ export default function DashboardHeader({ profile }: DashboardHeaderProps) {
 
   return (
     <header className={styles.topHeader}>
-      <label className={styles.search}>
-        <span>⌕</span>
-        <input type="search" placeholder="직원, 부서, 문서를 검색하세요" />
-      </label>
 
       <div className={styles.topActions}>
         <div className={styles.profile}>
