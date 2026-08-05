@@ -6,6 +6,8 @@ COPY package.json package-lock.json ./
 RUN npm ci
 
 ENV BACKEND_URL=http://backend:8080
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_OPTIONS="--max_old_space_size=768"
 
 COPY . .
 RUN npm run build
