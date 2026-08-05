@@ -70,7 +70,7 @@ function SidebarIcon({ name }: SidebarIconProps) {
   );
 }
 
-export default function DashboardSidebar() {
+export default function DashboardSidebar({ isOpen, onClose }: { isOpen?: boolean, onClose?: () => void }) {
   const pathname = usePathname();
   const [isAdmin, setIsAdmin] = useState(false);
   const [perms, setPerms] = useState({
@@ -197,15 +197,20 @@ export default function DashboardSidebar() {
   }, [pathname]);
 
   return (
-    <aside className={styles.sidebar}>
-      <Link href="/dashboard" className={styles.brand}>
-        <span className={styles.brandSymbol}>＋</span>
+    <>
+      <div 
+        className={`${styles.overlay} ${isOpen ? styles.overlayOpen : ""}`} 
+        onClick={onClose} 
+      />
+      <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ""}`}>
+        <Link href="/dashboard" className={styles.brand} onClick={onClose}>
+          <span className={styles.brandSymbol}>＋</span>
 
-        <span className={styles.brandText}>
-          <strong>SmartRAD HR</strong>
-          <small>Hospital Human Resources</small>
-        </span>
-      </Link>
+          <span className={styles.brandText}>
+            <strong>SmartRAD HR</strong>
+            <small>Hospital Human Resources</small>
+          </span>
+        </Link>
 
       <nav className={styles.sideNav}>
         <p className={styles.menuTitle}>MAIN MENU</p>
@@ -217,6 +222,7 @@ export default function DashboardSidebar() {
             isDashboardPage ? styles.active : ""
           }`}
           aria-current={isDashboardPage ? "page" : undefined}
+          onClick={onClose}
         >
           <span className={styles.iconBox}>
             <SidebarIcon name="dashboard" />
@@ -264,6 +270,7 @@ export default function DashboardSidebar() {
                   href="/dashboard/approvals"
                   className={isApprovalInboxPage ? styles.subMenuActive : ""}
                   aria-current={isApprovalInboxPage ? "page" : undefined}
+                  onClick={onClose}
                 >
                   결재 대기함
                 </Link>
@@ -274,6 +281,7 @@ export default function DashboardSidebar() {
                   href="/dashboard/drafts"
                   className={isDraftDocumentsPage ? styles.subMenuActive : ""}
                   aria-current={isDraftDocumentsPage ? "page" : undefined}
+                  onClick={onClose}
                 >
                   기안 문서함
                 </Link>
@@ -492,6 +500,7 @@ export default function DashboardSidebar() {
                       ? styles.subMenuActive
                       : ""
                   }`}
+                  onClick={onClose}
                 >
                   사용자 권한 관리
                 </Link>
@@ -500,6 +509,7 @@ export default function DashboardSidebar() {
                   href="/dashboard/system/common-code"
                   className={isCommonCodePage ? styles.subMenuActive : ""}
                   aria-current={isCommonCodePage ? "page" : undefined}
+                  onClick={onClose}
                 >
                   공통 코드 관리
                 </Link>
@@ -509,5 +519,6 @@ export default function DashboardSidebar() {
         )}
       </nav>
     </aside>
+    </>
   );
 }

@@ -12,6 +12,7 @@ interface ProfileData {
 
 interface DashboardHeaderProps {
   profile?: ProfileData;
+  onMenuClick?: () => void;
 }
 
 function BellIcon() {
@@ -23,7 +24,7 @@ function BellIcon() {
   );
 }
 
-export default function DashboardHeader({ profile }: DashboardHeaderProps) {
+export default function DashboardHeader({ profile, onMenuClick }: DashboardHeaderProps) {
   const [currentUser, setCurrentUser] = React.useState<ProfileData>({
     initial: "유",
     name: "사용자",
@@ -57,6 +58,15 @@ export default function DashboardHeader({ profile }: DashboardHeaderProps) {
 
   return (
     <header className={styles.topHeader}>
+      <div className={styles.leftGroup}>
+        <button className={styles.menuBtn} onClick={onMenuClick} aria-label="메뉴 열기">
+          <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"></line>
+            <line x1="3" y1="6" x2="21" y2="6"></line>
+            <line x1="3" y1="18" x2="21" y2="18"></line>
+          </svg>
+        </button>
+      </div>
 
       <div className={styles.topActions}>
         <div className={styles.profile}>

@@ -1,6 +1,28 @@
 @use "../../../styles/variables" as *;
 @use "../../../styles/mixins" as *;
 
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+  100% { transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 0.7; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
 .hero {
   position: relative;
   overflow: hidden;
@@ -17,6 +39,7 @@
   background:
     radial-gradient(circle at 85% 20%, rgba(75, 122, 255, 0.28), transparent 28%),
     linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.025), transparent);
+  animation: pulseGlow 6s ease-in-out infinite;
 }
 
 .inner {
@@ -36,6 +59,8 @@
   background: rgba(255, 255, 255, 0.06);
   font-size: 0.78rem;
   font-weight: 700;
+  opacity: 0;
+  animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 
   .dot {
     color: #2DD4BF;
@@ -48,6 +73,8 @@
   font-size: clamp(2.7rem, 6vw, 5rem);
   line-height: 1.12;
   letter-spacing: -0.055em;
+  opacity: 0;
+  animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.15s forwards;
 }
 
 .hero p {
@@ -55,6 +82,8 @@
   color: rgba(229, 238, 255, 0.7);
   font-size: clamp(0.92rem, 1.5vw, 1.05rem);
   line-height: 1.8;
+  opacity: 0;
+  animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
 }
 
 .actions {
@@ -62,12 +91,16 @@
   justify-content: center;
   gap: 12px;
   margin-top: 30px;
+  opacity: 0;
+  animation: fadeUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.45s forwards;
 }
 
 .preview {
   display: flex;
   justify-content: center;
   margin-top: 48px;
+  opacity: 0;
+  animation: fadeUp 1s cubic-bezier(0.16, 1, 0.3, 1) 0.6s forwards, float 6s ease-in-out infinite 1.6s;
 }
 
 .roleBar {

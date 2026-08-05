@@ -39,7 +39,7 @@
     box-shadow $transition;
 
   &:hover {
-    transform: translateY(-7px);
+    transform: translateY(-7px) !important;
     box-shadow: 0 26px 60px rgba(18, 46, 92, 0.13);
   }
 
@@ -80,6 +80,7 @@
   color: #df8d35;
   background: #fff4e8;
 }
+
 
 .tags {
   display: flex;
